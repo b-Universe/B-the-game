@@ -1,18 +1,21 @@
-import { AuthLogic } from './creator-logic.js?v=new-engine-311';
-import { initSelection } from './selection.js?v=new-engine-311';
-import { AuthUIManager } from './auth-ui.js?v=new-engine-311';
-import { CharacterCreatorUIManager } from './character-creator-ui.js?v=new-engine-311';
-import { InGameMenuUIManager } from './in-game-menu-ui.js?v=new-engine-311';
+import { AuthLogic } from './creator-logic.js?v=new-engine-330';
+import { initSelection } from './selection.js?v=new-engine-330';
+import { AuthUIManager } from './auth-ui.js?v=new-engine-330';
+import { CharacterCreatorUIManager } from './character-creator-ui.js?v=new-engine-330';
+import { InGameMenuUIManager } from './in-game-menu-ui.js?v=new-engine-330';
 
 const applyUIScaling = () => {
   const scalers = document.querySelectorAll('.screen-scaler');
   const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
   scalers.forEach(scaler => {
-    scaler.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    scaler.style.left = '0';
+    scaler.style.top = '50%';
+    scaler.style.transformOrigin = 'left center';
+    scaler.style.transform = `translate(0, -50%) scale(${scale})`;
   });
 };
 window.addEventListener('resize', applyUIScaling);
-applyUIScaling(); 
+applyUIScaling();
 
 const modal = document.getElementById('custom-modal');
 document.getElementById('modal-close').onclick = () => modal.style.display = 'none';

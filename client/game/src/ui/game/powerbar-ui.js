@@ -1,4 +1,4 @@
-import { POWER_REGISTRY } from './registry.js?v=new-engine-314';
+import { POWER_REGISTRY } from './registry.js?v=new-engine-330';
 export class PowerbarUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;
@@ -16,7 +16,7 @@ export class PowerbarUIManager {
     if (!container) {
         container = document.createElement('div');
         container.id = 'powerbar-container';
-        
+
         const gameScreen = document.getElementById('game-screen');
         if (gameScreen) {
             const scaler = gameScreen.querySelector('.screen-scaler');
@@ -31,30 +31,35 @@ export class PowerbarUIManager {
     container.innerHTML = '';
     this.powerSlots = [];
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-    
+
     for (let i = 0; i < 10; i++) {
         const slot = document.createElement('div');
         slot.className = 'powerbar-slot';
         slot.style.cssText = 'width: 44px; height: 44px; background: rgba(0, 0, 0, 0.7); border: 2px solid #444; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);';
-        
+
         const keyLabel = document.createElement('span');
         keyLabel.innerText = keys[i];
         keyLabel.style.cssText = 'position: absolute; top: 2px; left: 4px; font-size: 0.75rem; font-weight: bold; color: #888; font-family: var(--font-mono, monospace); text-shadow: 1px 1px 0 #000;';
-        
+
         const iconOrName = document.createElement('div');
-        iconOrName.style.cssText = 'color: #fff; font-size: 0.7rem; font-family: var(--font-header, sans-serif); text-align: center; line-height: 1.1; pointer-events: none; padding: 0 2px; word-wrap: break-word; overflow: hidden; max-height: 30px; text-shadow: 1px 1px 0 #000;';
-        
+        iconOrName.style.cssText = 'color: #fff; font-size: 0.7rem; font-family: var(--font-header, sans-serif); text-align: center; line-height: 1.1; pointer-events: none; padding: 0 2px; word-wrap: break-word; overflow: hidden; max-height: 30px; text-shadow: 1px 1px 0 #000; z-index: 3;';
+
+        const overlay = document.createElement('div');
+        overlay.className = 'cooldown-overlay';
+        overlay.style.cssText = 'position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0, 0, 0, 0.75); pointer-events: none; z-index: 2;';
+
+        slot.appendChild(overlay);
         slot.appendChild(keyLabel);
         slot.appendChild(iconOrName);
         container.appendChild(slot);
-        
+
         slot.onmouseenter = () => {
             const powers = this.engine.playerData.powers || [];
             const powerName = powers[i];
             if (powerName) slot.style.background = 'rgba(52, 152, 219, 0.4)';
         };
         slot.onmouseleave = () => slot.style.background = 'rgba(0, 0, 0, 0.7)';
-        
+
         slot.draggable = true;
         slot.ondragstart = (e) => {
             const powers = this.engine.playerData.powers || [];
@@ -75,16 +80,16 @@ export class PowerbarUIManager {
                     if (fromIdx !== toIdx) {
                         const powers = this.engine.playerData.powers || [];
                         while (powers.length <= Math.max(fromIdx, toIdx)) powers.push(null);
-                        
+
                         const temp = powers[fromIdx];
                         powers[fromIdx] = powers[toIdx];
                         powers[toIdx] = temp;
-                        
+
                         while(powers.length > 0 && powers[powers.length - 1] === null) powers.pop();
-                        
+
                         this.engine.playerData.powers = powers;
                         this.updatePowerbar();
-                        
+
                         const pPanel = document.getElementById('powers-panel');
                         if (pPanel && pPanel.style.display === 'flex') this.renderPowersUI();
                     }
@@ -96,17 +101,11 @@ export class PowerbarUIManager {
             const powers = this.engine.playerData.powers || [];
             const powerName = powers[i];
             if (powerName) {
-                if (powerName === 'brawl') this.engine.combat?.triggerAttack();
-                else if (powerName === 'throw_airplane') this.engine.combat?.triggerThrowAirplane();
-                else if (powerName === 'dev_noclip') this.engine.chat.processCommand('/noclip');
-                else if (powerName === 'dev_heal') this.engine.chat.processCommand('/heal');
-                else if (powerName === 'dev_smite') this.engine.combat?.triggerSmite();
-                else if (['fly', 'super_jump', 'super_speed'].includes(powerName)) this.engine.combat?.toggleTravelPower(powerName);
-                else if (powerName === 'teleport') this.engine.combat?.triggerTeleport();
+                this.engine.combat?.usePower(powerName);
             }
         };
 
-        this.powerSlots.push({ element: slot, iconEl: iconOrName });
+        this.powerSlots.push({ element: slot, iconEl: iconOrName, overlayEl: overlay });
     }
     this.updatePowerbar();
   }
@@ -114,7 +113,7 @@ export class PowerbarUIManager {
   updatePowerbar() {
       if (!this.powerSlots) return;
       const powers = this.engine.playerData.powers || [];
-      
+
       for (let i = 0; i < 10; i++) {
           const slotData = this.powerSlots[i];
           const powerId = powers[i];
@@ -144,6 +143,33 @@ export class PowerbarUIManager {
       }
   }
 
+  updateCooldowns() {
+      if (!this.powerSlots) return;
+      const powers = this.engine.playerData.powers || [];
+      const now = Date.now();
+      const lastAttackTimes = this.engine.player.lastAttackTimes || {};
+
+      for (let i = 0; i < 10; i++) {
+          const slotData = this.powerSlots[i];
+          const powerId = powers[i];
+          if (powerId && POWER_REGISTRY[powerId]) {
+              const cooldownMs = POWER_REGISTRY[powerId].cooldown || 0;
+              const lastTime = lastAttackTimes[powerId] || 0;
+              const elapsed = now - lastTime;
+
+              if (elapsed < cooldownMs) {
+                  // Calculate the percentage remaining for the overlay height
+                  const percent = 100 - ((elapsed / cooldownMs) * 100);
+                  slotData.overlayEl.style.height = `${percent}%`;
+              } else {
+                  slotData.overlayEl.style.height = '0%';
+              }
+          } else if (slotData.overlayEl) {
+              slotData.overlayEl.style.height = '0%';
+          }
+      }
+  }
+
   setupPowersUI() {
     const btnPowers = document.getElementById('btn-powers');
     const powersPanel = document.getElementById('powers-panel');
@@ -161,30 +187,30 @@ export class PowerbarUIManager {
   renderPowersUI() {
     const pd = this.engine.playerData;
     const level = pd.level || 1;
-    
+
     const elLevel = document.getElementById('powers-level-text');
     const elLearned = document.getElementById('powersets-learned-text');
     const elPicks = document.getElementById('powers-picks-text');
     const elSets = document.getElementById('powersets-picks-text');
     const elSlots = document.getElementById('powers-slots-text');
     const listContainer = document.getElementById('powers-list-container');
-    
+
     if (!listContainer) return;
 
     const totalPowerPicks = pd.unspentPowerPicks !== undefined ? pd.unspentPowerPicks : 0;
     const totalPowersetPicks = pd.unspentPowersetPicks !== undefined ? pd.unspentPowersetPicks : 0;
     const learnedSetsCount = pd.powersets ? pd.powersets.length : 0;
     const totalEnhancementSlots = Math.ceil(level / 2) * 2;
-    
+
     if (elLevel) elLevel.innerText = level;
     if (elPicks) elPicks.innerText = totalPowerPicks;
     if (elSets) elSets.innerText = totalPowersetPicks;
     if (elSlots) elSlots.innerText = totalEnhancementSlots;
     if (elLearned) elLearned.innerText = learnedSetsCount;
-    
+
     listContainer.innerHTML = '';
     const powers = pd.powers || [];
-    
+
     if (powers.filter(Boolean).length === 0) {
       listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--font-mono); font-size: 0.9rem;">No powers selected.</div>`;
     } else {

@@ -3,6 +3,7 @@ export class AuthUIManager {
     this.app = app;
     this.isSignUpMode = false;
     this.setupUI();
+    this.loadPatchNotes();
   }
 
   setupUI() {
@@ -17,7 +18,7 @@ export class AuthUIManager {
       this.isSignUpMode = !this.isSignUpMode;
       if (emailGroup) emailGroup.style.display = this.isSignUpMode ? 'flex' : 'none';
       if (btnMain) btnMain.innerText = this.isSignUpMode ? 'Create Account' : 'Login';
-      
+
       if (togglePrompt) {
         if (this.isSignUpMode) {
           togglePrompt.innerHTML = `Already Have An Account? <span id="toggle-auth">Log in!</span>`;
@@ -73,7 +74,7 @@ export class AuthUIManager {
           if (this.isSignUpMode) {
             if (!email || noEmail) email = '';
             const newAcc = await this.app.auth.register(user, email, pass);
-            
+
             this.app.currentAccount = newAcc;
             localStorage.setItem('b_current_account', JSON.stringify(newAcc));
             this.app.showModal("Success", "Account created successfully! You can now log in.");
@@ -82,6 +83,9 @@ export class AuthUIManager {
             const result = await this.app.auth.verify(user, pass);
             if (result.success) {
               this.app.currentAccount = result.account;
+              if (result.account.clientSettings) {
+                localStorage.setItem('b_client_settings', JSON.stringify(result.account.clientSettings));
+              }
               localStorage.setItem('b_current_account', JSON.stringify(result.account));
               const remUser = document.getElementById('remember-user');
               if (remUser && remUser.checked) {
@@ -89,7 +93,7 @@ export class AuthUIManager {
               } else {
                 localStorage.removeItem('b_saved_username');
               }
-              
+
               this.app.initSelection(result.account);
             } else {
               this.app.showModal("Auth Failure", "Invalid login information.");
@@ -110,21 +114,25 @@ export class AuthUIManager {
       try {
         const account = JSON.parse(savedAccount);
         this.app.currentAccount = account;
-        
+
         let selectedChar = (account.characters || []).find(c => {
           const cName = typeof c === 'object' ? c.name : c;
           return cName && cName.trim().toLowerCase() === autoRelogChar.trim().toLowerCase();
         });
-        
+
         if (!selectedChar && account.characters && account.characters.length > 0) {
           selectedChar = typeof account.characters[0] === 'object' ? account.characters[0] : { name: account.characters[0] };
         }
-        
+
+        if (typeof selectedChar === 'string') {
+          selectedChar = { name: selectedChar };
+        }
+
         if (selectedChar) {
           document.getElementById('creation-screen').style.display = 'none';
           document.getElementById('selection-screen').style.display = 'none';
           document.getElementById('game-screen').style.display = 'block';
-          
+
           import(`./game/engine.js?v=${Date.now()}`).then(module => {
             if (window.currentGameEngine) window.currentGameEngine.stop();
             window.currentGameEngine = new module.GameEngine('game-canvas', selectedChar, account.uuid);
@@ -154,18 +162,18 @@ export class AuthUIManager {
             charName = activeSlot.innerText.trim().split('\n')[0].trim();
           }
         }
-        
+
         if (!this.app.currentAccount) return this.app.showModal("Data Error", "No account loaded.");
 
         const selectedChar = this.app.currentAccount.characters.find(c => c.name.toLowerCase() === charName.toLowerCase());
-        
+
         if (!selectedChar) {
           return this.app.showModal("Data Error", "Could not load character data.");
         }
 
         document.getElementById('selection-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'block';
-        
+
         import(`./game/engine.js?v=${Date.now()}`).then(module => {
           if (window.currentGameEngine) window.currentGameEngine.stop();
           window.currentGameEngine = new module.GameEngine('game-canvas', selectedChar, this.app.currentAccount.uuid);
@@ -174,6 +182,40 @@ export class AuthUIManager {
           this.app.showModal("Engine Error", "Failed to load engine.js. Open your browser console (F12) to see the exact file path error.");
         });
       });
+    }
+  }
+
+  async loadPatchNotes() {
+    const list = document.getElementById('patch-notes-list');
+    if (!list) return;
+
+    try {
+      const res = await fetch('/api/patch-notes?v=' + Date.now());
+      if (res.ok) {
+        const notes = await res.json();
+        list.innerHTML = '';
+        notes.forEach(note => {
+          const div = document.createElement('div');
+          let content = `<strong style="color: ${note.color || '#3498db'};">${note.version}</strong>`;
+          if (note.text) {
+            content += ` - ${note.text}`;
+          }
+          if (note.changes && note.changes.length > 0) {
+            content += `<ul style="margin: 5px 0 10px 15px; padding: 0; font-size: 0.9em; color: #ccc;">`;
+            note.changes.forEach(c => {
+              const typeColor = c.type === 'Engine' ? '#3498db' : c.type === 'Gameplay' ? '#2ecc71' : c.type === 'Fix' ? '#e74c3c' : '#f1c40f';
+              content += `<li><strong style="color: ${typeColor};">[${c.type}]</strong> ${c.text}</li>`;
+            });
+            content += `</ul>`;
+          }
+          div.innerHTML = content;
+          list.appendChild(div);
+        });
+      } else {
+        list.innerHTML = '<div style="text-align: center; color: #ff4757;">Failed to load patch notes.</div>';
+      }
+    } catch (e) {
+      list.innerHTML = '<div style="text-align: center; color: #ff4757;">Error loading patch notes.</div>';
     }
   }
 }

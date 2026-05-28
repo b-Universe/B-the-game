@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "Powersets": [
+        {
+          "Id": "inherited",
+          "Name": "Inherited",
+          "Focus": "Basic abilities innate to all entities.",
+          "Requirement": "Hidden",
+          "Powers": [
+            {
+              "Id": "brawl",
+              "Name": "Brawl",
+              "Description": "A standard melee attack."
+            },
+            {
+              "Id": "throw_airplane",
+              "Name": "Throw Airplane",
+              "Description": "Throw a paper airplane at your enemies."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

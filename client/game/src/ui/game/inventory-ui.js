@@ -75,6 +75,7 @@ export class InventoryUIManager {
             inv[i] = inv[data.index];
             inv[data.index] = temp || null;
             this.renderInventory();
+            this.engine.network.sendInventoryMove(data.index, i);
         }
       };
       

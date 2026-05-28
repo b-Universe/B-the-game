@@ -8,10 +8,11 @@ export class MinimapManager {
   draw(ctx) {
     const eng = this.engine;
     if (!eng.mapManager) return;
-    const mmSize = 250;
-    const mmX = eng.canvas.width - mmSize - 20;
-    const mmY = 70; 
-    const mmTileSize = 8; 
+    const box = eng.getMinimapBox();
+    const mmSize = box.size;
+    const mmX = box.x;
+    const mmY = box.y;
+    const mmTileSize = eng.clientSettings.minimapZoom || 8;
     const mmRadius = Math.ceil(((mmSize / mmTileSize) / 2) * 1.5) + 1;
 
     ctx.save();
@@ -26,7 +27,7 @@ export class MinimapManager {
     ctx.clip();
 
         ctx.translate(mmX + mmSize / 2, mmY + mmSize / 2);
-    
+
     const camAngle = eng.renderer ? eng.renderer.cameraAngle : 0;
     const rotationAngle = eng.clientSettings.rotateMinimap ? camAngle : 0;
     ctx.scale(-1, 1);
@@ -39,27 +40,54 @@ export class MinimapManager {
     const offsetX = (pFracX - pGx) * mmTileSize;
     const offsetY = (pFracY - pGy) * mmTileSize;
 
-    for (let gy = pGy - mmRadius; gy <= pGy + mmRadius; gy++) {
-      for (let gx = pGx - mmRadius; gx <= pGx + mmRadius; gx++) {
-        let color = null;
-        
-        for (let z = 15; z >= -4; z--) {
-          const v = eng.mapManager.getVoxelAt(gx * 32, gy * 32, z * 32);
-          if (v) {
-            color = v.color || (v.tex === 'grass' ? '#51852E' : '#ffffff');
-            break;
-          }
-        }
+    if (eng.mapManager.cacheBounds) {
+      const bounds = eng.mapManager.cacheBounds;
+      const drawWidth = eng.mapManager.mapCacheCanvas.width * mmTileSize;
+      const drawHeight = eng.mapManager.mapCacheCanvas.height * mmTileSize;
+      const drawOffsetX = (bounds.minX - pFracX) * mmTileSize;
+      const drawOffsetY = (bounds.minY - pFracY) * mmTileSize;
 
-        if (color) {
-          const drawX = (gx - pGx) * mmTileSize - offsetX - (mmTileSize / 2);
-          const drawY = (gy - pGy) * mmTileSize - offsetY - (mmTileSize / 2);
-          
-          ctx.fillStyle = color;
-          ctx.fillRect(drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
-        }
-      }
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(eng.mapManager.mapCacheCanvas, drawOffsetX, drawOffsetY, drawWidth, drawHeight);
     }
+
+    if (eng.targetingPower && eng.mouseWorldPos) {
+      const tDrawX = (eng.mouseWorldPos.x / 32 - pFracX) * mmTileSize;
+      const tDrawY = (eng.mouseWorldPos.y / 32 - pFracY) * mmTileSize;
+
+      ctx.save();
+      ctx.strokeStyle = '#9b59b6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 12]);
+      ctx.lineDashOffset = -(performance.now() / 20);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(tDrawX, tDrawY);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(tDrawX - 8, tDrawY); ctx.lineTo(tDrawX + 8, tDrawY);
+      ctx.moveTo(tDrawX, tDrawY - 8); ctx.lineTo(tDrawX, tDrawY + 8);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(tDrawX, tDrawY, 6 + Math.sin(performance.now() / 100) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    eng.waypoints.forEach((wp) => {
+      const wDrawX = (wp.x / 32 - pFracX) * mmTileSize;
+      const wDrawY = (wp.y / 32 - pFracY) * mmTileSize;
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(wDrawX, wDrawY, Math.max(3, mmTileSize/2), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
 
         const drawMinimapDot = (worldX, worldY, dotColor, size) => {
       const drawX = (worldX / 32 - pFracX) * mmTileSize;

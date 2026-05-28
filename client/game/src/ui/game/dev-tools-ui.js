@@ -1,4 +1,4 @@
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-314';
+import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
 const HUD_BTN_STYLE = 'width: auto; height: 45px; padding: 0 10px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
 const DEV_BTN_STYLE = 'width: 100%; margin-top: 5px;';
 const HEADER_STYLE = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; margin-bottom: 10px;';
@@ -12,7 +12,6 @@ const SHAPE_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(
 const DIR_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #f39c12; color: #f39c12; display: none; min-width: 40px;';
 const REL_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #9b59b6; color: #9b59b6; display: none; min-width: 40px;';
 const FLUID_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #3498db; color: #3498db; display: none; width: 100%;';
-const GRID_CONTAINER_STYLE = 'display: grid; grid-template-columns: repeat(5, 36px); gap: 8px; justify-content: center; align-content: start; max-height: 168px; overflow-y: scroll; padding-right: 5px;';
 const PLAYER_PANEL_STYLE = 'position: absolute; top: 150px; left: 50px; display: none; width: 800px;';
 const PLAYER_ROW_STYLE = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
 
@@ -58,7 +57,7 @@ export class DevToolsUIManager {
       btn.onclick = onClick;
       btn.onmouseenter = () => btn.style.background = 'rgba(243, 156, 18, 0.2)';
       btn.onmouseleave = () => btn.style.background = 'rgba(0,0,0,0.8)';
-      
+
       const btnPowers = document.getElementById('btn-powers');
       if (btnPowers) sideHud.insertBefore(btn, btnPowers);
       else sideHud.appendChild(btn);
@@ -71,8 +70,8 @@ export class DevToolsUIManager {
         if (npcPanel.style.display === 'flex') this.renderNpcManager();
       }
     });
-    createBtn('btn-hud-dev', '/dev', 'Toggle Dev Tools', () => this.engine.chat.processCommand('/dev'));
-    createBtn('btn-hud-edit', '/edit', 'Toggle Edit Mode', () => this.engine.chat.processCommand('/editmode'));
+    createBtn('btn-hud-dev', '/dev', 'Toggle Dev Tools', () => this.engine.chat.commandHandler.processCommand('/dev'));
+    createBtn('btn-hud-edit', '/edit', 'Toggle Edit Mode', () => this.engine.chat.commandHandler.processCommand('/editmode'));
   }
 
   setupDevTools() {
@@ -125,11 +124,11 @@ export class DevToolsUIManager {
         wrapper.style.gap = '5px';
         wrapper.style.marginTop = '5px';
         wrapper.style.width = '100%';
-        
+
         btnLos.parentNode.insertBefore(wrapper, btnLos);
         btnLos.style.marginTop = '0';
         wrapper.appendChild(btnLos);
-        
+
         const editBtn = document.createElement('button');
         editBtn.id = 'btn-dev-los-edit';
         editBtn.className = 'btn-secondary';
@@ -156,11 +155,11 @@ export class DevToolsUIManager {
         wrapper.style.gap = '5px';
         wrapper.style.marginTop = '5px';
         wrapper.style.width = '100%';
-        
+
         btnDistPlayerMouse.parentNode.insertBefore(wrapper, btnDistPlayerMouse);
         btnDistPlayerMouse.style.marginTop = '0';
         wrapper.appendChild(btnDistPlayerMouse);
-        
+
         const tBtn = document.createElement('button');
         tBtn.id = 'btn-dev-tooltip-toggle';
         tBtn.className = 'btn-secondary';
@@ -191,7 +190,7 @@ export class DevToolsUIManager {
               document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
               document.getElementById('edit-npc-type').value = npc.type || 'idle';
               document.getElementById('edit-npc-dir').value = npc.dir || 'down';
-              
+
               document.getElementById('npc-edit-modal').style.display = 'flex';
             }
           }
@@ -208,7 +207,7 @@ export class DevToolsUIManager {
         document.getElementById('btn-close-npc-manager').onclick = () => npcPanel.style.display = 'none';
 
         document.getElementById('btn-close-npc-edit').onclick = () => document.getElementById('npc-edit-modal').style.display = 'none';
-        
+
         document.getElementById('btn-edit-npc-tp-me').onclick = () => {
           document.getElementById('edit-npc-x').value = Math.round(eng.player.x);
           document.getElementById('edit-npc-y').value = Math.round(eng.player.y);
@@ -278,7 +277,7 @@ export class DevToolsUIManager {
         const el = document.getElementById(id);
         if (el && devPanel) {
           devPanel.appendChild(el);
-          el.style.order = ''; 
+          el.style.order = '';
         }
       });
     }
@@ -333,7 +332,7 @@ export class DevToolsUIManager {
     this.engine.npcs.forEach(npc => {
       const row = document.createElement('div');
       row.style.cssText = NPC_ROW_STYLE;
-      
+
       const type = npc.type || 'idle';
       const group = npc.group || 'Civilian';
       const notes = npc.notes || '';
@@ -367,7 +366,7 @@ export class DevToolsUIManager {
         document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
         document.getElementById('edit-npc-type').value = npc.type || 'idle';
         document.getElementById('edit-npc-dir').value = npc.dir || 'down';
-        
+
         document.getElementById('npc-edit-modal').style.display = 'flex';
       };
 
@@ -395,7 +394,7 @@ export class DevToolsUIManager {
     if (builderPanel) {
       builderPanel.style.width = '260px';
       builderPanel.style.display = eng.editMode ? 'flex' : 'none';
-      
+
       if (!builderPanel.querySelector('.dev-panel-header')) {
         const header = document.createElement('div');
         header.className = 'dev-panel-header';
@@ -406,7 +405,7 @@ export class DevToolsUIManager {
       }
       document.getElementById('btn-close-builder').onclick = () => {
         if (eng.editMode) {
-          eng.chat.processCommand('/editmode');
+          eng.chat.commandHandler.processCommand('/editmode');
         } else {
           builderPanel.style.display = 'none';
         }
@@ -436,7 +435,7 @@ export class DevToolsUIManager {
 
       const toolsGroup = document.createElement('div');
       toolsGroup.style.cssText = 'display: flex; flex-direction: column; gap: 5px; margin-top: 10px;';
-      
+
       const btnToggleHotbar = document.createElement('button');
       btnToggleHotbar.className = 'btn-secondary';
       btnToggleHotbar.style.cssText = 'width: 100%; border-color: #3498db; color: #3498db;';
@@ -451,7 +450,7 @@ export class DevToolsUIManager {
               this.updateBuildingMode();
           }
       };
-      
+
       const btnToggleObjLib = document.createElement('button');
       btnToggleObjLib.className = 'btn-secondary';
       btnToggleObjLib.style.cssText = 'width: 100%; border-color: #9b59b6; color: #9b59b6;';
@@ -466,7 +465,7 @@ export class DevToolsUIManager {
               this.updateBuildingMode();
           }
       };
-      
+
       toolsGroup.appendChild(btnToggleHotbar);
       toolsGroup.appendChild(btnToggleObjLib);
       builderPanel.appendChild(toolsGroup);
@@ -486,10 +485,10 @@ export class DevToolsUIManager {
           const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
           let base = 'cube';
           if (activeSlot && activeSlot.dataset.tex.includes('door')) base = 'door';
-          
+
           eng.editShapeBase = base;
           eng.editShape = base;
-          
+
           const shapeBtn = document.getElementById('build-shape-btn');
           if (shapeBtn) {
               shapeBtn.innerText = 'Shape: ' + base.toUpperCase();
@@ -516,8 +515,8 @@ export class DevToolsUIManager {
       objLibPanel = document.createElement('div');
       objLibPanel.id = 'object-library-panel';
       objLibPanel.className = 'dev-panel';
-      objLibPanel.style.cssText = 'position: absolute; width: 260px; background: rgba(5, 7, 10, 0.9); border: 2px solid #3498db; border-radius: 8px; display: none; flex-direction: column; padding: 10px; z-index: 1000; pointer-events: auto;';
-      
+      objLibPanel.style.cssText = 'position: absolute; width: 260px; background: rgba(5, 7, 10, 0.9); border: 2px solid #3498db; border-radius: 8px; display: none; flex-direction: column; padding: 10px; z-index: 1000; pointer-events: auto; resize: vertical; overflow: hidden;';
+
       if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
           const savedPos = localStorage.getItem('b_objlib_pos');
           if (savedPos) {
@@ -538,8 +537,8 @@ export class DevToolsUIManager {
       objLibPanel.appendChild(header);
 
       const objLibGrid = document.createElement('div');
-      objLibGrid.style.cssText = 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding-top: 5px;';
-      
+      objLibGrid.style.cssText = 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding-top: 5px; overflow-y: scroll; flex-grow: 1; min-height: 168px; padding-right: 5px; align-content: start;';
+
       for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
         const btnObj = document.createElement('button');
         btnObj.id = `btn-obj-${id}`;
@@ -549,7 +548,7 @@ export class DevToolsUIManager {
           <span style="display:none; font-size: 0.9rem; font-weight: bold; color: #fff;">${data.name.substring(0, 2).toUpperCase()}</span>
         `;
         btnObj.style.cssText = 'font-size: 1.2rem; padding: 5px; border-radius: 4px; border: 1px solid #444; background: rgba(0,0,0,0.5); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s;';
-        
+
         btnObj.onmouseenter = (e) => {
           btnObj.style.background = 'rgba(52, 152, 219, 0.3)';
           const builderTooltip = document.getElementById('builder-tooltip');
@@ -586,15 +585,15 @@ export class DevToolsUIManager {
           eng.editShape = id;
           const woodSlot = document.querySelector('.hotbar-slot[data-tex="wood-planks"]');
           if (woodSlot) woodSlot.click();
-          
+
           eng.editShapeBase = id;
           eng.editShape = id;
-          
+
           const shapeBtn = document.getElementById('build-shape-btn');
           const dirBtn = document.getElementById('build-dir-btn');
           const relBtn = document.getElementById('build-rel-btn');
           const flipBtn = document.getElementById('build-flip-btn');
-          
+
           if (shapeBtn) shapeBtn.innerText = `Shape: ${data.name.toUpperCase()}`;
           if (dirBtn) { dirBtn.style.display = 'block'; dirBtn.innerText = eng.editShapeDir.toUpperCase(); }
           if (relBtn) relBtn.style.display = 'none';
@@ -611,7 +610,7 @@ export class DevToolsUIManager {
       } else {
         document.body.appendChild(objLibPanel);
       }
-      
+
       document.getElementById('btn-close-objlib').onclick = () => {
           objLibPanel.style.display = 'none';
           this.updateBuildingMode();
@@ -625,8 +624,8 @@ export class DevToolsUIManager {
     const builderHotbar = document.getElementById('builder-hotbar');
     if (!builderHotbar) return;
 
-      builderHotbar.innerHTML = ''; 
-      
+      builderHotbar.innerHTML = '';
+
       builderHotbar.style.position = 'absolute';
       if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
         const savedPos = localStorage.getItem('b_hotbar_pos');
@@ -654,6 +653,8 @@ export class DevToolsUIManager {
       builderHotbar.style.gap = '10px';
       builderHotbar.style.zIndex = '1000';
       builderHotbar.style.width = '260px';
+      builderHotbar.style.resize = 'vertical';
+      builderHotbar.style.overflow = 'hidden';
 
       const header = document.createElement('div');
       header.className = 'dev-panel-header';
@@ -756,13 +757,13 @@ export class DevToolsUIManager {
     const shapeContainer = document.createElement('div');
     shapeContainer.id = 'build-shape-container';
     shapeContainer.style.cssText = SHAPE_CONTAINER_STYLE;
-      
+
     const shapeBtn = document.createElement('button');
     shapeBtn.id = 'build-shape-btn';
     shapeBtn.className = 'btn-secondary';
     shapeBtn.style.cssText = SHAPE_BTN_STYLE;
     shapeBtn.innerText = 'Shape: CUBE';
-      
+
     const dirBtn = document.createElement('button');
     dirBtn.id = 'build-dir-btn';
     dirBtn.className = 'btn-secondary';
@@ -788,7 +789,7 @@ export class DevToolsUIManager {
     shapeContainer.appendChild(dirBtn);
     shapeContainer.appendChild(flipBtn);
     controlsContainer.appendChild(shapeContainer);
-      
+
     const fluidBtn = document.createElement('button');
     fluidBtn.id = 'build-fluid-btn';
     fluidBtn.className = 'btn-secondary';
@@ -797,7 +798,7 @@ export class DevToolsUIManager {
     controlsContainer.appendChild(fluidBtn);
 
     builderHotbar.appendChild(controlsContainer);
-      
+
     setupTooltip(shapeBtn, 'Cycle Block Shape (Cube, Slab, Ramp, Stair)');
     setupTooltip(dirBtn, 'Cycle Block Direction (N, E, S, W)');
     setupTooltip(relBtn, 'Toggle Player-Relative Rotation');
@@ -808,17 +809,17 @@ export class DevToolsUIManager {
     eng.editShapeRelative = false;
     eng.editShapeFlip = false;
     eng.editFluid = 'still';
-      
+
     fluidBtn.onclick = () => {
         eng.editFluid = eng.editFluid === 'still' ? 'flow' : 'still';
         fluidBtn.innerText = 'Fluid State: ' + eng.editFluid.toUpperCase();
     };
-    
+
     flipBtn.onclick = () => {
       eng.editShapeFlip = !eng.editShapeFlip;
       updateShapeUI();
     };
-      
+
     const updateShapeUI = () => {
       if (eng.editShapeBase === 'none') {
         if (shapeBtn) shapeBtn.innerText = 'Shape: NONE';
@@ -828,7 +829,7 @@ export class DevToolsUIManager {
         return;
       }
       shapeBtn.innerText = 'Shape: ' + eng.editShapeBase.toUpperCase();
-      
+
       if (eng.editShapeBase === 'door') {
         dirBtn.style.display = 'block';
         relBtn.style.display = 'none';
@@ -846,15 +847,15 @@ export class DevToolsUIManager {
         relBtn.style.display = 'none';
         flipBtn.style.display = 'none';
       }
-      
+
       dirBtn.innerText = eng.editShapeDir.toUpperCase();
       relBtn.style.background = eng.editShapeRelative ? 'rgba(155, 89, 182, 0.2)' : 'transparent';
       flipBtn.style.background = eng.editShapeFlip ? 'rgba(46, 204, 113, 0.2)' : 'transparent';
-        
+
       let finalShape = eng.editShapeBase;
       if (finalShape === 'ramp' || finalShape === 'stair' || finalShape === 'door') {
           if (eng.editShapeRelative && finalShape !== 'door') {
-            eng.editShape = finalShape + '_player'; 
+            eng.editShape = finalShape + '_player';
           } else {
             eng.editShape = finalShape + '_' + eng.editShapeDir + (finalShape === 'door' && eng.editShapeFlip ? '_flip' : '');
           }
@@ -871,7 +872,7 @@ export class DevToolsUIManager {
       let bases = ['cube', 'slab', 'ramp', 'stair'];
       if (tex.includes('door')) bases = ['door'];
       else if (FURNITURE_REGISTRY[eng.editShapeBase]) bases = [eng.editShapeBase, 'cube', 'slab', 'ramp', 'stair'];
-      
+
       let nextIdx = bases.indexOf(eng.editShapeBase) + 1;
       if (nextIdx >= bases.length) nextIdx = 0;
       eng.editShapeBase = bases[nextIdx];
@@ -890,16 +891,92 @@ export class DevToolsUIManager {
     };
     updateShapeUI();
 
-    const gridContainer = document.createElement('div');
-    gridContainer.style.cssText = GRID_CONTAINER_STYLE;
+    const tabsContainer = document.createElement('div');
+    tabsContainer.id = 'builder-tabs-container';
+    tabsContainer.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 5px; margin-bottom: 5px;';
 
-    const ensureSlot = (tex, bgStyle, text = '', title = '') => {
-        if (!gridContainer.querySelector(`[data-tex="${tex}"]`)) {
+    const gridsWrapper = document.createElement('div');
+    gridsWrapper.style.cssText = 'position: relative; overflow-y: scroll; flex-grow: 1; min-height: 168px; padding-right: 5px;';
+
+    const categories = {};
+    const addCategory = (id, name) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-secondary';
+      btn.style.cssText = 'padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; border-color: #3498db; color: #3498db; flex-shrink: 0; background: rgba(0,0,0,0.8); border-radius: 4px; cursor: pointer; transition: all 0.2s;';
+      btn.innerText = name;
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display: none; grid-template-columns: repeat(5, 36px); gap: 8px; justify-content: center; align-content: start;';
+      grid.className = 'cat-grid';
+
+      btn.onclick = () => {
+        tabsContainer.querySelectorAll('button').forEach(b => {
+          b.style.background = 'rgba(0,0,0,0.8)';
+          b.style.color = '#3498db';
+        });
+        btn.style.background = 'rgba(52, 152, 219, 0.4)';
+        btn.style.color = '#fff';
+
+        gridsWrapper.querySelectorAll('.cat-grid').forEach(g => g.style.display = 'none');
+        grid.style.display = 'grid';
+      };
+
+      categories[id] = { btn, grid, name };
+
+      tabsContainer.appendChild(btn);
+      gridsWrapper.appendChild(grid);
+    };
+
+    addCategory('tools', 'Tools');
+    addCategory('naturals', 'Naturals');
+    addCategory('wood', 'Wood');
+    addCategory('glass', 'Glass');
+    addCategory('liquid', 'Liquid');
+    addCategory('light', 'Light');
+    addCategory('industrial', 'Industrial');
+
+    const ensureActionSlot = (catId, id, text, title, action) => {
+        const cat = categories[catId];
+        if (!cat) return;
+        const grid = cat.grid;
+
+        const slot = document.createElement('div');
+        slot.className = 'hotbar-action-slot';
+        slot.style.cssText = 'background: rgba(52, 152, 219, 0.2); border-radius: 4px; border: 2px solid #3498db; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #fff; font-size: 1rem; transition: background 0.2s;';
+        slot.innerHTML = text;
+
+        slot.onmouseenter = (e) => {
+            slot.style.background = 'rgba(52, 152, 219, 0.4)';
+            builderTooltip.innerText = title;
+            builderTooltip.style.display = 'block';
+            builderTooltip.style.left = (e.clientX + 15) + 'px';
+            builderTooltip.style.top = (e.clientY + 15) + 'px';
+        };
+        slot.onmousemove = (e) => {
+            builderTooltip.style.left = (e.clientX + 15) + 'px';
+            builderTooltip.style.top = (e.clientY + 15) + 'px';
+        };
+        slot.onmouseleave = () => {
+            slot.style.background = 'rgba(52, 152, 219, 0.2)';
+            builderTooltip.style.display = 'none';
+        };
+
+        slot.onclick = action;
+        grid.appendChild(slot);
+    };
+
+    const ensureSlot = (catId, tex, bgStyle, text = '', title = '') => {
+        const cat = categories[catId];
+        if (!cat) return;
+        const grid = cat.grid;
+
+        if (!grid.querySelector(`[data-tex="${tex}"]`)) {
           const slot = document.createElement('div');
           slot.className = 'hotbar-slot';
           slot.dataset.tex = tex;
           slot.dataset.bg = bgStyle;
           slot.dataset.name = title || tex.toUpperCase();
+          slot.dataset.cat = cat.name;
           slot.style.background = bgStyle;
           slot.style.borderRadius = '4px';
           slot.style.border = '2px solid #444';
@@ -912,12 +989,12 @@ export class DevToolsUIManager {
           slot.innerHTML = text;
           const isBlock = tex !== 'picker' && tex !== 'erase';
           setupTooltip(slot, title || tex.toUpperCase(), isBlock, bgStyle);
-          gridContainer.appendChild(slot);
+          grid.appendChild(slot);
 
           slot.addEventListener('click', () => {
-            gridContainer.querySelectorAll('.hotbar-slot').forEach(s => s.classList.remove('active'));
+            gridsWrapper.querySelectorAll('.hotbar-slot').forEach(s => s.classList.remove('active'));
             slot.classList.add('active');
-            
+
             if (tex.includes('door')) {
                eng.editShapeBase = 'door';
                eng.editShapeFlip = false;
@@ -935,14 +1012,14 @@ export class DevToolsUIManager {
                  updateShapeUI();
                }
             }
-            
+
             if (slot.dataset.tex === 'picker') {
                eng.selectedTiles = [];
                eng.isDraggingSelection = false;
                eng.renderer.needsVoxelUpdate = true;
                return;
             }
-            
+
             const isFluid = ['water', 'lava', 'acid'].includes(slot.dataset.tex);
             fluidBtn.style.display = isFluid ? 'block' : 'none';
             if (isFluid) {
@@ -962,16 +1039,16 @@ export class DevToolsUIManager {
                 else if (pDir.includes('left')) placeShape = base + '_w';
                 else placeShape = base + '_s';
               }
-              
+
               let finalTex = slot.dataset.tex;
               if (finalTex === 'water' && eng.editFluid === 'flow') finalTex = 'water_flow';
-              
+
               if (finalTex.includes('door') && !placeShape.startsWith('door')) {
                 placeShape = 'door_' + eng.editShapeDir + (eng.editShapeFlip ? '_flip' : '');
               } else if (!finalTex.includes('door') && placeShape.startsWith('door')) {
                 placeShape = 'cube';
               }
-              
+
               const updates = [];
               const previousStates = [];
                 eng.selectedTiles.forEach(tile => {
@@ -982,7 +1059,7 @@ export class DevToolsUIManager {
                     eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, null, false);
                     updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: null });
                     for (let i = 0; i < 5; i++) {
-                      eng.particles.push({
+                      eng.spawnParticle({
                         x: tile.x, y: tile.y, z: tile.z,
                         vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, vz: (Math.random() - 0.5) * 100,
                         life: 0.3 + Math.random() * 0.3, maxLife: 0.6, color: 'rgba(200, 200, 200, 0.7)', size: 1 + Math.random()
@@ -992,7 +1069,7 @@ export class DevToolsUIManager {
                     eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir }, false);
                     updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir } });
                     for (let i = 0; i < 3; i++) {
-                      eng.particles.push({
+                      eng.spawnParticle({
                         x: tile.x + (Math.random() - 0.5) * 32, y: tile.y + (Math.random() - 0.5) * 32, z: tile.z + (Math.random() - 0.5) * 32,
                         life: 0.2 + Math.random() * 0.2, maxLife: 0.4, color: eng.buildColor, size: 1 + Math.random()
                       });
@@ -1014,32 +1091,57 @@ export class DevToolsUIManager {
         }
     };
 
-      ensureSlot('picker', 'rgba(155, 89, 182, 0.5)', '🔍', 'Picker Tool');
-      ensureSlot('erase', 'rgba(231, 76, 60, 0.5)', 'X', 'Erase Tool');
+      ensureSlot('tools', 'picker', 'rgba(155, 89, 182, 0.5)', '🔍', 'Picker Tool');
+      ensureSlot('tools', 'erase', 'rgba(231, 76, 60, 0.5)', 'X', 'Erase Tool');
+      ensureActionSlot('tools', 'undo', '↶', 'Undo (Ctrl+Z)', () => { if (eng.undo) eng.undo(); });
+      ensureActionSlot('tools', 'redo', '↷', 'Redo (Ctrl+Y)', () => { if (eng.redo) eng.redo(); });
 
-      ensureSlot('grass', '#51852E', '', 'Grass');
-      ensureSlot('dirt', 'url("assets/tiles/base/all-facing/dirt.png") center/cover', '', 'Dirt');
-      ensureSlot('stone', 'url("assets/tiles/base/all-facing/stone.png") center/cover', '', 'Stone');
-      ensureSlot('stone-bricks', 'url("assets/tiles/base/all-facing/stone-bricks1.png") center/cover', '', 'Stone Bricks');
-      ensureSlot('mud', 'url("assets/tiles/base/all-facing/packed_mud1.png") center/cover', '', 'Mud');
-      ensureSlot('ice', 'url("assets/tiles/base/all-facing/ice.png") center/cover', '', 'Ice');
-      ensureSlot('glass', 'url("assets/tiles/base/all-facing/glass.png") center/cover', '', 'Glass');
-      ensureSlot('glass-stained', 'url("assets/tiles/base/all-facing/glass-stained.png") center/cover', '', 'Stained Glass');
-      
+      ensureSlot('naturals', 'grass', '#51852E', '', 'Grass');
+      ensureSlot('naturals', 'dirt', 'url("assets/tiles/base/all-facing/dirt.png") center/cover', '', 'Dirt');
+      ensureSlot('naturals', 'stone', 'url("assets/tiles/base/all-facing/stone.png") center/cover', '', 'Stone');
+      ensureSlot('naturals', 'stone-bricks', 'url("assets/tiles/base/all-facing/stone-bricks1.png") center/cover', '', 'Stone Bricks');
+      ensureSlot('naturals', 'cobblestone', 'url("assets/tiles/base/all-facing/cobblestone.png") center/cover', '', 'Cobblestone');
+      ensureSlot('naturals', 'cobbled_deepslate', 'url("assets/tiles/base/all-facing/cobbled_deepslate.png") center/cover', '', 'Cobbled Deepslate');
+      ensureSlot('naturals', 'gravel', 'url("assets/tiles/base/all-facing/gravel.png") center/cover', '', 'Gravel');
+      ensureSlot('naturals', 'sand', 'url("assets/tiles/base/all-facing/sand.png") center/cover', '', 'Sand');
+      ensureSlot('naturals', 'clay', 'url("assets/tiles/base/all-facing/clay.png") center/cover', '', 'Clay');
+      ensureSlot('naturals', 'mud', 'url("assets/tiles/base/all-facing/packed_mud1.png") center/cover', '', 'Mud');
+      ensureSlot('naturals', 'ice', 'url("assets/tiles/base/all-facing/ice.png") center/cover', '', 'Ice');
+
+      ensureSlot('glass', 'glass', 'url("assets/tiles/base/all-facing/glass.png") center/cover', '', 'Glass');
+      ensureSlot('glass', 'glass-stained', 'url("assets/tiles/base/all-facing/glass-stained.png") center/cover', '', 'Stained Glass');
+      ensureSlot('glass', 'clear_stained_glass_edges', 'url("assets/tiles/base/all-facing/clear_stained_glass_edges.png") center/cover', '', 'Clear Stained Glass (Edges)');
+      ensureSlot('glass', 'clear_stained_glass_edgeless', 'url("assets/tiles/base/all-facing/clear_stained_glass_edgeless.png") center/cover', '', 'Clear Stained Glass (Edgeless)');
+
       const cb = '?v=' + Date.now();
-      ensureSlot('water', `url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Water');
-      ensureSlot('lava', `linear-gradient(rgba(255, 93, 0, 0.6), rgba(255, 93, 0, 0.6)), url("assets/tiles/base/fluid/lava_still.png${cb}") center/cover`, '', 'Lava');
-      ensureSlot('acid', `linear-gradient(rgba(46, 204, 113, 0.6), rgba(46, 204, 113, 0.6)), url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Acid');
-      
-      ensureSlot('wood-planks', '#8B5A2B url("assets/tiles/base/all-facing/wood-planks.png") center/cover', '', 'Wood Planks');
-      ensureSlot('wood-stripped', '#A0522D url("assets/tiles/base/all-facing/wood-stripped.png") center/cover', '', 'Stripped Wood');
-      
-      ensureSlot('wood-door-bottom', '#6b4c3a url("assets/tiles/base/interactable/wood_door-bottom.png") center/cover', '', 'Wood Door');
+      ensureSlot('liquid', 'water', `url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Water');
+      ensureSlot('liquid', 'lava', `linear-gradient(rgba(255, 93, 0, 0.6), rgba(255, 93, 0, 0.6)), url("assets/tiles/base/fluid/lava_still.png${cb}") center/cover`, '', 'Lava');
+      ensureSlot('liquid', 'acid', `linear-gradient(rgba(46, 204, 113, 0.6), rgba(46, 204, 113, 0.6)), url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Acid');
 
-      builderHotbar.appendChild(gridContainer);
+      ensureSlot('light', 'light_block', 'rgba(241, 196, 15, 0.4)', '', 'Light Block (Invisible)');
+      ensureSlot('light', 'block-lamp-on-0', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/8 Spread)');
+      ensureSlot('light', 'block-lamp-on-1', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/4 Spread)');
+      ensureSlot('light', 'block-lamp-on-2', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/2 Spread)');
+      ensureSlot('light', 'block-lamp-on-3', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (3/4 Spread)');
+      ensureSlot('light', 'block-lamp-on', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (Max Spread)');
+
+      ensureSlot('wood', 'wood-planks', '#8B5A2B url("assets/tiles/base/all-facing/wood-planks.png") center/cover', '', 'Wood Planks');
+      ensureSlot('wood', 'wood-stripped', '#A0522D url("assets/tiles/base/all-facing/wood-stripped.png") center/cover', '', 'Stripped Wood');
+      ensureSlot('wood', 'bark-log', '#5c4033 url("assets/tiles/base/all-facing/bark-log.png") center/cover', '', 'Bark Log');
+      ensureSlot('wood', 'bark-birch', '#d4b79b url("assets/tiles/base/all-facing/bark-birch.png") center/cover', '', 'Birch Bark');
+      ensureSlot('wood', 'wood-door-bottom', '#6b4c3a url("assets/tiles/base/interactable/wood_door-bottom.png") center/cover', '', 'Wood Door');
+
+      ensureSlot('industrial', 'concrete', 'url("assets/tiles/base/all-facing/concrete.png") center/cover', '', 'Concrete');
+      ensureSlot('industrial', 'paint', 'url("assets/tiles/base/side/rough-paint.png") center/cover', '', 'Paint');
+      ensureSlot('industrial', 'carpet', 'url("assets/tiles/base/all-facing/carpet.png") center/cover', '', 'Carpet');
+      ensureSlot('industrial', 'arcade-carpet', 'url("assets/tiles/base/all-facing/arcade-carpet.png") center/cover', '', 'Arcade Carpet');
+
+      builderHotbar.appendChild(tabsContainer);
+      builderHotbar.appendChild(gridsWrapper);
       this.ui.makeDraggable('builder-hotbar', '.dev-panel-header');
 
-      const firstSlot = gridContainer.querySelector('.hotbar-slot[data-tex="stone"]');
+      if (categories['naturals']) categories['naturals'].btn.click();
+      const firstSlot = gridsWrapper.querySelector('.hotbar-slot[data-tex="stone"]');
       if (firstSlot) firstSlot.click();
   }
 
@@ -1082,7 +1184,7 @@ export class DevToolsUIManager {
 
       const row = document.createElement('div');
       row.style.cssText = PLAYER_ROW_STYLE;
-      
+
       row.innerHTML = `
           <div style="flex: 1.2; font-weight: bold; color: ${isSelf ? '#2ecc71' : '#3498db'};" title="${name}">${name} (Lv.${level || 1})</div>
           <div style="flex: 1.5; display: flex; align-items: center; gap: 5px;">
@@ -1097,7 +1199,7 @@ export class DevToolsUIManager {
       `;
 
       row.querySelector('.btn-tp').onclick = () => {
-        this.engine.chat.processCommand(`/tp ${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.z || 0)}`);
+        this.engine.chat.commandHandler.processCommand(`/tp ${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.z || 0)}`);
       };
 
       row.querySelector('.btn-edit').onclick = () => {
@@ -1128,7 +1230,7 @@ export class DevToolsUIManager {
     colorPicker.style.border = '1px solid #333';
     colorPicker.style.borderRadius = '4px';
     colorPicker.style.cursor = 'pointer';
-    
+
     colorPicker.addEventListener('input', (e) => {
       eng.buildColor = e.target.value;
       document.querySelectorAll('.shared-color-picker').forEach(cp => {
@@ -1143,10 +1245,10 @@ export class DevToolsUIManager {
     presetsHeader.style.cssText = 'color: #aaa; font-size: 0.65rem; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;';
     presetsHeader.innerText = 'Color Presets';
     presetsWrapper.appendChild(presetsHeader);
-    
+
     const presetsContainer = document.createElement('div');
     presetsContainer.style.cssText = 'display: grid; grid-template-columns: repeat(8, 22px); gap: 4px; justify-content: center;';
-    
+
     const presets = [
       { name: 'Default', hex: '#ffffff' }, { name: 'Birch', hex: '#e1d4b6' }, { name: 'Pine', hex: '#d9c593' }, { name: 'Bamboo', hex: '#d5d48c' },
       { name: 'Alder', hex: '#d4b79b' }, { name: 'Ash', hex: '#c2bba8' }, { name: 'Driftwood', hex: '#8c8c83' }, { name: 'Maple', hex: '#c58d55' },
@@ -1161,7 +1263,7 @@ export class DevToolsUIManager {
       pBtn.style.cssText = `width: 22px; height: 22px; background: ${p.hex}; border: 1px solid #000; border-radius: 2px; cursor: pointer; padding: 0; box-sizing: border-box;`;
       pBtn.title = p.name;
       pBtn.onclick = () => {
-          eng.buildColor = p.hex; 
+          eng.buildColor = p.hex;
           document.querySelectorAll('.shared-color-picker').forEach(cp => cp.value = p.hex);
       };
       presetsContainer.appendChild(pBtn);

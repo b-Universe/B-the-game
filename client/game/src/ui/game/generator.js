@@ -48,31 +48,64 @@ export class TerrainGenerator {
     return isNaN(elevation) ? 0 : elevation;
   }
 
-  generateChunk(cx, cy, chunkSize) {
-    const voxels = new Map();
+  generateChunk(cx, cy, chunkSize, voxels = new Map()) {
 
-    for (let x = 0; x < chunkSize; x++) {
-      for (let y = 0; y < chunkSize; y++) {
+    // 1. Precompute noise and elevation data to avoid massive redundant recalculations.
+    // A standard chunk would otherwise calculate noise 5 times per tile (self + 4 neighbors).
+    const stride = chunkSize + 2;
+    if (!this.elevCache || this.elevCache.length < stride * stride) {
+      this.elevCache = new Int8Array(stride * stride);
+      this.noiseCache = new Float32Array(stride * stride);
+      this.dirtCache = new Float32Array(chunkSize * chunkSize);
+    }
+
+    const elevCache = this.elevCache;
+    const noiseCache = this.noiseCache;
+    const dirtCache = this.dirtCache;
+
+    for (let y = -1; y <= chunkSize; y++) {
+      for (let x = -1; x <= chunkSize; x++) {
         const worldX = (cx * chunkSize) + x;
         const worldY = (cy * chunkSize) + y;
 
-        const elevation = this.getElevation(worldX, worldY);
-
         const noiseVal = this.fractalNoise(worldX * 0.05, worldY * 0.05, 4);
+        let elevation = Math.floor(noiseVal * 3);
+        if (isNaN(elevation)) elevation = 0;
+
+        const idx = (y + 1) * stride + (x + 1);
+        elevCache[idx] = elevation;
+        noiseCache[idx] = noiseVal;
+
+        // Dirt noise is only needed for the actual chunk bounds, not the borders
+        if (x >= 0 && x < chunkSize && y >= 0 && y < chunkSize) {
+          dirtCache[y * chunkSize + x] = this.fractalNoise(worldX * 0.08, worldY * 0.08, 2);
+        }
+      }
+    }
+
+    // 2. Build the voxels using the cached arrays
+    for (let x = 0; x < chunkSize; x++) {
+      for (let y = 0; y < chunkSize; y++) {
+        const cacheIdx = (y + 1) * stride + (x + 1);
+        const elevation = elevCache[cacheIdx];
+        const noiseVal = noiseCache[cacheIdx];
+        const worldX = (cx * chunkSize) + x;
+        const worldY = (cy * chunkSize) + y;
+
         const shift = Math.floor((noiseVal - 0.5) * 30);
         const r = Math.max(0, Math.min(255, 81 + shift));
         const g = Math.max(0, Math.min(255, 133 + shift));
         const b = Math.max(0, Math.min(255, 46 + shift));
         let colorHex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
         if (colorHex.includes('NaN')) colorHex = '#51852E';
-        
-        const dirtNoise = this.fractalNoise(worldX * 0.08, worldY * 0.08, 2);
-        const isDirt = dirtNoise > 0.65;
+
+        const innerIdx = y * chunkSize + x;
+        const isDirt = dirtCache[innerIdx] > 0.65;
         const surfaceTex = isDirt ? 'dirt' : 'grass';
         const surfaceColor = isDirt ? '#ffffff' : colorHex;
 
         for (let vz = -3; vz <= elevation; vz++) {
-          const voxelKey = `${x}_${y}_${vz}`;
+          const voxelKey = `${worldX}_${worldY}_${vz}`;
           let tex = 'stone';
           let color = '#ffffff';
 
@@ -81,17 +114,20 @@ export class TerrainGenerator {
             color = surfaceColor;
           }
 
-          voxels.set(voxelKey, {
-            tex: tex,
-            color: color,
-            shape: 'cube'
-          });
+          if (!voxels.has(voxelKey)) {
+            voxels.set(voxelKey, {
+              tex: tex,
+              color: color,
+              shape: 'cube'
+            });
+          }
         }
 
-        const elevN = this.getElevation(worldX, worldY - 1);
-        const elevS = this.getElevation(worldX, worldY + 1);
-        const elevE = this.getElevation(worldX + 1, worldY);
-        const elevW = this.getElevation(worldX - 1, worldY);
+        // Check cached neighbors for ramp placement instead of recalculating noise
+        const elevN = elevCache[y * stride + (x + 1)];       // y - 1
+        const elevS = elevCache[(y + 2) * stride + (x + 1)]; // y + 1
+        const elevE = elevCache[(y + 1) * stride + (x + 2)]; // x + 1
+        const elevW = elevCache[(y + 1) * stride + x];       // x - 1
 
         let rampShape = null;
         if (elevN === elevation + 1) rampShape = 'ramp_n';
@@ -100,11 +136,14 @@ export class TerrainGenerator {
         else if (elevW === elevation + 1) rampShape = 'ramp_w';
 
         if (rampShape) {
-           voxels.set(`${x}_${y}_${elevation + 1}`, {
-             tex: surfaceTex,
-             color: surfaceColor,
-             shape: rampShape
-           });
+           const rampKey = `${worldX}_${worldY}_${elevation + 1}`;
+           if (!voxels.has(rampKey)) {
+             voxels.set(rampKey, {
+               tex: surfaceTex,
+               color: surfaceColor,
+               shape: rampShape
+             });
+           }
         }
       }
     }

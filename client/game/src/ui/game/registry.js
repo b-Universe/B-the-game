@@ -96,6 +96,76 @@ export const BlockRegistry = {
     frametime: 100,
     faces: { top: [3, 2], bottom: [3, 2], sides: [3, 2] }
   },
+  45: {
+    name: 'block-lamp-on',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [4, 0], bottom: [4, 0], sides: [4, 0] }
+  },
+  46: {
+    name: 'block-lamp-on-3',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [4, 0], bottom: [4, 0], sides: [4, 0] }
+  },
+  47: {
+    name: 'block-lamp-on-2',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [4, 0], bottom: [4, 0], sides: [4, 0] }
+  },
+  48: {
+    name: 'block-lamp-on-1',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [4, 0], bottom: [4, 0], sides: [4, 0] }
+  },
+  49: {
+    name: 'block-lamp-on-0',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [4, 0], bottom: [4, 0], sides: [4, 0] }
+  },
+  50: {
+    name: 'light_block',
+    type: 'block',
+    shape: 'cube',
+    solid: false,
+    faces: { top: [0, 1], bottom: [0, 1], sides: [0, 1] }
+  },
+  51: {
+    name: 'arcade-carpet',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [2, 5], bottom: [2, 5], sides: [2, 5] }
+  },
+  52: {
+    name: 'carpet',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [3, 5], bottom: [3, 5], sides: [3, 5] }
+  },
+  53: {
+    name: 'concrete',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [4, 5], bottom: [4, 5], sides: [4, 5] }
+  },
+  54: {
+    name: 'paint',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [5, 5], bottom: [5, 5], sides: [5, 5] }
+  },
   105: {
     name: 'dandelion',
     type: 'decor',
@@ -115,90 +185,15 @@ export const FURNITURE_REGISTRY = {
   'wood-table-2x2': { name: '2x2 Wood Table' },
   'wood-table-3x3': { name: '3x3 Wood Table' },
   'plant-pot-small': { name: 'Small Plant Pot' },
-  'plant-pot-medium': { name: 'Medium Plant Pot' }
+  'plant-pot-medium': { name: 'Medium Plant Pot' },
+  'neon-sign-1': { name: 'Neon Sign 1' },
+  'neon-sign-2': { name: 'Neon Sign 2' }
 };
 
-export const POWERSET_REGISTRY = {
-  'inherited': {
-    name: 'Inherited',
-    description: 'Basic abilities innate to all entities.',
-    powers: ['brawl', 'throw_airplane']
-  },
-  'developer': {
-    name: 'Developer',
-    description: 'God-like tools for world shaping and testing.',
-    powers: ['dev_noclip', 'dev_heal', 'dev_smite', 'fly', 'super_jump', 'super_speed']
-  },
-  'travel': {
-    name: 'Travel',
-    description: 'Powers that manipulate your movement and traversal.',
-    powers: ['fly', 'super_jump', 'super_speed', 'teleport']
-  }
-};
+export const POWERSET_REGISTRY = {};
 
 export const POWER_REGISTRY = {
-  'brawl': {
-    name: 'Brawl',
-    type: 'melee',
-    energyCost: 20,
-    damage: 25,
-    critDamage: 35,
-    range: 200,
-    cooldown: 1.0,
-    description: 'A standard melee attack.'
-  },
-  'throw_airplane': {
-    name: 'Throw Airplane',
-    type: 'ranged',
-    energyCost: 15,
-    damage: 1,
-    critDamage: 3,
-    range: 800,
-    cooldown: 2.5,
-    description: 'Throw a paper airplane at your enemies.'
-  },
-  'dev_noclip': {
-    name: 'Noclip',
-    type: 'utility',
-    energyCost: 0,
-    description: 'Toggle noclip mode.'
-  },
-  'dev_heal': {
-    name: 'Full Heal',
-    type: 'utility',
-    energyCost: 0,
-    description: 'Fully restore health and energy.'
-  },
-  'dev_smite': {
-    name: 'Smite',
-    type: 'ranged',
-    energyCost: 0,
-    damage: 9999,
-    range: 2000,
-    description: 'Instantly destroy target.'
-  },
-  'fly': {
-    name: 'Fly',
-    type: 'utility',
-    energyCost: 0,
-    description: 'Take to the skies and glide. Hold Space to ascend.'
-  },
-  'super_jump': {
-    name: 'Super Jump',
-    type: 'utility',
-    energyCost: 0,
-    description: 'Leap incredible heights.'
-  },
-  'super_speed': {
-    name: 'Super Speed',
-    type: 'utility',
-    energyCost: 0,
-    description: 'Run at incredible speeds. Builds up over time.'
-  },
-  'teleport': {
-    name: 'Teleport',
-    type: 'utility',
-    energyCost: 30,
-    description: 'Click to select a destination, then warp there after a brief delay.'
-  }
+  'flashlight': { name: 'Flashlight', type: 'toggle', description: 'Illuminate your surroundings.' },
+  'teleport': { name: 'Teleport', description: 'Teleport to a target location.', stats: { energyCost: 30, rechargeRate: 2.0 } }
 };
+export const EFFECT_REGISTRY = {};

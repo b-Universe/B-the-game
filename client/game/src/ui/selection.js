@@ -51,12 +51,9 @@ export function initSelection(accountData) {
       listContainer.appendChild(slot);
     });
     
-    btnPlay.disabled = true;
-    btnPlay.style.opacity = "0.5";
-    if (btnDelete) {
-      btnDelete.disabled = true;
-      btnDelete.style.opacity = "0.5";
-    }
+    // Auto-select the first character slot
+    const firstSlot = listContainer.querySelector('.char-slot');
+    if (firstSlot) firstSlot.click();
   }
 
   selectionScreen.onclick = (e) => {

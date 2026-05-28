@@ -27,6 +27,54 @@ export const BLOCK_REGISTRY = {
     isFluid: false,
     slipperiness: 0.95 // Momentum retention factor
   },
+  'block-lamp-on': {
+    isSolid: true,
+    isFluid: false
+  },
+  'clear_stained_glass_edges': {
+    isSolid: true,
+    isFluid: false
+  },
+  'clear_stained_glass_edgeless': {
+    isSolid: true,
+    isFluid: false
+  },
+  'block-lamp-on-3': {
+    isSolid: true,
+    isFluid: false
+  },
+  'block-lamp-on-2': {
+    isSolid: true,
+    isFluid: false
+  },
+  'block-lamp-on-1': {
+    isSolid: true,
+    isFluid: false
+  },
+  'block-lamp-on-0': {
+    isSolid: true,
+    isFluid: false
+  },
+  'light_block': {
+    isSolid: false,
+    isFluid: false
+  },
+  'arcade-carpet': {
+    isSolid: true,
+    isFluid: false
+  },
+  'carpet': {
+    isSolid: true,
+    isFluid: false
+  },
+  'concrete': {
+    isSolid: true,
+    isFluid: false
+  },
+  'paint': {
+    isSolid: true,
+    isFluid: false
+  },
   'air': {
     isSolid: false,
     isFluid: false

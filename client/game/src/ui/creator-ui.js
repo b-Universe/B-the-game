@@ -1,4 +1,4 @@
-import { HERITAGE_MAP } from './heritage-data.js?v=new-engine-311';
+import { HERITAGE_MAP } from './heritage-data.js?v=new-engine-330';
 
 export function initHeritageUI() {
   const classList = document.getElementById('class-list');

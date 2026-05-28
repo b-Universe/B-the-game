@@ -13,7 +13,7 @@ export class MapOverlayManager {
       this.active = !this.active;
       const chatInput = document.getElementById('chat-input');
       if (chatInput) chatInput.blur();
-      
+
       const controls = document.getElementById('map-controls');
       if (controls) {
         controls.style.display = this.active ? 'flex' : 'none';
@@ -67,7 +67,7 @@ export class MapOverlayManager {
 
       const scaleBar = document.createElement('div');
       scaleBar.style.cssText = 'display: flex; flex-direction: column; align-items: flex-end; color: #f39c12; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; font-size: 0.85rem; font-weight: bold;';
-      
+
       const scaleLabel = document.createElement('span');
       scaleLabel.id = 'map-scale-label';
       scaleLabel.innerText = '100 ft';
@@ -84,11 +84,15 @@ export class MapOverlayManager {
       controls.appendChild(zoomGroup);
       controls.appendChild(scaleBar);
       gameScreen.appendChild(controls);
+
+      if (this.engine.clientSettings && this.engine.clientSettings.uiScale !== undefined) {
+        controls.style.zoom = this.engine.clientSettings.uiScale;
+      }
     }
 
     this.keydownListener = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.repeat) return; 
+      if (e.repeat) return;
       if (e.key.toLowerCase() === 'm') {
         toggleMap();
       }
@@ -98,6 +102,12 @@ export class MapOverlayManager {
     this.wheelListener = (e) => {
       if (!this.active) return;
       if (e.target !== this.engine.canvas) return;
+
+      const box = this.engine.getMinimapBox();
+      if (e.clientX >= box.x && e.clientX <= box.x + box.size && e.clientY >= box.y && e.clientY <= box.y + box.size) {
+        return; // Allow the 3D camera to zoom instead
+      }
+
       if (e.deltaY < 0) {
         this.zoom = Math.min(this.zoom + 1, 16);
       } else {
@@ -114,13 +124,13 @@ export class MapOverlayManager {
     if (line && label) {
       let tiles = 20;
       let feet = 100;
-      
+
       if (this.zoom >= 10) {
         tiles = 10; feet = 50;
       } else if (this.zoom <= 2) {
         tiles = 40; feet = 200;
       }
-      
+
       line.style.width = `${tiles * this.zoom}px`;
       label.innerText = `${feet} ft`;
     }
@@ -137,7 +147,7 @@ export class MapOverlayManager {
 
   draw(ctx) {
     if (!this.active || !this.engine.mapManager) return;
-    
+
     const eng = this.engine;
     const canvasW = eng.canvas.width;
     const canvasH = eng.canvas.height;
@@ -145,11 +155,21 @@ export class MapOverlayManager {
 
     ctx.save();
 
+    const box = this.engine.getMinimapBox();
+    const mmSize = box.size;
+    const mmX = box.x;
+    const mmY = box.y;
+
+    ctx.beginPath();
+    ctx.rect(0, 0, canvasW, canvasH);
+    ctx.rect(mmX, mmY, mmSize, mmSize);
+    ctx.clip('evenodd');
+
     ctx.fillStyle = 'rgba(5, 7, 10, 0.95)';
     ctx.fillRect(0, 0, canvasW, canvasH);
 
     ctx.translate(canvasW / 2, canvasH / 2);
-    
+
     const camAngle = eng.renderer ? eng.renderer.cameraAngle : 0;
     const rotationAngle = eng.clientSettings.rotateMinimap ? camAngle : 0;
     ctx.scale(-1, 1);
@@ -166,38 +186,77 @@ export class MapOverlayManager {
     const tilesY = Math.ceil((canvasH / mmTileSize) / 2) + 1;
     const maxRadius = Math.max(tilesX, tilesY);
 
-    for (let gy = pGy - maxRadius; gy <= pGy + maxRadius; gy++) {
-      for (let gx = pGx - maxRadius; gx <= pGx + maxRadius; gx++) {
-        const drawX = (gx - pGx) * mmTileSize - offsetX - (mmTileSize / 2);
-        const drawY = (gy - pGy) * mmTileSize - offsetY - (mmTileSize / 2);
-      
-        if (drawX < -canvasW * 1.5 || drawX > canvasW * 1.5 || drawY < -canvasH * 1.5 || drawY > canvasH * 1.5) continue;
+    if (eng.mapManager.cacheBounds) {
+      const bounds = eng.mapManager.cacheBounds;
+      const drawWidth = eng.mapManager.mapCacheCanvas.width * mmTileSize;
+      const drawHeight = eng.mapManager.mapCacheCanvas.height * mmTileSize;
+      const drawOffsetX = (bounds.minX - pFracX) * mmTileSize;
+      const drawOffsetY = (bounds.minY - pFracY) * mmTileSize;
 
-        let color = null;
-        for (let z = 15; z >= -4; z--) {
-          const v = eng.mapManager.getVoxelAt(gx * 32, gy * 32, z * 32);
-          if (v) {
-            color = v.color || (v.tex === 'grass' ? '#51852E' : '#ffffff');
-            break;
-          }
-        }
-
-        if (color) {
-          ctx.fillStyle = color;
-          ctx.fillRect(drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
-        }
-      }
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(eng.mapManager.mapCacheCanvas, drawOffsetX, drawOffsetY, drawWidth, drawHeight);
     }
+
+    if (eng.targetingPower && eng.mouseWorldPos) {
+      const tDrawX = (eng.mouseWorldPos.x / 32 - pFracX) * mmTileSize;
+      const tDrawY = (eng.mouseWorldPos.y / 32 - pFracY) * mmTileSize;
+
+      ctx.save();
+      ctx.strokeStyle = '#9b59b6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 12]);
+      ctx.lineDashOffset = -(performance.now() / 20);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(tDrawX, tDrawY);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(tDrawX - 8, tDrawY); ctx.lineTo(tDrawX + 8, tDrawY);
+      ctx.moveTo(tDrawX, tDrawY - 8); ctx.lineTo(tDrawX, tDrawY + 8);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(tDrawX, tDrawY, 6 + Math.sin(performance.now() / 100) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    eng.waypoints.forEach((wp, index) => {
+      const wDrawX = (wp.x / 32 - pFracX) * mmTileSize;
+      const wDrawY = (wp.y / 32 - pFracY) * mmTileSize;
+
+      if (wDrawX < -canvasW || wDrawX > canvasW || wDrawY < -canvasH || wDrawY > canvasH) return;
+
+      ctx.save();
+      ctx.translate(wDrawX, wDrawY);
+
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(4, mmTileSize/2), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.rotate(-(45 - rotationAngle) * Math.PI / 180);
+      ctx.scale(-1, 1);
+      ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;
+      const textOffset = Math.max(12, mmTileSize * 1.5);
+      ctx.strokeText(`WP ${index + 1}`, 0, -textOffset); ctx.fillText(`WP ${index + 1}`, 0, -textOffset);
+      ctx.restore();
+    });
 
     const drawMapAvatar = (entity, isPlayer = false) => {
       const drawX = (entity.x / 32 - pFracX) * mmTileSize;
       const drawY = (entity.y / 32 - pFracY) * mmTileSize;
-      
+
       if (drawX < -canvasW || drawX > canvasW || drawY < -canvasH || drawY > canvasH) return;
 
       ctx.save();
       ctx.translate(drawX, drawY);
-      
+
       ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
       ctx.beginPath();
       ctx.arc(0, 0, Math.max(4, mmTileSize/2), 0, Math.PI * 2);
@@ -234,7 +293,7 @@ export class MapOverlayManager {
       ctx.fillRect(-15, textOffset + 6, 30, 4);
       ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
       ctx.fillRect(-15, textOffset + 6, 30 * hpPercent, 4);
-      
+
       if (entity.energy !== undefined && entity.maxEnergy) {
          const epPercent = Math.max(0, entity.energy / entity.maxEnergy);
          ctx.fillStyle = '#0984e3';
@@ -253,16 +312,13 @@ export class MapOverlayManager {
 
   drawBorder(ctx) {
     if (!this.active) return;
-    const canvasW = this.engine.canvas.width;
-    const mmSize = 250;
-    const pipX = canvasW - mmSize / 2 - 20;
-    const pipY = 70 + mmSize / 2;
-    const pipRadius = mmSize / 2;
+    const box = this.engine.getMinimapBox();
+    const mmSize = box.size;
+    const mmX = box.x;
+    const mmY = box.y;
 
-    ctx.beginPath();
-    ctx.arc(pipX, pipY, pipRadius, 0, Math.PI * 2);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(243, 156, 18, 0.8)';
-    ctx.stroke();
+    ctx.strokeStyle = '#00d2ff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(mmX, mmY, mmSize, mmSize);
   }
 }

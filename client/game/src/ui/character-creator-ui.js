@@ -99,21 +99,21 @@ export class CharacterCreatorUIManager {
     const updateAffinityLocks = () => {
       const currentClassItem = document.querySelector('#class-list .active');
       if (!currentClassItem) return;
-      
+
       const classKey = currentClassItem.dataset.class;
       const data = heritageData[classKey];
       if (!data) return;
 
       const integrityVal = parseInt(integrityScrollbar.value);
       const affinityElements = document.querySelectorAll('#affinity-list .list-item');
-      
+
       let hasValidActive = false;
       let firstValidItem = null;
 
       affinityElements.forEach(item => {
         const affinityId = item.dataset.id;
         const affinityConfig = data.affinities.find(a => a.id === affinityId);
-        
+
         if (affinityConfig && affinityConfig.check(integrityVal)) {
           item.classList.remove('locked');
           if (!firstValidItem) firstValidItem = item;
@@ -174,7 +174,7 @@ export class CharacterCreatorUIManager {
               p.style.animation = 'none';
             }
           });
-          
+
           const activeArchItem = document.querySelector('#archetype-list .active');
           if (activeArchItem && typeof archetypesData !== 'undefined') {
             const arch = archetypesData.find(a => a.id === activeArchItem.dataset.id);
@@ -207,8 +207,8 @@ export class CharacterCreatorUIManager {
     if (heightSlider) {
         heightSlider.addEventListener('input', () => {
         const scaleY = parseFloat(heightSlider.value);
-        
-        const widthRatio = 0.4; 
+
+        const widthRatio = 0.4;
         const scaleX = 1.0 + ((scaleY - 1.0) * widthRatio);
 
         playerPreviews.forEach(p => {
@@ -222,7 +222,7 @@ export class CharacterCreatorUIManager {
         const inches = totalInches % 12;
         heightDisplay.innerText = `${feet}'${inches}"`;
         });
-        
+
         heightSlider.dispatchEvent(new Event('input'));
     }
 
@@ -297,7 +297,7 @@ export class CharacterCreatorUIManager {
 
         updateAffinityLocks();
         updateIntegrityWarning(); // Update warning when integrity changes
-        
+
         const activeArchItem = document.querySelector('#archetype-list .active');
         if (activeArchItem && typeof archetypesData !== 'undefined') {
           const arch = archetypesData.find(a => a.id === activeArchItem.dataset.id);
@@ -330,7 +330,7 @@ export class CharacterCreatorUIManager {
       },
       ironman: {
         description: 'Reject the collective to maximize your Sovereign potential. You become the raid boss of your own story, gaining massive stat multipliers but losing strength when other players interfere with your proximity. You can be affected by other players but cannot aid or trade with others.',
-        splash: 'assets/images/ui/creator/splashes/style_ironman.png',
+        splash: 'assets/images/ui/creator/splashes/standard.png',
         skills: [
           { name: 'Tactical Advantage', desc: 'High base defense and damage that increases when enemies surround you.' },
           { name: 'Self Sustain', desc: 'High Max HP and Energy; regenerative abilities are most effective when solo.' },
@@ -344,7 +344,7 @@ export class CharacterCreatorUIManager {
       },
       neural: {
         description: 'The Neural or Pet type players - operators controlling multiple entities like a hivemind pathogen or a coordinated robotic network. You multiply your efficiency through shared systems, mirroring the command structure of The Galactic Federation of B.',
-        splash: 'assets/images/ui/creator/splashes/style_neural.png',
+        splash: 'assets/images/ui/creator/splashes/standard.png',
         skills: [
           { name: 'Shared Vision', desc: 'If one unit sees an enemy, the entire group detects it regardless of individual line-of-sight.' },
           { name: 'Distributed Efficiency', desc: 'Efficiency and critical multipliers scale exponentially when units are in close proximity.' },
@@ -369,7 +369,7 @@ export class CharacterCreatorUIManager {
       data.skills.forEach(skill => {
         const item = document.createElement('div');
         item.className = 'list-item';
-        item.style.cursor = 'default'; 
+        item.style.cursor = 'default';
         item.innerHTML = `
           <h4>${skill.name}</h4>
           <p>${skill.desc}</p>
@@ -488,22 +488,22 @@ export class CharacterCreatorUIManager {
         { id: 'glass_cannon', name: 'Glass Cannon', desc: 'Absolute high-damage glass cannon.', cols: [{ label: 'Primary (Ranged/Melee)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] }
     ];
 
-    let rawPowersetsData = { Melee: [], Ranged: [], Defense: [], Resistance: [], Support: [], Control: [], Neural: [] };
+    let rawPowersetsData = { Melee: [], Ranged: [], Defense: [], Resistance: [], Support: [], Control: [], Neural: [], Travel: [], Innate: [] };
 
     const loadPowersets = async () => {
       try {
         const res = await fetch('/api/powersets');
         if (!res.ok) throw new Error("Failed to fetch powersets API");
         const json = await res.json();
-        
+
         for (const [catKey, powersetsList] of Object.entries(json)) {
           if (!rawPowersetsData[catKey]) rawPowersetsData[catKey] = [];
-          
+
           powersetsList.forEach(ps => {
             if (!ps.Id && !ps.id) return;
-            
+
             let reqCheck = () => true;
-            
+
             if (ps.minIntegrity !== undefined && ps.maxIntegrity !== undefined) {
               reqCheck = (v) => v >= ps.minIntegrity && v <= ps.maxIntegrity;
             } else if (ps.requiresAffinity) {
@@ -512,8 +512,10 @@ export class CharacterCreatorUIManager {
               reqCheck = (v, heritageClass) => heritageClass === ps.requiresHeritage;
             } else {
               const reqStr = (ps.Requirement || ps.requirement || ps.IntegrityRequirement || ps.integrityRequirement || '').toLowerCase();
-              
-              if (reqStr.includes('0% integrity') || reqStr.includes('purity') || reqStr.includes('baseline') || reqStr.includes('pure')) {
+
+              if (reqStr.includes('hidden')) {
+                reqCheck = () => false;
+              } else if (reqStr.includes('0% integrity') || reqStr.includes('purity') || reqStr.includes('baseline') || reqStr.includes('pure')) {
                 reqCheck = (v) => v >= -70 && v <= 70;
               } else if (reqStr.includes('synthetic exclusive') || reqStr.includes('synthetic')) {
                 reqCheck = (v) => v < 0;
@@ -551,7 +553,7 @@ export class CharacterCreatorUIManager {
       } catch (err) {
         console.error("Error loading powersets:", err);
       }
-      
+
       if (Object.values(rawPowersetsData).flat().length === 0) {
         rawPowersetsData['Melee'].push({ id: 'fallback', name: 'Fallback Powerset', desc: 'No JSON loaded.', check: () => true, powers: Array.from({ length: 6 }, (_, i) => ({ id: `fb${i}`, name: `Power ${i+1}`, desc: 'Fallback' })) });
       }
@@ -568,9 +570,9 @@ export class CharacterCreatorUIManager {
       const activeClass = activeClassItem ? activeClassItem.dataset.class : 'standard';
       const activeAffinityItem = document.querySelector('#affinity-list .active');
       const activeAffinity = activeAffinityItem ? activeAffinityItem.dataset.id : null;
-      
+
       const match = label.match(/\(([^)]+)\)/);
-      
+
       let combined = [];
       if (!match) {
         combined = Object.values(rawPowersetsData).flat();
@@ -581,7 +583,7 @@ export class CharacterCreatorUIManager {
         });
         if (combined.length === 0) combined = Object.values(rawPowersetsData).flat();
       }
-      
+
       return combined.filter(ps => ps.check ? ps.check(integrityVal, activeClass, activeAffinity) : true);
     };
 
@@ -597,13 +599,13 @@ export class CharacterCreatorUIManager {
       });
 
       powersetColumnsContainer.innerHTML = '';
-      
+
       arch.cols.forEach((col, colIndex) => {
         const colDiv = document.createElement('div');
         colDiv.className = 'powerset-col';
-        
+
         let availableSets = getAvailablePowersets(col.label);
-        
+
         let prevSelection = currentSelections[colIndex];
         let selectedValue = prevSelection ? prevSelection.value : undefined;
         let activePowerNames = prevSelection ? prevSelection.activePowers : [];
@@ -626,7 +628,7 @@ export class CharacterCreatorUIManager {
           </div>
           <div class="power-list"></div>
         `;
-        
+
         const listDiv = colDiv.querySelector('.power-list');
         const picksDisplay = colDiv.querySelector('.picks-display');
         const selectEl = colDiv.querySelector('.powerset-dropdown');
@@ -643,11 +645,12 @@ export class CharacterCreatorUIManager {
           }
 
           const powerItems = [];
-          
+
           set.powers.forEach((p, i) => {
             const isLocked = i >= 2;
             const item = document.createElement('div');
             item.className = `list-item power-item ${isLocked ? 'locked' : ''}`;
+            item.dataset.id = p.id;
             item.style.marginBottom = '0';
             item.style.padding = '10px';
             item.style.fontSize = '0.85rem';
@@ -757,7 +760,7 @@ export class CharacterCreatorUIManager {
       btnSkipArchetype.addEventListener('click', () => {
         const civilianItem = Array.from(document.querySelectorAll('#archetype-list .list-item')).find(i => i.querySelector('h4').innerText === 'Civilian');
         if (civilianItem) civilianItem.click();
-        
+
         navigateToStep(currentStepIndex + 1);
       });
     }
@@ -831,7 +834,7 @@ export class CharacterCreatorUIManager {
           const select = col.querySelector('.powerset-dropdown');
           const activeItems = col.querySelectorAll('.power-item.active');
           if (select && select.value !== '' && activeItems.length > 0) activePowersets.push(select.value);
-          activeItems.forEach(item => activePowers.push(item.innerText));
+          activeItems.forEach(item => activePowers.push(item.dataset.id || item.innerText));
         });
 
         let unspentPowerPicks = 0;
@@ -892,12 +895,12 @@ export class CharacterCreatorUIManager {
           const updatedAccount = await this.app.auth.createCharacter(this.app.currentAccount.uuid, pendingCharData);
           this.app.currentAccount = updatedAccount;
           localStorage.setItem('b_current_account', JSON.stringify(updatedAccount));
-          
+
           const newChar = this.app.currentAccount.characters.find(c => c.name === pendingCharData.name);
 
           document.getElementById('character-creator-screen').style.display = 'none';
           document.getElementById('game-screen').style.display = 'block';
-          
+
           import(`./game/engine.js?v=${Date.now()}`).then(module => {
             if (window.currentGameEngine) window.currentGameEngine.stop();
             window.currentGameEngine = new module.GameEngine('game-canvas', newChar, this.app.currentAccount.uuid);

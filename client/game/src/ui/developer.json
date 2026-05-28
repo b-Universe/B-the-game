@@ -1,0 +1,31 @@
+{
+  "Categories": [
+    {
+      "Powersets": [
+        {
+          "Id": "developer",
+          "Name": "Developer",
+          "Focus": "God-like tools for world shaping and testing.",
+          "Requirement": "Hidden",
+          "Powers": [
+            {
+              "Id": "dev_noclip",
+              "Name": "Noclip",
+              "Description": "Toggle noclip mode."
+            },
+            {
+              "Id": "dev_heal",
+              "Name": "Full Heal",
+              "Description": "Fully restore health and energy."
+            },
+            {
+              "Id": "dev_smite",
+              "Name": "Smite",
+              "Description": "Instantly destroy target."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
