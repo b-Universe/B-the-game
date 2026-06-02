@@ -49,6 +49,26 @@ export class TerrainGenerator {
   }
 
   generateChunk(cx, cy, chunkSize, voxels = new Map()) {
+    const currentZone = (this.engine.currentZone || 'untitled').toLowerCase();
+    if (currentZone === 'atlas-city') {
+      for (let x = 0; x < chunkSize; x++) {
+        for (let y = 0; y < chunkSize; y++) {
+          const worldX = (cx * chunkSize) + x;
+          const worldY = (cy * chunkSize) + y;
+          for (let vz = -3; vz <= 0; vz++) {
+            const voxelKey = `${worldX}_${worldY}_${vz}`;
+            if (!voxels.has(voxelKey)) {
+              voxels.set(voxelKey, {
+                tex: vz === 0 ? 'concrete' : 'stone',
+                color: '#ffffff',
+                shape: 'cube'
+              });
+            }
+          }
+        }
+      }
+      return voxels;
+    }
 
     // 1. Precompute noise and elevation data to avoid massive redundant recalculations.
     // A standard chunk would otherwise calculate noise 5 times per tile (self + 4 neighbors).

@@ -16,7 +16,7 @@ export class TrainerUIManager {
     document.getElementById('trainer-dialog-name').innerText = npc.name;
     const modal = document.getElementById('trainer-dialog-modal');
     if (modal) modal.style.display = 'flex';
-    
+
     const btnCloseTrainer = document.getElementById('btn-close-trainer');
     if (btnCloseTrainer) btnCloseTrainer.onclick = () => {
         this.engine.activeTrainer = null;
@@ -27,7 +27,7 @@ export class TrainerUIManager {
     const viewTraining = modal ? modal.querySelector('#trainer-training-view') : document.getElementById('trainer-training-view');
     if (viewDialog) viewDialog.style.display = 'block';
     if (viewTraining) viewTraining.style.display = 'none';
-    
+
     const powerPicks = this.engine.playerData.unspentPowerPicks || 0;
     const setPicksRaw = this.engine.playerData.unspentPowersetPicks;
     let setPicksCount = Array.isArray(setPicksRaw) ? setPicksRaw.length : (typeof setPicksRaw === 'number' ? setPicksRaw : 0);
@@ -37,7 +37,7 @@ export class TrainerUIManager {
             <p style="font-family: var(--font-mono); margin-bottom: 15px; color: #fff;">Hello, recruit. Ready to improve your skills?</p>
             <div id="trainer-actions-container" style="display: flex; flex-direction: column; gap: 5px;"></div>
         `;
-        
+
         const actionsBox = viewDialog.querySelector('#trainer-actions-container');
 
         const btnUnlock = document.createElement('button');
@@ -45,7 +45,7 @@ export class TrainerUIManager {
         btnUnlock.innerText = 'Select New Powerset';
         btnUnlock.className = 'btn-primary';
         btnUnlock.style.cssText = 'border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1); margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
-        
+
         if (setPicksCount <= 0) {
             btnUnlock.disabled = true;
             btnUnlock.style.opacity = '0.5';
@@ -112,7 +112,7 @@ export class TrainerUIManager {
             this.engine.activeTrainer = null;
             if (modal) modal.style.display = 'none';
         };
-        
+
         actionsBox.appendChild(btnUnlock);
         actionsBox.appendChild(btnTrain);
         actionsBox.appendChild(btnEnhance);
@@ -137,7 +137,7 @@ export class TrainerUIManager {
           <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">
             ${hasPicks ? 'Select a learned Powerset to train abilities:' : 'You have no unspent picks.'}
           </div>
-          <div style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
+          <div style="display: flex; flex-direction: column; gap: 5px; max-height: 350px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px; padding-right: 5px;">
              ${powersets.map((ps, i) => `<button class="btn-ps-select btn-secondary" data-index="${i}" style="text-align: left; padding: 10px;">${ps.toUpperCase()}</button>`).join('')}
           </div>
           <button id="btn-training-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
@@ -147,7 +147,7 @@ export class TrainerUIManager {
             document.getElementById('trainer-training-view').style.display = 'none';
             document.getElementById('trainer-dialog-view').style.display = 'block';
         };
-        
+
         container.querySelectorAll('.btn-ps-select').forEach(btn => {
           btn.onclick = () => {
             const psName = powersets[parseInt(btn.dataset.index)];
@@ -155,7 +155,7 @@ export class TrainerUIManager {
           };
         });
       };
-      
+
       renderList();
   }
 
@@ -172,7 +172,7 @@ export class TrainerUIManager {
            <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
         </div>
         <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Abilities in <strong style="color: var(--accent-neon);">${psName.toUpperCase()}</strong>:</div>
-        <div id="power-select-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
+        <div id="power-select-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 350px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px; padding-right: 5px;">
         </div>
         <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
       `;
@@ -188,7 +188,7 @@ export class TrainerUIManager {
 
         const updateLocks = () => {
           powerItems.forEach((pItem, idx) => {
-            if (idx > 1) {
+            if (idx > 1 && psName !== 'inherited') {
               const prev1Active = powerItems[idx - 1].classList.contains('learned');
               const prev2Active = powerItems[idx - 2].classList.contains('learned');
               if (prev1Active || prev2Active) {
@@ -200,14 +200,18 @@ export class TrainerUIManager {
                 pItem.style.opacity = '0.3';
                 pItem.style.cursor = 'not-allowed';
               }
+            } else {
+              pItem.classList.remove('locked');
+              pItem.style.opacity = pItem.disabled ? '0.6' : '1';
+              pItem.style.cursor = pItem.disabled ? 'not-allowed' : 'pointer';
             }
           });
         };
 
         psData.powers.forEach((power, i) => {
-          const alreadyLearned = knownPowers.includes(power.name);
+          const alreadyLearned = knownPowers.includes(power.id) || knownPowers.includes(power.name);
           const canAfford = currentPowerPicks > 0;
-          const isLocked = i >= 2;
+          const isLocked = i >= 2 && psName !== 'inherited';
 
           const pButton = document.createElement('button');
           pButton.className = `btn-secondary power-select-item ${alreadyLearned ? 'learned' : ''} ${isLocked ? 'locked' : ''}`;
@@ -232,7 +236,7 @@ export class TrainerUIManager {
             if (pButton.classList.contains('locked')) {
               this.engine.chat.addMessage('system', 'System', 'You must learn earlier powers in this set first.');
             } else if (!alreadyLearned && canAfford) {
-               this.engine.network.sendLearnPower({ powerName: power.name, powerset: psName });
+               this.engine.network.sendLearnPower({ powerId: power.id, powerset: psName });
             }
           };
           powerItems.push(pButton);
@@ -264,7 +268,7 @@ export class TrainerUIManager {
           availableSets = availableSets.filter(ps => {
               const psCat = ps.category ? ps.category.toLowerCase() : '';
               const psId = ps.id.toLowerCase();
-              return allowedTypes.some(t => 
+              return allowedTypes.some(t =>
                   (psCat && (psCat.includes(t) || t.includes(psCat))) ||
                   (!psCat && (psId.includes(t) || t.includes('melee') && psId.includes('fu') || t.includes('ranged') && psId.includes('blast')))
               );
@@ -277,28 +281,61 @@ export class TrainerUIManager {
              <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
       </div>
           <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Available Powersets ${pickType !== 'any' ? `(${pickType.toUpperCase()})` : ''}:</div>
-      <div id="powerset-unlock-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
+      <div id="powerset-unlock-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 350px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px; padding-right: 5px;">
       </div>
       <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
     `;
     document.getElementById('btn-power-back').onclick = goBackCb;
 
     const setListContainer = document.getElementById('powerset-unlock-list');
-        
-        if (availableSets.length === 0) {
-            setListContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px;">No powersets match this requirement.</div>`;
-        }
 
-    availableSets.forEach(set => {
-      const sButton = document.createElement('button');
-      sButton.className = 'btn-secondary';
-      sButton.style.textAlign = 'left';
-      sButton.style.padding = '10px';
-      sButton.innerText = set.name.toUpperCase();
-      sButton.onclick = () => {
-        this.engine.network.sendLearnPowerset({ powerset: set.id });
-      };
-      setListContainer.appendChild(sButton);
-    });
+    if (availableSets.length === 0) {
+        setListContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px;">No powersets match this requirement.</div>`;
+    } else {
+        const groupedSets = {};
+        availableSets.forEach(set => {
+            const cat = set.category || 'Uncategorized';
+            if (!groupedSets[cat]) groupedSets[cat] = [];
+            groupedSets[cat].push(set);
+        });
+
+        const sortedCategories = Object.keys(groupedSets).sort();
+
+        sortedCategories.forEach(cat => {
+            groupedSets[cat].sort((a, b) => (a.name || a.id || '').localeCompare(b.name || b.id || ''));
+
+            const header = document.createElement('div');
+            header.style.cssText = 'color: #3498db; font-size: 0.9rem; margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 3px; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 1px;';
+            header.innerText = cat;
+            setListContainer.appendChild(header);
+
+            const integrity = this.engine.playerData.integrity || 0;
+
+            groupedSets[cat].forEach(set => {
+                const meetsMin = set.minIntegrity === undefined || integrity >= set.minIntegrity;
+                const meetsMax = set.maxIntegrity === undefined || integrity <= set.maxIntegrity;
+                const isLocked = !meetsMin || !meetsMax;
+
+                const sButton = document.createElement('button');
+                sButton.className = 'btn-secondary';
+                sButton.style.cssText = 'text-align: left; padding: 10px; margin-left: 10px; width: calc(100% - 10px);';
+                sButton.innerText = (set.name || set.id || 'Unnamed').toUpperCase();
+
+                if (isLocked) {
+                    sButton.style.opacity = '0.4';
+                    sButton.style.cursor = 'not-allowed';
+                    let reason = '';
+                    if (!meetsMin) reason = `Req ${set.minIntegrity}%+ Integrity`;
+                    else if (!meetsMax) reason = `Req ${set.maxIntegrity}% or less Integrity`;
+                    sButton.innerText += ` (LOCKED: ${reason})`;
+                } else {
+                    sButton.onclick = () => {
+                        this.engine.network.sendLearnPowerset({ powerset: set.id });
+                    };
+                }
+                setListContainer.appendChild(sButton);
+            });
+        });
+    }
   }
 }

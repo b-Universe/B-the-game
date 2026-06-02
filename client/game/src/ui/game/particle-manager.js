@@ -114,13 +114,22 @@ export class ParticleManager {
           group.visible = true;
         } else {
           group = new THREE.Group();
-          const mat = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0 });
-          mat.onBeforeCompile = (shader) => {
-            shader.vertexShader = shader.vertexShader.replace(
-              '#include <defaultnormal_vertex>',
-              `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
-            );
-          };
+
+          if (!renderer.baseProjectileMaterial) {
+              renderer.baseProjectileMaterial = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0 });
+              renderer.baseProjectileMaterial.onBeforeCompile = (shader) => {
+                shader.vertexShader = shader.vertexShader.replace(
+                  '#include <defaultnormal_vertex>',
+                  `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+                );
+              };
+              renderer.baseProjectileMaterial.customProgramCacheKey = () => 'baseProjMat';
+          }
+
+          const mat = renderer.baseProjectileMaterial.clone();
+          mat.onBeforeCompile = renderer.baseProjectileMaterial.onBeforeCompile;
+          mat.customProgramCacheKey = renderer.baseProjectileMaterial.customProgramCacheKey;
+
           const geo = new THREE.PlaneGeometry(1, 1);
           const sprite = new THREE.Mesh(geo, mat);
           sprite.castShadow = engine.clientSettings.enableShadows !== false;
@@ -218,8 +227,9 @@ export class ParticleManager {
 
       const tex = renderer.assetManager.textures[seqId] || renderer.assetManager.textures['proj_airplane'];
       if (tex) {
-        if (sprite.userData.tex !== seqId) {
+        if (sprite.userData.mapUuid !== tex.uuid) {
           sprite.material.map = tex.clone();
+          sprite.userData.mapUuid = tex.uuid;
           sprite.userData.tex = seqId;
           sprite.material.needsUpdate = true;
         }
@@ -255,17 +265,15 @@ export class ParticleManager {
 
     if (!renderer.particleMesh) {
       const pGeo = new THREE.PlaneGeometry(1, 1);
-      const uvsMain = new Float32Array(this.poolSize * 4);
-      const uvsSides = new Float32Array(this.poolSize * 4);
-      pGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(uvsMain, 4));
-      pGeo.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(uvsSides, 4));
-      pGeo.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(uvsSides, 4));
-      pGeo.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(this.poolSize), 1));
+      const packedUVs = new Uint32Array(this.poolSize * 3);
+      pGeo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(packedUVs, 3));
 
-      const n1 = new Float32Array(this.poolSize * 4); n1.fill(1);
-      pGeo.setAttribute('instanceNeighbors1', new THREE.InstancedBufferAttribute(n1, 4));
-      const n2 = new Float32Array(this.poolSize * 2); n2.fill(1);
-      pGeo.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(n2, 2));
+      const packedColor = new Uint32Array(this.poolSize);
+      pGeo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(packedColor, 1));
+
+      const packedData = new Uint32Array(this.poolSize);
+      packedData.fill(63);
+      pGeo.setAttribute('packedData', new THREE.InstancedBufferAttribute(packedData, 1));
 
       const pMat = renderer.instancedMaterial.clone();
       pMat.onBeforeCompile = renderer.instancedMaterial.onBeforeCompile;
@@ -275,17 +283,12 @@ export class ParticleManager {
       renderer.particleMesh = new THREE.InstancedMesh(pGeo, pMat, this.poolSize);
       renderer.particleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       renderer.particleMesh.frustumCulled = false;
-
-      const colors = new Float32Array(this.poolSize * 3);
-      renderer.particleMesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
       renderer.scene.add(renderer.particleMesh);
     }
 
     const dummy = this.dummy;
     const color = this.color;
-    const uvAttr = renderer.particleMesh.geometry.attributes.instanceUVTop;
-    const uvAttrSides = renderer.particleMesh.geometry.attributes.instanceUVSide;
-    const uvAttrBottom = renderer.particleMesh.geometry.attributes.instanceUVBottom;
+    const uvAttr = renderer.particleMesh.geometry.attributes.packedUVs;
     let count = 0;
 
     for (let i = 0; i < this.poolSize; i++) {
@@ -323,7 +326,15 @@ export class ParticleManager {
       if (p.isPop) {
         color.lerp(this.whiteColor, 1.0 - (p.life / p.maxLife));
       }
-      renderer.particleMesh.setColorAt(count, color);
+
+      if (renderer.particleMesh.geometry.attributes.packedColor) {
+          const pr = Math.max(0, Math.min(255, color.r * 255)) | 0;
+          const pg = Math.max(0, Math.min(255, color.g * 255)) | 0;
+          const pb = Math.max(0, Math.min(255, color.b * 255)) | 0;
+          renderer.particleMesh.geometry.attributes.packedColor.setX(count, pr | (pg << 8) | (pb << 16));
+      } else {
+          renderer.particleMesh.setColorAt(count, color);
+      }
 
       let blockType = p.tex || 'white';
       if (p.tex === 'bubble') blockType = 'bubble';
@@ -332,19 +343,17 @@ export class ParticleManager {
       else if (blockType === 'stone-bricks') blockType = 'stone-bricks1';
       if (blockType === 'ice') blockType = 'ice';
       const atlasPos = renderer.assetManager.atlasMap[blockType] || renderer.assetManager.atlasMap['white'];
-      const uvScaleX = 64 / 2048;
-      const uvScaleY = 64 / 2048;
 
       let subUvX = p.uvOffsetX !== undefined ? p.uvOffsetX : 0;
       let subUvY = p.uvOffsetY !== undefined ? p.uvOffsetY : 0;
       let subScale = p.uvScale !== undefined ? p.uvScale : 1;
 
-      const finalUvOffsetX = (atlasPos.x + subUvX) * uvScaleX;
-      const finalUvOffsetY = 1.0 - ((atlasPos.y + 1 - subUvY) * uvScaleY);
+      let ux = Math.round((atlasPos.x + subUvX) * 8);
+      let uy = Math.round((atlasPos.y + subUvY) * 8);
+      let scaleLevel = subScale === 0.5 ? 1 : (subScale === 0.25 ? 2 : (subScale === 0.125 ? 3 : 0));
+      let packedUV = (ux & 255) | ((uy & 255) << 8) | (scaleLevel << 16);
 
-      uvAttr.setXYZW(count, finalUvOffsetX, finalUvOffsetY, uvScaleX * subScale, uvScaleY * subScale);
-      uvAttrSides.setXYZW(count, finalUvOffsetX, finalUvOffsetY, uvScaleX * subScale, uvScaleY * subScale);
-      uvAttrBottom.setXYZW(count, finalUvOffsetX, finalUvOffsetY, uvScaleX * subScale, uvScaleY * subScale);
+      uvAttr.setXYZ(count, packedUV, packedUV, packedUV);
 
       count++;
     }
@@ -352,8 +361,7 @@ export class ParticleManager {
     renderer.particleMesh.count = count;
     renderer.particleMesh.instanceMatrix.needsUpdate = true;
     if (renderer.particleMesh.instanceColor) renderer.particleMesh.instanceColor.needsUpdate = true;
+    if (renderer.particleMesh.geometry.attributes.packedColor) renderer.particleMesh.geometry.attributes.packedColor.needsUpdate = true;
     uvAttr.needsUpdate = true;
-    uvAttrSides.needsUpdate = true;
-    uvAttrBottom.needsUpdate = true;
   }
 }

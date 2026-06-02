@@ -9,7 +9,10 @@ export class PhysicsManager {
   getVoxelTop(voxel, zIndex, x, y) {
     if (!voxel) return -1000;
     if (voxel.shape === 'slab') return (zIndex * 32) + 0;
-    if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[voxel.shape]) return (zIndex * 32) + 0;
+    if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[voxel.shape]) {
+        const customHeight = FURNITURE_REGISTRY[voxel.shape].collisionHeight;
+        return customHeight !== undefined ? (zIndex * 32) - 16 + (customHeight * 32) : (zIndex * 32) + 0;
+    }
     if (voxel.shape && (voxel.shape.startsWith('ramp') || voxel.shape.startsWith('stair'))) {
       const vx = Math.round(x / 32) * 32;
       const vy = Math.round(y / 32) * 32;
@@ -149,32 +152,39 @@ export class PhysicsManager {
 
     const pZ = overrideZ !== undefined ? overrideZ : (eng.player.z || 0);
     const currentGridZ = Math.floor((pZ + 5) / 32);
-    const headGridZ = Math.floor((pZ + 60) / 32);
+    const headGridZ = Math.floor((pZ + 48) / 32);
 
     for (let c of corners) {
-      for (let z = currentGridZ; z <= headGridZ; z++) {
+      for (let z = currentGridZ - 2; z <= headGridZ; z++) { // Look downwards to catch the base of tall furniture
         const vx = nextX + c.dx;
         const vy = nextY + c.dy;
         const voxel = eng.mapManager.getVoxelAt(vx, vy, z * 32);
         if (voxel) {
           const props = getBlockProps(voxel.tex);
           if (props.isSolid) {
-            if (voxel.shape && voxel.shape.startsWith('door')) {
+            if (voxel.shape && voxel.shape.includes('door')) {
               if (!voxel.shape.includes('_open')) {
-                eng.player.doorPushTimer = (eng.player.doorPushTimer || 0) + 16;
                 eng.player.doorPushedThisFrame = true;
-                if (eng.player.doorPushTimer > 150) {
-                  const openDoor = (tx, ty, tz) => {
-                    const v = eng.mapManager.getVoxelAt(tx, ty, tz);
-                    if (v && v.shape && v.shape.startsWith('door') && !v.shape.includes('_open')) {
-                      v.shape += '_open';
-                      eng.mapManager.setVoxelAt(tx, ty, tz, v);
-                      eng.autoOpenedDoors.set(`${tx}_${ty}_${tz}`, { x: tx, y: ty, z: tz });
-                    }
-                  };
-                  openDoor(vx, vy, z * 32);
-                  openDoor(vx, vy, z * 32 + 32);
-                  openDoor(vx, vy, z * 32 - 32);
+
+                const gridX = Math.round(vx / 32) * 32;
+                const gridY = Math.round(vy / 32) * 32;
+                const gridZ = z * 32;
+
+                const v = eng.mapManager.getVoxelAt(gridX, gridY, gridZ);
+                if (v && v.shape && v.shape.includes('door') && !v.shape.includes('_open')) {
+                  v.shape += '_open';
+                  v._openedAt = performance.now(); // Record the exact moment it was pushed!
+                  eng.mapManager.setVoxelAt(gridX, gridY, gridZ, v);
+                  eng.autoOpenedDoors.set(`${gridX}_${gridY}_${gridZ}`, { x: gridX, y: gridY, z: gridZ, timer: 3000 });
+
+                  if (eng.doors) {
+                      const doorObj = eng.doors.find(d => d.x === gridX && d.y === gridY && d.z === gridZ);
+                      if (doorObj) {
+                          doorObj.shape = v.shape;
+                      } else {
+                          eng.doors.push({ x: gridX, y: gridY, z: gridZ, shape: v.shape, tex: v.tex, color: v.color, dir: v.dir });
+                      }
+                  }
                 }
               }
               continue; // Let the precise broadphase check handle door collision blocking
@@ -199,27 +209,64 @@ export class PhysicsManager {
         for (let dz = -32; dz <= 64; dz += 32) {
           const vx = cx + dx, vy = cy + dy, vz = cz + dz;
           const voxel = eng.mapManager.getVoxelAt(vx, vy, vz);
-          if (voxel && voxel.shape && voxel.shape.startsWith('door') && !voxel.shape.includes('_open')) {
-             let minX = vx - 16, maxX = vx + 16, minY = vy - 16, maxY = vy + 16;
-             if (voxel.shape.includes('door_e')) { minX = vx + 8; }
-             else if (voxel.shape.includes('door_n')) { minY = vy + 8; }
-             else if (voxel.shape.includes('door_w')) { maxX = vx - 8; }
-             else { maxY = vy - 8; }
+          if (voxel && voxel.shape && voxel.shape.includes('door')) {
+             let isSolid = !voxel.shape.includes('_open');
 
-             if (nextX > minX - 14 && nextX < maxX + 14 && nextY > minY - 14 && nextY < maxY + 14) {
-                if (pZ < vz + 32 && pZ + 60 > vz - 16) return true;
+             // If it's open, but was opened less than 150ms ago, it's still physically blocking!
+             if (!isSolid && voxel._openedAt) {
+                 const elapsed = performance.now() - voxel._openedAt;
+                 if (elapsed < 150) {
+                     isSolid = true;
+                 }
+             }
+
+             if (isSolid) {
+                 let minX = vx - 16, maxX = vx + 16, minY = vy - 16, maxY = vy + 16;
+                 const baseShape = voxel.shape.replace('_open', '');
+                 const dirE = baseShape.includes('door_e') || voxel.dir === 'e';
+                 const dirN = baseShape.includes('door_n') || voxel.dir === 'n';
+                 const dirW = baseShape.includes('door_w') || voxel.dir === 'w';
+
+                 if (dirE) { minX = vx + 8; }
+                 else if (dirN) { maxY = vy - 8; }
+                 else if (dirW) { maxX = vx - 8; }
+                 else { minY = vy + 8; }
+
+                 if (nextX > minX - 14 && nextX < maxX + 14 && nextY > minY - 14 && nextY < maxY + 14) {
+                    const customHeight = FURNITURE_REGISTRY[baseShape]?.collisionHeight || 1;
+                    if (pZ < vz + (customHeight * 32) && pZ + 48 > vz - 16) return true;
+                 }
              }
           }
         }
       }
     }
 
-    for (let npc of eng.npcs) {
-      if (npc.state !== 'dead' && Math.hypot(npc.x - nextX, npc.y - nextY) < 55 && Math.abs((npc.z || 0) - pZ) < 60) return true;
-    }
-    for (let id in eng.otherPlayers) {
-      const op = eng.otherPlayers[id];
-      if (op.state !== 'death' && Math.hypot(op.x - nextX, op.y - nextY) < 55 && Math.abs((op.z || 0) - pZ) < 60) return true;
+    if (eng.entityGrid) {
+      const cellSize = 128;
+      const minGx = Math.floor((nextX - 55) / cellSize);
+      const maxGx = Math.floor((nextX + 55) / cellSize);
+      const minGy = Math.floor((nextY - 55) / cellSize);
+      const maxGy = Math.floor((nextY + 55) / cellSize);
+
+      for (let gx = minGx; gx <= maxGx; gx++) {
+        for (let gy = minGy; gy <= maxGy; gy++) {
+          const cell = eng.entityGrid.get(`${gx}_${gy}`);
+          if (!cell) continue;
+          for (let item of cell) {
+            const ent = item.ent;
+            if (ent.state === 'dead' || ent.state === 'death') continue;
+            if (Math.abs((ent.z || 0) - pZ) >= 48) continue;
+
+            const dx = Math.abs(ent.x - nextX);
+            if (dx >= 55) continue;
+            const dy = Math.abs(ent.y - nextY);
+            if (dy >= 55) continue;
+
+            if (dx * dx + dy * dy < 3025) return true;
+          }
+        }
+      }
     }
     return false;
   }
@@ -237,7 +284,7 @@ export class PhysicsManager {
     if (eng.mapManager) {
       const currentGridZ = Math.round((entity.z || 0) / 32);
       const eMinZ = entity.z || 0;
-      const eMaxZ = eMinZ + 48; // Assume player is ~48 units tall
+      const eMaxZ = eMinZ + 38; // Assume player is ~38 units tall
 
       for (let offset = -2; offset <= 2; offset++) {
         const checkZ = (currentGridZ + offset) * 32;
@@ -265,24 +312,47 @@ export class PhysicsManager {
       const isDangerousFluid = waterVoxel.tex === 'acid' || waterVoxel.tex === 'lava' || waterVoxel.tex === 'lava_flow';
       if (!isDangerousFluid && entity.activePowers && entity.activePowers.includes('super-speed')) {
         const speedSq = (entity.momentumX * entity.momentumX) + (entity.momentumY * entity.momentumY);
-        if (speedSq > 160000) {
+        if (speedSq > 20000) {
           runningOnWater = true;
           currentlyInWater = false;
           const fluidTop = wZ + 16;
           if (entity.z >= fluidTop - 4) {
-             effectiveBlockTop = Math.max(effectiveBlockTop, fluidTop);
-             if (Math.random() > 0.4) {
+             effectiveBlockTop = Math.max(effectiveBlockTop, fluidTop + 20);
+
+             for (let i = 0; i < 4; i++) {
                  eng.spawnParticle({
-                    x: entity.x + (Math.random() - 0.5) * 16,
-                    y: entity.y + (Math.random() - 0.5) * 16,
-                    z: fluidTop + 2,
-                    vx: -(entity.momentumX * 0.1) + (Math.random() - 0.5) * 50,
-                    vy: -(entity.momentumY * 0.1) + (Math.random() - 0.5) * 50,
-                    vz: 20 + Math.random() * 40,
+                    x: entity.x + (Math.random() - 0.5) * 30,
+                    y: entity.y + (Math.random() - 0.5) * 30,
+                    z: fluidTop,
+                    vx: -(entity.momentumX * 0.3) + (Math.random() - 0.5) * 100,
+                    vy: -(entity.momentumY * 0.3) + (Math.random() - 0.5) * 100,
+                    vz: 30 + Math.random() * 80,
+                    life: 0.3 + Math.random() * 0.3,
+                    maxLife: 0.6,
+                    color: '#aaddff',
+                    size: 2 + Math.random() * 4
+                 });
+             }
+             if (Math.random() > 0.3) {
+                 eng.spawnParticle({
+                    x: entity.x + (Math.random() - 0.5) * 20,
+                    y: entity.y + (Math.random() - 0.5) * 20,
+                    z: fluidTop,
+                    vx: -(entity.momentumX * 0.15) + (Math.random() - 0.5) * 50,
+                    vy: -(entity.momentumY * 0.15) + (Math.random() - 0.5) * 50,
+                    vz: 20 + Math.random() * 60,
                     life: 0.2 + Math.random() * 0.3,
                     maxLife: 0.5,
                     color: '#ffffff',
-                    size: 2 + Math.random() * 3
+                    size: 3 + Math.random() * 5
+                 });
+             }
+             if (Math.random() > 0.6) {
+                 eng.debris.push({
+                   x: entity.x + (Math.random() - 0.5) * 16, y: entity.y + (Math.random() - 0.5) * 16, z: fluidTop + 15,
+                   vx: -(entity.momentumX * 0.05), vy: -(entity.momentumY * 0.05), vz: 0, life: 0.4, maxLife: 0.4, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
+                   color: '#aaddff',
+                   flipX: Math.random() > 0.5
                  });
              }
           } else {

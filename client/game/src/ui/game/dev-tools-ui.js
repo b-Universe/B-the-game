@@ -7,12 +7,12 @@ const MODAL_BG_STYLE = 'position: fixed; top: 0; left: 0; width: 100vw; height: 
 const NPC_ROW_STYLE = 'display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px;';
 const HOTBAR_HEADER_STYLE = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: center; align-items: center; cursor: move; user-select: none; margin: -10px -10px 10px -10px; border-radius: 6px 6px 0 0;';
 const TOOLTIP_STYLE = 'position: fixed; background: rgba(0,0,0,0.9); border: 1px solid #3498db; color: #fff; padding: 5px 10px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; pointer-events: none; z-index: 1000000; display: none; white-space: nowrap; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.8);';
-const SHAPE_CONTAINER_STYLE = 'display: flex; gap: 5px; align-items: center; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px; border: 1px solid #333; justify-content: center;';
+const SHAPE_CONTAINER_STYLE = 'display: flex; gap: 5px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px; border: 1px solid #333; justify-content: center;';
 const SHAPE_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #3498db; color: #3498db; min-width: 100px;';
 const DIR_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #f39c12; color: #f39c12; display: none; min-width: 40px;';
 const REL_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #9b59b6; color: #9b59b6; display: none; min-width: 40px;';
 const FLUID_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #3498db; color: #3498db; display: none; width: 100%;';
-const PLAYER_PANEL_STYLE = 'position: absolute; top: 150px; left: 50px; display: none; width: 800px;';
+const PLAYER_PANEL_STYLE = 'position: absolute; top: 150px; left: 50px; display: none; width: 800px; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; flex-direction: column; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
 const PLAYER_ROW_STYLE = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
 
 export class DevToolsUIManager {
@@ -31,6 +31,9 @@ export class DevToolsUIManager {
     this.setupObjectLibrary();
     this.setupSideHudButtons();
     this.setupPlayerManager();
+    this.setupZoneManager();
+    this.setupArcadeManager();
+    this.setupArcadeEditModal();
     this.updateBuildingMode();
   }
 
@@ -103,7 +106,7 @@ export class DevToolsUIManager {
       };
 
       // Completely remove unused buttons from the DOM
-      ['btn-dev-player-tile', 'btn-dev-mouse', 'btn-dev-entity-tile', 'btn-dev-tile', 'btn-dev-chunk', 'btn-dev-player-manager'].forEach(id => {
+      ['btn-dev-player-tile', 'btn-dev-mouse', 'btn-dev-entity-tile', 'btn-dev-tile', 'btn-dev-chunk'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
       });
@@ -133,7 +136,7 @@ export class DevToolsUIManager {
         editBtn.id = 'btn-dev-los-edit';
         editBtn.className = 'btn-secondary';
         editBtn.innerText = '✎';
-        editBtn.style.cssText = TOOL_BTN_STYLE;
+        editBtn.style.cssText = TOOL_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
         editBtn.onclick = () => {
           const modal = document.getElementById('los-edit-modal');
           if (modal) {
@@ -176,6 +179,8 @@ export class DevToolsUIManager {
 
       const btnEditTarget = document.getElementById('btn-dev-edit-target');
       if (btnEditTarget) {
+        btnEditTarget.style.borderColor = '#e056fd';
+        btnEditTarget.style.color = '#e056fd';
         btnEditTarget.onclick = () => {
           if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
             const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
@@ -200,6 +205,8 @@ export class DevToolsUIManager {
       const btnNpcManager = document.getElementById('btn-dev-npc-manager');
       const npcPanel = document.getElementById('npc-manager-panel');
       if (btnNpcManager && npcPanel) {
+        btnNpcManager.style.borderColor = '#e056fd';
+        btnNpcManager.style.color = '#e056fd';
         btnNpcManager.onclick = () => {
           npcPanel.style.display = 'flex';
           this.renderNpcManager();
@@ -260,6 +267,102 @@ export class DevToolsUIManager {
         });
       }
 
+      // Add the Management Group
+      let mgmtGroup = document.getElementById('dev-mgmt-group');
+      if (!mgmtGroup && devPanel) {
+        mgmtGroup = document.createElement('div');
+        mgmtGroup.id = 'dev-mgmt-group';
+        mgmtGroup.style.cssText = 'display: flex; flex-direction: column; gap: 5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(52, 152, 219, 0.5);';
+
+        const title = document.createElement('div');
+        title.innerText = 'World & Entity Management';
+        title.style.cssText = 'color: #3498db; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; text-align: center;';
+        mgmtGroup.appendChild(title);
+
+        devPanel.appendChild(mgmtGroup);
+      }
+
+      let btnPlayerManager = document.getElementById('btn-dev-player-manager');
+      if (!btnPlayerManager && devPanel) {
+        btnPlayerManager = document.createElement('button');
+        btnPlayerManager.id = 'btn-dev-player-manager';
+        btnPlayerManager.className = 'btn-secondary';
+        btnPlayerManager.innerText = 'Player Manager';
+        btnPlayerManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
+        btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
+      } else if (btnPlayerManager) {
+        btnPlayerManager.style.borderColor = '#e056fd';
+        btnPlayerManager.style.color = '#e056fd';
+        btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
+      }
+
+      let btnAccountManager = document.getElementById('btn-dev-account-manager');
+      if (!btnAccountManager && devPanel) {
+        btnAccountManager = document.createElement('button');
+        btnAccountManager.id = 'btn-dev-account-manager';
+        btnAccountManager.className = 'btn-secondary';
+        btnAccountManager.innerText = 'Account Manager';
+        btnAccountManager.style.cssText = DEV_BTN_STYLE + ' border-color: #9b59b6; color: #9b59b6;';
+        btnAccountManager.onclick = () => eng.ui.playerModifier.openEmptyAccountManager();
+      } else if (btnAccountManager) {
+        btnAccountManager.onclick = () => eng.ui.playerModifier.openEmptyAccountManager();
+      }
+
+      let btnEditMode = document.getElementById('btn-dev-edit-mode');
+      if (!btnEditMode && devPanel) {
+        btnEditMode = document.createElement('button');
+        btnEditMode.id = 'btn-dev-edit-mode';
+        btnEditMode.className = 'btn-secondary';
+        btnEditMode.innerText = 'Toggle Edit Mode (/edit)';
+        btnEditMode.style.cssText = DEV_BTN_STYLE;
+        btnEditMode.onclick = () => eng.chat.commandHandler.processCommand('/editmode');
+      }
+
+      let btnZoneManager = document.getElementById('btn-dev-zone-manager');
+      if (!btnZoneManager && devPanel) {
+        btnZoneManager = document.createElement('button');
+        btnZoneManager.id = 'btn-dev-zone-manager';
+        btnZoneManager.className = 'btn-secondary';
+        btnZoneManager.innerText = 'Zone Manager';
+        btnZoneManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
+        btnZoneManager.onclick = () => {
+           const zPanel = document.getElementById('zone-manager-panel');
+           if (zPanel) {
+              zPanel.style.display = zPanel.style.display === 'none' ? 'flex' : 'none';
+              if (zPanel.style.display === 'flex') this.renderZoneManager();
+           }
+        };
+      } else if (btnZoneManager) {
+        btnZoneManager.style.borderColor = '#e056fd';
+        btnZoneManager.style.color = '#e056fd';
+      }
+
+      let btnArcadeManager = document.getElementById('btn-dev-arcade-manager');
+      if (!btnArcadeManager && devPanel) {
+        btnArcadeManager = document.createElement('button');
+        btnArcadeManager.id = 'btn-dev-arcade-manager';
+        btnArcadeManager.className = 'btn-secondary';
+        btnArcadeManager.innerText = 'Arcade Manager';
+        btnArcadeManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
+        btnArcadeManager.onclick = () => {
+           const aPanel = document.getElementById('arcade-manager-panel');
+           if (aPanel) {
+              aPanel.style.display = aPanel.style.display === 'none' ? 'flex' : 'none';
+              if (aPanel.style.display === 'flex') this.renderArcadeManager();
+           }
+        };
+      }
+
+      if (mgmtGroup) {
+        if (btnPlayerManager) mgmtGroup.appendChild(btnPlayerManager);
+        if (btnAccountManager) mgmtGroup.appendChild(btnAccountManager);
+        if (btnNpcManager) mgmtGroup.appendChild(btnNpcManager);
+        if (btnZoneManager) mgmtGroup.appendChild(btnZoneManager);
+        if (btnArcadeManager) mgmtGroup.appendChild(btnArcadeManager);
+        if (btnEditTarget) mgmtGroup.appendChild(btnEditTarget);
+        if (btnEditMode) mgmtGroup.appendChild(btnEditMode);
+      }
+
       const orderList = [
         'btn-dev-player',
         'btn-dev-entity',
@@ -269,8 +372,8 @@ export class DevToolsUIManager {
         'btn-dev-melee',
         'wrapper-dev-los',
         'btn-dev-hitbox',
-        'btn-dev-edit-target',
-        'btn-dev-npc-manager'
+        'btn-dev-power-editor',
+        'dev-mgmt-group'
       ];
 
       orderList.forEach(id => {
@@ -317,6 +420,317 @@ export class DevToolsUIManager {
         modal.style.display = 'none';
       };
     }
+  }
+
+  setupZoneManager() {
+    const eng = this.engine;
+    let panel = document.getElementById('zone-manager-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'zone-manager-panel';
+      panel.className = 'dev-panel';
+      panel.style.cssText = 'position: absolute; top: 120px; left: 120px; width: 350px; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
+
+      panel.innerHTML = `
+        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
+          <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Zone Manager</span>
+          <button id="btn-close-zone-manager" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
+        </div>
+        <div style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="color: #ccc; font-size: 0.8rem; margin-bottom: 5px; display: block;">Create New Zone</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="text" id="zm-new-zone-input" placeholder="e.g., sewers" style="flex: 1; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px;">
+              <button id="btn-zm-create" class="btn-primary" style="padding: 5px 10px;">Create</button>
+            </div>
+          </div>
+          <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            <label style="color: #ccc; font-size: 0.8rem; margin-bottom: 5px; display: block;">Available Zones</label>
+            <div id="zone-manager-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 250px; overflow-y: auto;">
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(panel);
+      document.getElementById('btn-close-zone-manager').onclick = () => panel.style.display = 'none';
+
+      document.getElementById('btn-zm-create').onclick = async () => {
+        const input = document.getElementById('zm-new-zone-input');
+        const newZone = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        if (!newZone) return;
+
+        try {
+          const res = await fetch('/api/zones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zone: newZone })
+          });
+          if (res.ok) {
+            input.value = '';
+            this.renderZoneManager();
+          } else {
+             eng.ui.showSystemMessage('Failed to create zone.');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      this.ui.makeDraggable('zone-manager-panel', '.dev-panel-header');
+    }
+  }
+
+  async renderZoneManager() {
+    const list = document.getElementById('zone-manager-list');
+    if (!list) return;
+
+    try {
+      const res = await fetch('/api/zones');
+      if (res.ok) {
+        const data = await res.json();
+        list.innerHTML = '';
+
+        if (!data.zones || data.zones.length === 0) {
+          list.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 10px;">No zones available.</div>';
+          return;
+        }
+
+        data.zones.forEach(zone => {
+          const isActive = this.engine.currentZone === zone;
+          const row = document.createElement('div');
+          row.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid ${isActive ? '#2ecc71' : 'var(--text-dim)'}; border-radius: 4px;`;
+
+          row.innerHTML = `
+            <span style="color: ${isActive ? '#2ecc71' : '#fff'}; font-weight: ${isActive ? 'bold' : 'normal'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${zone} ${isActive ? '(Active)' : ''}</span>
+            <button class="btn-secondary btn-apply-zone" data-zone="${zone}" style="padding: 4px 8px; font-size: 0.8rem; border-color: #f1c40f; color: #f1c40f;">Load</button>
+          `;
+
+          row.querySelector('.btn-apply-zone').onclick = () => {
+            this.engine.chat.commandHandler.processCommand('/applymap ' + zone);
+            document.getElementById('zone-manager-panel').style.display = 'none';
+          };
+
+          list.appendChild(row);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load zones:', e);
+      list.innerHTML = '<div style="text-align: center; color: #e74c3c; padding: 10px;">Error loading zones.</div>';
+    }
+  }
+
+  setupArcadeManager() {
+      const eng = this.engine;
+      let panel = document.getElementById('arcade-manager-panel');
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'arcade-manager-panel';
+        panel.className = 'dev-panel';
+        panel.style.cssText = 'position: absolute; top: 120px; right: 120px; width: 400px; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
+
+        panel.innerHTML = `
+          <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
+            <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Arcade Cabinet Manager</span>
+            <button id="btn-close-arcade-manager" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
+          </div>
+          <div style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="color: #ccc; font-size: 0.8rem; margin-bottom: 5px;">Configure the game installed on each arcade cabinet in the current zone.</div>
+            <div id="arcade-manager-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 400px; overflow-y: auto;">
+            </div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 5px;">
+              <span style="color: #f1c40f; font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 5px;">Global Leaderboards</span>
+              <div id="arcade-manager-leaderboard" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: #aaa;">
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(panel);
+        document.getElementById('btn-close-arcade-manager').onclick = () => panel.style.display = 'none';
+
+        this.ui.makeDraggable('arcade-manager-panel', '.dev-panel-header');
+      }
+  }
+
+  setupArcadeEditModal() {
+      let modal = document.getElementById('arcade-edit-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'arcade-edit-modal';
+        modal.className = 'dev-panel';
+        modal.style.cssText = 'position: absolute; top: 150px; right: 150px; width: 300px; background: rgba(5, 7, 10, 0.95); border: 2px solid #e056fd; border-radius: 6px; display: none; flex-direction: column; z-index: 10005; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
+
+        modal.innerHTML = `
+          <div class="dev-panel-header" style="background: rgba(224, 86, 253, 0.2); padding: 8px 10px; border-bottom: 2px solid #e056fd; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
+            <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Edit Arcade Cabinet</span>
+            <button id="btn-close-arcade-edit" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
+          </div>
+          <div style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+            <div>
+              <label style="color: #ccc; font-size: 0.8rem;">Game Installed</label>
+              <select id="edit-arcade-game" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px; margin-top: 2px;">
+                <option value="pixel">Pixel (Platformer)</option>
+                <option value="pong">Bonk (Retro)</option>
+                <option value="invaders">Space Invaders</option>
+                <option value="b-man">B-Man</option>
+                <option value="flappy-bee">Flappy Bee</option>
+                <option value="pixel-cross">Pixel-Cross (Frogger)</option>
+                <option value="bepis">Bepis (Tetris)</option>
+                <option value="operius">Operius</option>
+              </select>
+            </div>
+            <div>
+              <label style="color: #ccc; font-size: 0.8rem;">Power State</label>
+              <select id="edit-arcade-power" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px; margin-top: 2px;">
+                <option value="on">Powered On</option>
+                <option value="off">Powered Off</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 5px;">
+              <div style="flex: 1;"><label style="color: #ccc; font-size: 0.8rem;">X</label><input type="number" id="edit-arcade-x" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; box-sizing: border-box;"></div>
+              <div style="flex: 1;"><label style="color: #ccc; font-size: 0.8rem;">Y</label><input type="number" id="edit-arcade-y" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; box-sizing: border-box;"></div>
+              <div style="flex: 1;"><label style="color: #ccc; font-size: 0.8rem;">Z</label><input type="number" id="edit-arcade-z" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; box-sizing: border-box;"></div>
+            </div>
+            <div>
+              <label style="color: #ccc; font-size: 0.8rem;">Zone</label>
+              <input type="text" id="edit-arcade-zone" style="width: 100%; background: #222; color: #888; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); box-sizing: border-box;" disabled>
+            </div>
+            <div style="display: flex; gap: 5px; align-items: center; margin-top: 5px;">
+              <input type="checkbox" id="edit-arcade-highlight" checked style="cursor: pointer;">
+              <label for="edit-arcade-highlight" style="color: #ccc; font-size: 0.8rem; cursor: pointer;">Highlight Cabinet in World</label>
+            </div>
+            <button id="btn-save-arcade-edit" class="btn-primary" style="margin-top: 5px; padding: 8px; border-color: #e056fd; color: #e056fd; background: rgba(224, 86, 253, 0.1);">Save Cabinet</button>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('btn-close-arcade-edit').onclick = () => modal.style.display = 'none';
+        document.getElementById('btn-save-arcade-edit').onclick = () => {
+          if (!this.currentEditCabinet) return;
+          const updatedVoxel = { ...this.currentEditCabinet.voxel, gameId: document.getElementById('edit-arcade-game').value, powerState: document.getElementById('edit-arcade-power').value };
+          const nX = parseInt(document.getElementById('edit-arcade-x').value, 10), nY = parseInt(document.getElementById('edit-arcade-y').value, 10), nZ = parseInt(document.getElementById('edit-arcade-z').value, 10);
+          if (nX !== this.currentEditCabinet.wx || nY !== this.currentEditCabinet.wy || nZ !== this.currentEditCabinet.wz) {
+              this.engine.mapManager.setVoxelAt(this.currentEditCabinet.wx, this.currentEditCabinet.wy, this.currentEditCabinet.wz, null, true);
+          }
+          this.engine.mapManager.setVoxelAt(nX, nY, nZ, updatedVoxel, true);
+          modal.style.display = 'none';
+          this.renderArcadeManager();
+          this.engine.ui.showSystemMessage('Arcade Cabinet updated.');
+        };
+        this.ui.makeDraggable('arcade-edit-modal', '.dev-panel-header');
+      }
+  }
+
+  renderArcadeManager() {
+      const list = document.getElementById('arcade-manager-list');
+      if (!list) return;
+      list.innerHTML = '';
+
+      const cabinets = [];
+      if (this.engine.mapManager && this.engine.mapManager.chunks) {
+          for (const [chunkKey, chunk] of this.engine.mapManager.chunks) {
+              for (const [voxelKey, voxel] of chunk) {
+                  if (voxel && voxel.shape === 'arcade-box-1') {
+                      const parts = voxelKey.split('_').map(Number);
+                      const wx = parts[0] * 32;
+                      const wy = parts[1] * 32;
+                      const wz = parts[2] * 32;
+                      cabinets.push({ wx, wy, wz, voxel });
+                  }
+              }
+          }
+      }
+
+      if (cabinets.length === 0) {
+          list.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 10px;">No arcade cabinets found in this zone.</div>';
+          return;
+      }
+
+      const availableGames = [
+          { id: 'pixel', name: 'Pixel (Platformer)' },
+          { id: 'pong', name: 'Bonk (Retro)' },
+          { id: 'invaders', name: 'Space Invaders' },
+          { id: 'b-man', name: 'B-Man' },
+          { id: 'flappy-bee', name: 'Flappy Bee' },
+          { id: 'pixel-cross', name: 'Pixel-Cross' },
+          { id: 'bepis', name: 'Bepis' },
+          { id: 'operius', name: 'Operius' }
+      ];
+
+      const lbContainer = document.getElementById('arcade-manager-leaderboard');
+      if (lbContainer) {
+          lbContainer.innerHTML = '';
+          const scores = this.engine.arcadeScores || {};
+          if (Object.keys(scores).length === 0) {
+              lbContainer.innerHTML = '<span style="color: var(--text-dim);">No high scores recorded yet.</span>';
+          } else {
+              availableGames.forEach(g => {
+                  const s = scores[g.id];
+                  if (s) {
+                      const row = document.createElement('div');
+                      row.style.cssText = 'display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;';
+                      row.innerHTML = `<span style="color: #fff;">${g.name}</span> <span style="color: #f1c40f;">${s.score} <span style="color: #7f8c8d; font-size: 0.7rem;">by ${s.player}</span></span>`;
+                      lbContainer.appendChild(row);
+                  }
+              });
+          }
+      }
+
+      cabinets.forEach((cab, index) => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: 4px; gap: 10px;';
+
+          const currentGame = cab.voxel.gameId || 'pixel';
+          const currentPower = cab.voxel.powerState || 'on';
+          const gameName = availableGames.find(g => g.id === currentGame)?.name || currentGame;
+          const statusDot = currentPower === 'on' ? '🟢' : '🔴';
+
+          row.innerHTML = `
+              <div style="display: flex; flex-direction: column; gap: 3px; flex: 1;">
+                  <span style="color: #fff; font-weight: bold; font-size: 0.85rem;">Cabinet #${index + 1} <span style="font-size: 0.7rem; color: #aaa;">${statusDot} ${gameName}</span></span>
+                  <span style="color: #aaa; font-family: var(--font-mono); font-size: 0.75rem;">X:${cab.wx} Y:${cab.wy} Z:${cab.wz}</span>
+              </div>
+              <div style="display: flex; gap: 5px;">
+                  <button class="btn-tp-arcade btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #f39c12; border-color: #f39c12;" title="Teleport to Cabinet">TP</button>
+                  <button class="btn-edit-arcade btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #e056fd; border-color: #e056fd;" title="Edit Cabinet">✎</button>
+                  <button class="btn-del-arcade btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #e74c3c; border-color: #e74c3c;" title="Delete Cabinet">X</button>
+              </div>
+          `;
+
+          row.querySelector('.btn-tp-arcade').onclick = () => {
+              let offsetX = 0, offsetY = 0;
+              if (cab.voxel.dir === 'n') offsetY = -32;
+              else if (cab.voxel.dir === 's') offsetY = 32;
+              else if (cab.voxel.dir === 'e') offsetX = 32;
+              else if (cab.voxel.dir === 'w') offsetX = -32;
+              else { offsetY = 32; }
+              this.engine.player.x = cab.wx + offsetX;
+              this.engine.player.y = cab.wy + offsetY;
+              this.engine.player.z = this.engine.physics ? this.engine.physics.getTerrainZ(this.engine.player.x, this.engine.player.y) : cab.wz;
+              this.engine.camera.x = this.engine.player.x;
+              this.engine.camera.y = this.engine.player.y;
+          };
+
+          row.querySelector('.btn-edit-arcade').onclick = () => {
+              this.currentEditCabinet = cab;
+              document.getElementById('edit-arcade-game').value = currentGame;
+              document.getElementById('edit-arcade-power').value = currentPower;
+              document.getElementById('edit-arcade-x').value = cab.wx;
+              document.getElementById('edit-arcade-y').value = cab.wy;
+              document.getElementById('edit-arcade-z').value = cab.wz;
+              document.getElementById('edit-arcade-zone').value = this.engine.currentZone || 'untitled';
+              document.getElementById('arcade-edit-modal').style.display = 'flex';
+          };
+
+          row.querySelector('.btn-del-arcade').onclick = () => {
+              if (confirm(`Are you sure you want to permanently delete Arcade Cabinet #${index + 1}?`)) {
+                  this.engine.mapManager.setVoxelAt(cab.wx, cab.wy, cab.wz, null, true);
+                  this.renderArcadeManager();
+                  this.engine.ui.showSystemMessage(`Arcade Cabinet #${index + 1} deleted.`);
+              }
+          };
+
+          list.appendChild(row);
+      });
   }
 
   renderNpcManager() {
@@ -375,7 +789,6 @@ export class DevToolsUIManager {
         this.engine.player.y = npc.y;
         this.engine.camera.x = npc.x;
         this.engine.camera.y = npc.y;
-        this.engine.chat.addMessage('system', 'System', `Teleported to ${npc.name}.`);
       };
 
       row.querySelector('.btn-del').onclick = () => {
@@ -436,6 +849,17 @@ export class DevToolsUIManager {
       const toolsGroup = document.createElement('div');
       toolsGroup.style.cssText = 'display: flex; flex-direction: column; gap: 5px; margin-top: 10px;';
 
+      const btnToggleGrid = document.createElement('button');
+      btnToggleGrid.className = eng.devOptions.showGrid ? 'btn-primary' : 'btn-secondary';
+      btnToggleGrid.style.cssText = 'width: 100%; border-color: #2ecc71; color: #2ecc71;';
+      btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
+      btnToggleGrid.onclick = () => {
+          eng.devOptions.showGrid = !eng.devOptions.showGrid;
+          btnToggleGrid.className = eng.devOptions.showGrid ? 'btn-primary' : 'btn-secondary';
+          btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
+          localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
+      };
+
       const btnToggleHotbar = document.createElement('button');
       btnToggleHotbar.className = 'btn-secondary';
       btnToggleHotbar.style.cssText = 'width: 100%; border-color: #3498db; color: #3498db;';
@@ -466,6 +890,7 @@ export class DevToolsUIManager {
           }
       };
 
+      toolsGroup.appendChild(btnToggleGrid);
       toolsGroup.appendChild(btnToggleHotbar);
       toolsGroup.appendChild(btnToggleObjLib);
       builderPanel.appendChild(toolsGroup);
@@ -484,7 +909,7 @@ export class DevToolsUIManager {
       if (hbVisible) {
           const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
           let base = 'cube';
-          if (activeSlot && activeSlot.dataset.tex.includes('door')) base = 'door';
+          if (activeSlot && (activeSlot.dataset.tex === 'wood-door-bottom' || activeSlot.dataset.tex === 'wood-door-top')) base = 'door';
 
           eng.editShapeBase = base;
           eng.editShape = base;
@@ -583,8 +1008,6 @@ export class DevToolsUIManager {
         btnObj.onclick = () => {
           eng.editShapeBase = id;
           eng.editShape = id;
-          const woodSlot = document.querySelector('.hotbar-slot[data-tex="wood-planks"]');
-          if (woodSlot) woodSlot.click();
 
           eng.editShapeBase = id;
           eng.editShape = id;
@@ -764,6 +1187,12 @@ export class DevToolsUIManager {
     shapeBtn.style.cssText = SHAPE_BTN_STYLE;
     shapeBtn.innerText = 'Shape: CUBE';
 
+    const axisBtn = document.createElement('button');
+    axisBtn.id = 'build-axis-btn';
+    axisBtn.className = 'btn-secondary';
+    axisBtn.style.cssText = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #e74c3c; color: #e74c3c; min-width: 40px;';
+    axisBtn.innerText = 'Axis: X/Y';
+
     const dirBtn = document.createElement('button');
     dirBtn.id = 'build-dir-btn';
     dirBtn.className = 'btn-secondary';
@@ -781,13 +1210,22 @@ export class DevToolsUIManager {
     flipBtn.id = 'build-flip-btn';
     flipBtn.className = 'btn-secondary';
     flipBtn.style.cssText = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #2ecc71; color: #2ecc71; display: none; min-width: 40px;';
-    flipBtn.innerText = 'F';
-    flipBtn.title = 'Toggle Flip (Mirror)';
+    flipBtn.innerText = 'L-Hinge';
+    flipBtn.title = 'Toggle Hinge Side (Left/Right)';
+
+    const uvBtn = document.createElement('button');
+    uvBtn.id = 'build-uv-btn';
+    uvBtn.className = 'btn-secondary';
+    uvBtn.style.cssText = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #e67e22; color: #e67e22; display: none; min-width: 40px;';
+    uvBtn.innerText = 'Auto UV';
+    uvBtn.title = 'Toggle Texture Mapping (Seamless Box UV / Blockbench Mesh UV)';
 
     shapeContainer.appendChild(shapeBtn);
+    shapeContainer.appendChild(axisBtn);
     shapeContainer.appendChild(relBtn);
     shapeContainer.appendChild(dirBtn);
     shapeContainer.appendChild(flipBtn);
+    shapeContainer.appendChild(uvBtn);
     controlsContainer.appendChild(shapeContainer);
 
     const fluidBtn = document.createElement('button');
@@ -800,6 +1238,7 @@ export class DevToolsUIManager {
     builderHotbar.appendChild(controlsContainer);
 
     setupTooltip(shapeBtn, 'Cycle Block Shape (Cube, Slab, Ramp, Stair)');
+    setupTooltip(axisBtn, 'Toggle Drag Selection Axis (Horizontal X/Y vs Vertical Z)');
     setupTooltip(dirBtn, 'Cycle Block Direction (N, E, S, W)');
     setupTooltip(relBtn, 'Toggle Player-Relative Rotation');
     setupTooltip(fluidBtn, 'Toggle Fluid State (Still / Flow)');
@@ -808,7 +1247,15 @@ export class DevToolsUIManager {
     eng.editShapeDir = 'n';
     eng.editShapeRelative = false;
     eng.editShapeFlip = false;
+    eng.editShapeUV = 'auto'; // 'auto', 'mesh', 'box'
+    eng.editDragAxis = 'horizontal';
     eng.editFluid = 'still';
+
+    axisBtn.onclick = () => {
+        eng.editDragAxis = eng.editDragAxis === 'horizontal' ? 'vertical' : 'horizontal';
+        axisBtn.innerText = eng.editDragAxis === 'horizontal' ? 'Axis: X/Y' : 'Axis: Z';
+        axisBtn.style.background = eng.editDragAxis === 'vertical' ? 'rgba(231, 76, 60, 0.2)' : 'transparent';
+    };
 
     fluidBtn.onclick = () => {
         eng.editFluid = eng.editFluid === 'still' ? 'flow' : 'still';
@@ -820,12 +1267,20 @@ export class DevToolsUIManager {
       updateShapeUI();
     };
 
+    uvBtn.onclick = () => {
+        if (eng.editShapeUV === 'auto') eng.editShapeUV = 'mesh';
+        else if (eng.editShapeUV === 'mesh') eng.editShapeUV = 'box';
+        else eng.editShapeUV = 'auto';
+        updateShapeUI();
+    };
+
     const updateShapeUI = () => {
       if (eng.editShapeBase === 'none') {
         if (shapeBtn) shapeBtn.innerText = 'Shape: NONE';
         if (dirBtn) dirBtn.style.display = 'none';
         if (relBtn) relBtn.style.display = 'none';
         if (flipBtn) flipBtn.style.display = 'none';
+        if (uvBtn) uvBtn.style.display = 'none';
         return;
       }
       shapeBtn.innerText = 'Shape: ' + eng.editShapeBase.toUpperCase();
@@ -834,22 +1289,37 @@ export class DevToolsUIManager {
         dirBtn.style.display = 'block';
         relBtn.style.display = 'none';
         flipBtn.style.display = 'block';
+        uvBtn.style.display = 'none';
       } else if (FURNITURE_REGISTRY[eng.editShapeBase]) {
         dirBtn.style.display = 'block';
         relBtn.style.display = 'none';
-        flipBtn.style.display = 'none';
-      } else if (eng.editShapeBase === 'ramp' || eng.editShapeBase === 'stair') {
+        flipBtn.style.display = eng.editShapeBase.includes('door') ? 'block' : 'none';
+        uvBtn.style.display = 'block';
+        if (eng.editShapeUV === 'auto') {
+            uvBtn.innerText = 'Auto UV';
+            uvBtn.style.background = 'transparent';
+        } else if (eng.editShapeUV === 'mesh') {
+            uvBtn.innerText = 'Mesh UV';
+            uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
+        } else {
+            uvBtn.innerText = 'Box UV';
+            uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
+        }
+      } else if (eng.editShapeBase === 'ramp' || eng.editShapeBase === 'stair' || eng.editShapeBase === 'decal') {
         dirBtn.style.display = eng.editShapeRelative ? 'none' : 'block';
         relBtn.style.display = 'block';
         flipBtn.style.display = 'none';
+        uvBtn.style.display = 'none';
       } else {
         dirBtn.style.display = 'none';
         relBtn.style.display = 'none';
         flipBtn.style.display = 'none';
+        uvBtn.style.display = 'none';
       }
 
       dirBtn.innerText = eng.editShapeDir.toUpperCase();
       relBtn.style.background = eng.editShapeRelative ? 'rgba(155, 89, 182, 0.2)' : 'transparent';
+      flipBtn.innerText = eng.editShapeFlip ? 'R-Hinge' : 'L-Hinge';
       flipBtn.style.background = eng.editShapeFlip ? 'rgba(46, 204, 113, 0.2)' : 'transparent';
 
       let finalShape = eng.editShapeBase;
@@ -860,7 +1330,7 @@ export class DevToolsUIManager {
             eng.editShape = finalShape + '_' + eng.editShapeDir + (finalShape === 'door' && eng.editShapeFlip ? '_flip' : '');
           }
       } else if (FURNITURE_REGISTRY[finalShape]) {
-          eng.editShape = finalShape;
+          eng.editShape = finalShape + (finalShape.includes('door') && eng.editShapeFlip ? '_flip' : '');
       } else {
           eng.editShape = finalShape;
       }
@@ -871,7 +1341,9 @@ export class DevToolsUIManager {
       const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
       let bases = ['cube', 'slab', 'ramp', 'stair'];
       if (tex.includes('door')) bases = ['door'];
-      else if (FURNITURE_REGISTRY[eng.editShapeBase]) bases = [eng.editShapeBase, 'cube', 'slab', 'ramp', 'stair'];
+      else if (tex.startsWith('line-')) bases = ['decal'];
+      else if (FURNITURE_REGISTRY[eng.editShapeBase]) bases = [eng.editShapeBase, 'cube', 'slab', 'ramp', 'stair', 'decal', 'fence'];
+      else bases = ['cube', 'slab', 'ramp', 'stair', 'decal', 'fence'];
 
       let nextIdx = bases.indexOf(eng.editShapeBase) + 1;
       if (nextIdx >= bases.length) nextIdx = 0;
@@ -919,6 +1391,8 @@ export class DevToolsUIManager {
 
         gridsWrapper.querySelectorAll('.cat-grid').forEach(g => g.style.display = 'none');
         grid.style.display = 'grid';
+
+        this.renderColorPresets(id === 'industrial' ? 'industrial' : (id === 'lines' ? 'lines' : 'naturals'));
       };
 
       categories[id] = { btn, grid, name };
@@ -934,6 +1408,7 @@ export class DevToolsUIManager {
     addCategory('liquid', 'Liquid');
     addCategory('light', 'Light');
     addCategory('industrial', 'Industrial');
+    addCategory('lines', 'Street Lines');
 
     const ensureActionSlot = (catId, id, text, title, action) => {
         const cat = categories[catId];
@@ -995,18 +1470,27 @@ export class DevToolsUIManager {
             gridsWrapper.querySelectorAll('.hotbar-slot').forEach(s => s.classList.remove('active'));
             slot.classList.add('active');
 
-            if (tex.includes('door')) {
+            const ol = document.getElementById('object-library-panel');
+            const olVisible = ol && ol.style.display !== 'none';
+
+            if (tex === 'wood-door-bottom' || tex === 'wood-door-top') {
                eng.editShapeBase = 'door';
                eng.editShapeFlip = false;
                updateShapeUI();
-            } else if (eng.editShapeBase === 'door') {
+            } else if (FURNITURE_REGISTRY[tex]) {
+               eng.editShapeBase = tex;
+               eng.editShapeFlip = false;
+               updateShapeUI();
+            } else if (tex.startsWith('line-')) {
+               eng.editShapeBase = 'decal';
+               eng.editShapeFlip = false;
+               updateShapeUI();
+            } else if (eng.editShapeBase === 'door' || (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence')) {
                eng.editShapeBase = 'cube';
                eng.editShapeFlip = false;
                updateShapeUI();
             } else {
-               const ol = document.getElementById('object-library-panel');
-               const olVisible = ol && ol.style.display !== 'none';
-               if (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'stair') {
+               if (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence') {
                  eng.editShapeBase = 'cube';
                  eng.editShapeFlip = false;
                  updateShapeUI();
@@ -1040,20 +1524,24 @@ export class DevToolsUIManager {
                 else placeShape = base + '_s';
               }
 
-              let finalTex = slot.dataset.tex;
-              if (finalTex === 'water' && eng.editFluid === 'flow') finalTex = 'water_flow';
+              let baseTex = slot.dataset.tex;
+              if (baseTex === 'water' && eng.editFluid === 'flow') baseTex = 'water_flow';
 
-              if (finalTex.includes('door') && !placeShape.startsWith('door')) {
-                placeShape = 'door_' + eng.editShapeDir + (eng.editShapeFlip ? '_flip' : '');
-              } else if (!finalTex.includes('door') && placeShape.startsWith('door')) {
-                placeShape = 'cube';
-              }
-
+              const finalUVMode = eng.editShapeUV === 'auto' ? undefined : (eng.editShapeUV === 'mesh');
               const updates = [];
               const previousStates = [];
                 eng.selectedTiles.forEach(tile => {
                   const clickedVoxelOld = eng.mapManager.getVoxelAt(tile.x, tile.y, tile.z);
                   previousStates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: clickedVoxelOld ? { ...clickedVoxelOld } : null });
+
+                  let finalTex = baseTex;
+                  if (slot.dataset.tex === 'arcade-carpet') {
+                      const wx = Math.round(tile.x / 32);
+                      const wy = Math.round(tile.y / 32);
+                      const rx = ((wx % 2) + 2) % 2;
+                      const ry = ((wy % 2) + 2) % 2;
+                      finalTex = `arcade-carpet-${rx}-${ry}`;
+                  }
 
                   if (isErase) {
                     eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, null, false);
@@ -1066,8 +1554,8 @@ export class DevToolsUIManager {
                       });
                     }
                   } else {
-                    eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir }, false);
-                    updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir } });
+                    eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode }, false);
+                    updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode } });
                     for (let i = 0; i < 3; i++) {
                       eng.spawnParticle({
                         x: tile.x + (Math.random() - 0.5) * 32, y: tile.y + (Math.random() - 0.5) * 32, z: tile.z + (Math.random() - 0.5) * 32,
@@ -1118,23 +1606,54 @@ export class DevToolsUIManager {
       ensureSlot('liquid', 'lava', `linear-gradient(rgba(255, 93, 0, 0.6), rgba(255, 93, 0, 0.6)), url("assets/tiles/base/fluid/lava_still.png${cb}") center/cover`, '', 'Lava');
       ensureSlot('liquid', 'acid', `linear-gradient(rgba(46, 204, 113, 0.6), rgba(46, 204, 113, 0.6)), url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Acid');
 
-      ensureSlot('light', 'light_block', 'rgba(241, 196, 15, 0.4)', '', 'Light Block (Invisible)');
       ensureSlot('light', 'block-lamp-on-0', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/8 Spread)');
       ensureSlot('light', 'block-lamp-on-1', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/4 Spread)');
       ensureSlot('light', 'block-lamp-on-2', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/2 Spread)');
       ensureSlot('light', 'block-lamp-on-3', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (3/4 Spread)');
       ensureSlot('light', 'block-lamp-on', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (Max Spread)');
+      ensureSlot('light', 'light_block', 'rgba(241, 196, 15, 0.4)', '', 'Light Block (Invisible)');
 
       ensureSlot('wood', 'wood-planks', '#8B5A2B url("assets/tiles/base/all-facing/wood-planks.png") center/cover', '', 'Wood Planks');
       ensureSlot('wood', 'wood-stripped', '#A0522D url("assets/tiles/base/all-facing/wood-stripped.png") center/cover', '', 'Stripped Wood');
       ensureSlot('wood', 'bark-log', '#5c4033 url("assets/tiles/base/all-facing/bark-log.png") center/cover', '', 'Bark Log');
       ensureSlot('wood', 'bark-birch', '#d4b79b url("assets/tiles/base/all-facing/bark-birch.png") center/cover', '', 'Birch Bark');
-      ensureSlot('wood', 'wood-door-bottom', '#6b4c3a url("assets/tiles/base/interactable/wood_door-bottom.png") center/cover', '', 'Wood Door');
+      ensureSlot('wood', 'wooden-door-1', '#6b4c3a url("assets/tiles/base/interactable/wooden-door-1.png") center/cover', '', 'Custom Door 1');
+      ensureSlot('wood', 'wooden-door-2', '#6b4c3a url("assets/tiles/base/interactable/wooden-door-2.png") center/cover', '', 'Custom Door 2');
 
       ensureSlot('industrial', 'concrete', 'url("assets/tiles/base/all-facing/concrete.png") center/cover', '', 'Concrete');
       ensureSlot('industrial', 'paint', 'url("assets/tiles/base/side/rough-paint.png") center/cover', '', 'Paint');
       ensureSlot('industrial', 'carpet', 'url("assets/tiles/base/all-facing/carpet.png") center/cover', '', 'Carpet');
       ensureSlot('industrial', 'arcade-carpet', 'url("assets/tiles/base/all-facing/arcade-carpet.png") center/cover', '', 'Arcade Carpet');
+
+      ensureSlot('lines', 'line-dashed', 'url("assets/tiles/base/all-facing/line-dashed.png") center/cover', '', 'Line (Dashed)');
+      ensureSlot('lines', 'line-solid', 'url("assets/tiles/base/all-facing/line-solid.png") center/cover', '', 'Line (Solid)');
+      ensureSlot('lines', 'line-double-solid', 'url("assets/tiles/base/all-facing/line-double-solid.png") center/cover', '', 'Line (Double Solid)');
+      ensureSlot('lines', 'line-sidewalk-2', 'url("assets/tiles/base/all-facing/line-sidewalk-2.png") center/cover', '', 'Sidewalk Lines (2)');
+      ensureSlot('lines', 'line-sidewalk-4', 'url("assets/tiles/base/all-facing/line-sidewalk-4.png") center/cover', '', 'Sidewalk Lines (4)');
+
+      ensureSlot('lines', 'line-edge-1-dashed', 'url("assets/tiles/base/all-facing/line-edge-1-dashed.png") center/cover', '', 'Line (Edge 1 Dashed)');
+      ensureSlot('lines', 'line-edge-2-dashed', 'url("assets/tiles/base/all-facing/line-edge-2-dashed.png") center/cover', '', 'Line (Edge 2 Dashed)');
+      ensureSlot('lines', 'line-double-dashed-solid', 'url("assets/tiles/base/all-facing/line-double-dashed-solid.png") center/cover', '', 'Line (Dashed & Solid)');
+      ensureSlot('lines', 'line-corner-3-dashed', 'url("assets/tiles/base/all-facing/line-corner-3-dashed.png") center/cover', '', 'Line (Corner 3 Dashed)');
+      ensureSlot('lines', 'line-t-dashed', 'url("assets/tiles/base/all-facing/line-t-dashed.png") center/cover', '', 'Line (T Dashed)');
+
+      ensureSlot('lines', 'line-split-1', 'url("assets/tiles/base/all-facing/line-split-1.png") center/cover', '', 'Line (Split 1)');
+      ensureSlot('lines', 'line-split-2', 'url("assets/tiles/base/all-facing/line-split-2.png") center/cover', '', 'Line (Split 2)');
+      ensureSlot('lines', 'line-t-1', 'url("assets/tiles/base/all-facing/line-t-1.png") center/cover', '', 'Line (T 1)');
+      ensureSlot('lines', 'line-t-2', 'url("assets/tiles/base/all-facing/line-t-2.png") center/cover', '', 'Line (T 2)');
+      ensureSlot('lines', 'line-x', 'url("assets/tiles/base/all-facing/line-x.png") center/cover', '', 'Line (X)');
+
+      ensureSlot('lines', 'line-corner-1', 'url("assets/tiles/base/all-facing/line-corner-1.png") center/cover', '', 'Line (Corner 1)');
+      ensureSlot('lines', 'line-corner-2', 'url("assets/tiles/base/all-facing/line-corner-2.png") center/cover', '', 'Line (Corner 2)');
+      ensureSlot('lines', 'line-corner-3', 'url("assets/tiles/base/all-facing/line-corner-3.png") center/cover', '', 'Line (Corner 3)');
+      ensureSlot('lines', 'line-corner-4', 'url("assets/tiles/base/all-facing/line-corner-4.png") center/cover', '', 'Line (Corner 4)');
+      ensureSlot('lines', 'line-corner-5', 'url("assets/tiles/base/all-facing/line-corner-5.png") center/cover', '', 'Line (Corner 5)');
+
+      ensureSlot('lines', 'line-edge-1', 'url("assets/tiles/base/all-facing/line-edge-1.png") center/cover', '', 'Line (Edge 1)');
+      ensureSlot('lines', 'line-edge-2', 'url("assets/tiles/base/all-facing/line-edge-2.png") center/cover', '', 'Line (Edge 2)');
+      ensureSlot('lines', 'line-edge-end-1', 'url("assets/tiles/base/all-facing/line-edge-end-1.png") center/cover', '', 'Line (Edge End 1)');
+      ensureSlot('lines', 'line-edge-end-2', 'url("assets/tiles/base/all-facing/line-edge-end-2.png") center/cover', '', 'Line (Edge End 2)');
+
 
       builderHotbar.appendChild(tabsContainer);
       builderHotbar.appendChild(gridsWrapper);
@@ -1148,62 +1667,90 @@ export class DevToolsUIManager {
   setupPlayerManager() {
     const eng = this.engine;
     let panel = document.getElementById('player-manager-panel');
-    if (panel) return;
-
-    panel = document.createElement('div');
-    panel.id = 'player-manager-panel';
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'player-manager-panel';
+        document.body.appendChild(panel);
+    }
     panel.className = 'dev-panel';
     panel.style.cssText = PLAYER_PANEL_STYLE;
     panel.innerHTML = `
-        <div class="dev-panel-header">
-            <span>Player Manager</span>
-            <button id="btn-close-player-manager" class="btn-close">X</button>
+        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
+            <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Player Manager</span>
+            <button id="btn-close-player-manager" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
         </div>
-        <div id="player-manager-list" class="npc-manager-list" style="max-height: 500px;"></div>
+        <div style="padding: 10px 10px 0 10px;">
+            <input type="text" id="pm-search-input" placeholder="Search characters..." style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px;">
+        </div>
+        <div id="player-manager-list" class="npc-manager-list" style="max-height: 500px; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px;"></div>
     `;
-    document.body.appendChild(panel);
     document.getElementById('btn-close-player-manager').onclick = () => panel.style.display = 'none';
+    document.getElementById('pm-search-input').addEventListener('input', () => this.renderPlayerManager());
     this.ui.makeDraggable('player-manager-panel', '.dev-panel-header');
   }
 
   renderPlayerManager() {
+    if (!this.allPlayersList) return; // Waiting for server data
+
     const list = document.getElementById('player-manager-list');
     if (!list) return;
     list.innerHTML = '';
 
-    const players = [this.engine.player, ...Object.values(this.engine.otherPlayers)];
-    players.sort((a, b) => (a.name || this.engine.playerData.name).localeCompare(b.name));
+    const searchVal = document.getElementById('pm-search-input')?.value.toLowerCase() || '';
+    const filtered = this.allPlayersList.filter(p => p.name.toLowerCase().includes(searchVal));
 
-    players.forEach(p => {
-      const isSelf = p === this.engine.player;
-      const name = isSelf ? this.engine.playerData.name : p.name;
-      const level = isSelf ? this.engine.playerData.level : p.level;
-      const alignment = isSelf ? this.engine.playerData.alignment : p.alignment;
-      const race = isSelf ? this.engine.playerData.race : p.race;
-      const integrity = isSelf ? this.engine.playerData.integrity : p.integrity;
+    filtered.sort((a, b) => {
+      if (a.online && !b.online) return -1;
+      if (!a.online && b.online) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    filtered.forEach(p => {
+      const isSelf = p.name.toLowerCase() === this.engine.playerData.name.toLowerCase();
+      const color = p.online ? (isSelf ? '#2ecc71' : '#3498db') : '#7f8c8d';
+      const statusIcon = p.online ? '🟢' : '⚫';
 
       const row = document.createElement('div');
       row.style.cssText = PLAYER_ROW_STYLE;
 
       row.innerHTML = `
-          <div style="flex: 1.2; font-weight: bold; color: ${isSelf ? '#2ecc71' : '#3498db'};" title="${name}">${name} (Lv.${level || 1})</div>
-          <div style="flex: 1.5; display: flex; align-items: center; gap: 5px;">
-              <span>X:${Math.round(p.x)} Y:${Math.round(p.y)} Z:${Math.round(p.z || 0)}</span>
-              <button class="btn-tp btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;">TP</button>
+          <div style="flex: 1.2; font-weight: bold; color: ${color};" title="${p.name}">
+              <span style="font-size: 0.6rem; margin-right: 4px;">${statusIcon}</span>
+              ${p.name} <span style="color: #aaa; font-size: 0.75rem;">(Lv.${p.level || 1})</span>
           </div>
-          <div style="flex: 0.8;">${alignment || 'N/A'}</div>
-          <div style="flex: 0.8;">${race || 'N/A'}</div>
-          <div style="flex: 0.8;">${integrity || 0}%</div>
-          <div style="flex: 1;">${Math.floor(p.hp)} / ${p.maxHp}</div>
+          <div style="flex: 1.5; display: flex; flex-direction: column; justify-content: center; gap: 2px;">
+              <span style="color: #f1c40f; font-size: 0.75rem;">Zone: ${p.zone || 'untitled'}</span>
+              <span style="color: #aaa; font-size: 0.7rem;">X:${Math.round(p.x)} Y:${Math.round(p.y)} Z:${Math.round(p.z || 0)}</span>
+          </div>
+          <div style="flex: 0.8;">${p.alignment || 'N/A'}</div>
+          <div style="flex: 0.8;">${p.race || 'N/A'}</div>
+          <div style="flex: 0.8;">${p.integrity || 0}%</div>
+          <div style="flex: 1;">${Math.floor(p.hp || 0)} / ${p.maxHp || 1000}</div>
           <button class="btn-edit btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;">Edit</button>
       `;
 
-      row.querySelector('.btn-tp').onclick = () => {
-        this.engine.chat.commandHandler.processCommand(`/tp ${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.z || 0)}`);
+      if (p.online) {
+        const tpBtn = document.createElement('button');
+        tpBtn.className = 'btn-tp btn-secondary';
+        tpBtn.style.cssText = 'padding: 2px 8px; font-size: 0.7rem; margin-right: 5px;';
+        tpBtn.innerText = 'TP';
+        tpBtn.onclick = () => {
+          this.engine.chat.commandHandler.processCommand(`/tp ${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.z || 0)}`);
+        };
+        row.insertBefore(tpBtn, row.lastElementChild);
+      }
+
+      const kickBtn = document.createElement('button');
+      kickBtn.className = 'btn-secondary';
+      kickBtn.style.cssText = 'padding: 2px 8px; font-size: 0.7rem; margin-right: 5px; border-color: #e74c3c; color: #e74c3c;';
+      kickBtn.innerText = 'Kick';
+      kickBtn.onclick = () => {
+          if (confirm(`Kick ${p.name}?`)) this.engine.network.sendAdminKickPlayer(p.name);
       };
+      row.insertBefore(kickBtn, row.lastElementChild);
 
       row.querySelector('.btn-edit').onclick = () => {
-        this.engine.chat.addMessage('system', 'System', `Editing player ${name} is not yet implemented.`);
+        this.engine.network.sendRequestPlayerData(p.name);
       };
 
       list.appendChild(row);
@@ -1249,29 +1796,110 @@ export class DevToolsUIManager {
     const presetsContainer = document.createElement('div');
     presetsContainer.style.cssText = 'display: grid; grid-template-columns: repeat(8, 22px); gap: 4px; justify-content: center;';
 
-    const presets = [
-      { name: 'Default', hex: '#ffffff' }, { name: 'Birch', hex: '#e1d4b6' }, { name: 'Pine', hex: '#d9c593' }, { name: 'Bamboo', hex: '#d5d48c' },
-      { name: 'Alder', hex: '#d4b79b' }, { name: 'Ash', hex: '#c2bba8' }, { name: 'Driftwood', hex: '#8c8c83' }, { name: 'Maple', hex: '#c58d55' },
-      { name: 'Oak', hex: '#a08153' }, { name: 'Teak', hex: '#9d6736' }, { name: 'Jungle', hex: '#b07c57' }, { name: 'Acacia', hex: '#ba643b' },
-      { name: 'Cherry', hex: '#c9786a' }, { name: 'Red Cedar', hex: '#8c3c2f' }, { name: 'Mangrove', hex: '#77353b' }, { name: 'Chestnut', hex: '#7d492e' },
-      { name: 'Spruce', hex: '#7a5840' }, { name: 'Hickory', hex: '#8a5c3a' }, { name: 'Mahogany', hex: '#5a2523' }, { name: 'Rosewood', hex: '#63251c' },
-      { name: 'Walnut', hex: '#5c4033' }, { name: 'Dark Oak', hex: '#452c16' }, { name: 'Ironwood', hex: '#3e342b' }, { name: 'Ebony', hex: '#26221f' }
-    ];
-
-    presets.forEach(p => {
-      const pBtn = document.createElement('button');
-      pBtn.style.cssText = `width: 22px; height: 22px; background: ${p.hex}; border: 1px solid #000; border-radius: 2px; cursor: pointer; padding: 0; box-sizing: border-box;`;
-      pBtn.title = p.name;
-      pBtn.onclick = () => {
-          eng.buildColor = p.hex;
-          document.querySelectorAll('.shared-color-picker').forEach(cp => cp.value = p.hex);
-      };
-      presetsContainer.appendChild(pBtn);
-    });
+    this.presetContainers = this.presetContainers || [];
+    this.presetContainers.push(presetsContainer);
+    this.renderColorPresets('naturals');
 
     presetsWrapper.appendChild(presetsContainer);
     colorContainer.appendChild(colorPicker);
     colorContainer.appendChild(presetsWrapper);
     container.appendChild(colorContainer);
+  }
+
+  renderColorPresets(category) {
+    if (!this.presetContainers) return;
+    const eng = this.engine;
+    let presets = [];
+    if (category === 'industrial') {
+       presets = [
+         { name: 'Asphalt Dark', hex: '#222222' }, { name: 'Asphalt', hex: '#333333' }, { name: 'Road Grey', hex: '#444444' }, { name: 'Faded Road', hex: '#555555' },
+         { name: 'Dark Concrete', hex: '#7f8c8d' }, { name: 'Concrete', hex: '#95a5a6' }, { name: 'Sidewalk', hex: '#bdc3c7' }, { name: 'Light Concrete', hex: '#d0d3d4' },
+         { name: 'Plaster White', hex: '#ecf0f1' }, { name: 'Office White', hex: '#fdfefe' }, { name: 'Eggshell', hex: '#f4f6f6' }, { name: 'Putty', hex: '#eaeded' },
+         { name: 'Dark Brick', hex: '#922b21' }, { name: 'Industrial Red', hex: '#a93226' }, { name: 'Cinder', hex: '#c0392b' }, { name: 'Rust', hex: '#e74c3c' },
+         { name: 'Hazard Yellow', hex: '#f1c40f' }, { name: 'Warning Orange', hex: '#f39c12' }, { name: 'Safety Gold', hex: '#d4ac0d' }, { name: 'Mustard', hex: '#b7950b' },
+         { name: 'Steel', hex: '#34495e' }, { name: 'Dark Metal', hex: '#2c3e50' }, { name: 'Gunmetal', hex: '#273746' }, { name: 'Iron', hex: '#1c2833' }
+       ];
+    } else if (category === 'lines') {
+       presets = [
+         { name: 'Standard White', hex: '#ffffff' }, { name: 'Warning Yellow', hex: '#f1c40f' }, { name: 'Handicap Blue', hex: '#3498db' }, { name: 'Fire Lane Red', hex: '#e74c3c' },
+         { name: 'Faded White', hex: '#bdc3c7' }, { name: 'Faded Yellow', hex: '#f39c12' }, { name: 'Faded Blue', hex: '#2980b9' }, { name: 'Faded Red', hex: '#c0392b' }
+       ];
+    } else {
+       presets = [
+         { name: 'Default', hex: '#ffffff' }, { name: 'Birch', hex: '#e1d4b6' }, { name: 'Pine', hex: '#d9c593' }, { name: 'Bamboo', hex: '#d5d48c' },
+         { name: 'Alder', hex: '#d4b79b' }, { name: 'Ash', hex: '#c2bba8' }, { name: 'Driftwood', hex: '#8c8c83' }, { name: 'Maple', hex: '#c58d55' },
+         { name: 'Oak', hex: '#a08153' }, { name: 'Teak', hex: '#9d6736' }, { name: 'Jungle', hex: '#b07c57' }, { name: 'Acacia', hex: '#ba643b' },
+         { name: 'Cherry', hex: '#c9786a' }, { name: 'Red Cedar', hex: '#8c3c2f' }, { name: 'Mangrove', hex: '#77353b' }, { name: 'Chestnut', hex: '#7d492e' },
+         { name: 'Spruce', hex: '#7a5840' }, { name: 'Hickory', hex: '#8a5c3a' }, { name: 'Mahogany', hex: '#5a2523' }, { name: 'Rosewood', hex: '#63251c' },
+         { name: 'Walnut', hex: '#5c4033' }, { name: 'Dark Oak', hex: '#452c16' }, { name: 'Ironwood', hex: '#3e342b' }, { name: 'Ebony', hex: '#26221f' }
+       ];
+    }
+
+    this.presetContainers.forEach(container => {
+       container.innerHTML = '';
+       presets.forEach(p => {
+         const pBtn = document.createElement('button');
+         pBtn.style.cssText = `width: 22px; height: 22px; background: ${p.hex}; border: 1px solid #000; border-radius: 2px; cursor: pointer; padding: 0; box-sizing: border-box;`;
+
+         pBtn.onmouseenter = (e) => {
+             const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
+             let isBlock = false;
+             let bgStyle = '';
+             let blockName = '';
+             if (activeSlot && activeSlot.dataset.tex !== 'picker' && activeSlot.dataset.tex !== 'erase') {
+                 isBlock = true;
+                 bgStyle = activeSlot.dataset.bg || '';
+                 blockName = activeSlot.dataset.name || activeSlot.dataset.tex;
+             }
+             const builderTooltip = document.getElementById('builder-tooltip');
+             if (builderTooltip) {
+                 const tooltipText = isBlock ? `${blockName} (${p.name})` : p.name;
+                 if (isBlock) {
+                     const safeBg = bgStyle.replace(/"/g, "'");
+                     const makeFace = (transform, brightness, border) => `
+                       <div style="position: absolute; width: 32px; height: 32px; background: ${safeBg}; transform: ${transform}; border: 1px solid ${border}; filter: brightness(${brightness}); overflow: hidden;">
+                         <div style="position: absolute; inset: 0; background: ${p.hex}; mix-blend-mode: multiply;"></div>
+                       </div>
+                     `;
+                     builderTooltip.innerHTML = `
+                       <div style="display: flex; align-items: center; gap: 15px; padding: 2px;">
+                         <div style="width: 32px; height: 32px; transform-style: preserve-3d; animation: tooltipSpin 4s infinite linear; margin: 5px;">
+                           ${makeFace('translateZ(16px)', 0.85, 'rgba(0,0,0,0.4)')}
+                           ${makeFace('rotateY(180deg) translateZ(16px)', 0.85, 'rgba(0,0,0,0.4)')}
+                           ${makeFace('rotateY(90deg) translateZ(16px)', 0.7, 'rgba(0,0,0,0.4)')}
+                           ${makeFace('rotateY(-90deg) translateZ(16px)', 0.7, 'rgba(0,0,0,0.4)')}
+                           ${makeFace('rotateX(90deg) translateZ(16px)', 1.0, 'rgba(0,0,0,0.15)')}
+                           ${makeFace('rotateX(-90deg) translateZ(16px)', 0.5, 'rgba(0,0,0,0.4)')}
+                         </div>
+                         <span>${tooltipText}</span>
+                       </div>
+                     `;
+                 } else {
+                     builderTooltip.innerText = tooltipText;
+                 }
+                 builderTooltip.style.display = 'block';
+                 builderTooltip.style.left = (e.clientX + 15) + 'px';
+                 builderTooltip.style.top = (e.clientY + 15) + 'px';
+             }
+         };
+         pBtn.onmousemove = (e) => {
+             const builderTooltip = document.getElementById('builder-tooltip');
+             if (builderTooltip) {
+                 builderTooltip.style.left = (e.clientX + 15) + 'px';
+                 builderTooltip.style.top = (e.clientY + 15) + 'px';
+             }
+         };
+         pBtn.onmouseleave = () => {
+             const builderTooltip = document.getElementById('builder-tooltip');
+             if (builderTooltip) builderTooltip.style.display = 'none';
+         };
+
+         pBtn.onclick = () => {
+             eng.buildColor = p.hex;
+             document.querySelectorAll('.shared-color-picker').forEach(cp => cp.value = p.hex);
+         };
+         container.appendChild(pBtn);
+       });
+    });
   }
 }

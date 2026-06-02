@@ -5,6 +5,17 @@ export class InGameMenuUIManager {
   }
 
   setupUI() {
+    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, enableShadows: true, softShadows: true, enableDayNightCycle: true, enableCameraShake: true, enableWeatherParticles: true, maxDynamicLights: 48, enableArcadeCRT: true, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
+    const savedSettingsStr = localStorage.getItem('b_client_settings');
+    const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
+
+    const saveClientSettings = (settingsObj) => {
+        localStorage.setItem('b_client_settings', JSON.stringify(settingsObj));
+        if (window.currentGameEngine && window.currentGameEngine.network) {
+            window.currentGameEngine.network.sendClientSettings(settingsObj);
+        }
+    };
+
     const btnGameMenu = document.getElementById('btn-game-menu');
     const gameDropdown = document.getElementById('game-dropdown');
 
@@ -102,13 +113,6 @@ export class InGameMenuUIManager {
           </div>
         `;
 
-        const saveClientSettings = (settingsObj) => {
-            localStorage.setItem('b_client_settings', JSON.stringify(settingsObj));
-            if (window.currentGameEngine && window.currentGameEngine.network) {
-                window.currentGameEngine.network.sendClientSettings(settingsObj);
-            }
-        };
-
         const saveKeybinds = () => {
             const targetSettings = window.currentGameEngine ? window.currentGameEngine.clientSettings : savedSettings;
             targetSettings.keybinds = {
@@ -171,6 +175,53 @@ export class InGameMenuUIManager {
               document.getElementById('kb-camleft').value = kbs.camLeft || 'q';
               document.getElementById('kb-camright').value = kbs.camRight || 'e';
           }
+
+          // Synchronize all UI toggles to match the live engine state
+          const syncToggle = (btnId, key) => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+              let val = targetSettings[key];
+              if ((key === 'enableShadows' || key === 'enableDayNightCycle' || key === 'enableCameraShake') && val === undefined) val = true;
+              btn.innerText = val ? 'Enabled' : 'Disabled';
+              btn.className = val ? 'btn-primary' : 'btn-secondary';
+              btn.style.width = '115px';
+            }
+          };
+
+          syncToggle('btn-toggle-coords', 'showCoords');
+          syncToggle('btn-toggle-yaw-pitch', 'showYawPitch');
+          syncToggle('btn-toggle-fps', 'showFPS');
+          syncToggle('btn-toggle-ping', 'showPing');
+          syncToggle('btn-toggle-baseplates', 'showBaseplates');
+          syncToggle('btn-toggle-merge-synth', 'mergeSynthBar');
+          syncToggle('btn-toggle-power-raytrace', 'showPowerRaytrace');
+          syncToggle('btn-toggle-day-night', 'enableDayNightCycle');
+          syncToggle('btn-toggle-shadows', 'enableShadows');
+          syncToggle('btn-toggle-soft-shadows', 'softShadows');
+          syncToggle('btn-toggle-lock-builder', 'lockBuilderPanel');
+          syncToggle('btn-toggle-cam-jump', 'cameraFollowsJump');
+          syncToggle('btn-toggle-camera-shake', 'enableCameraShake');
+          syncToggle('btn-toggle-arcade-crt', 'enableArcadeCRT');
+          syncToggle('btn-toggle-minimap', 'showMinimap');
+          syncToggle('btn-toggle-minimap-rotate', 'rotateMinimap');
+          syncToggle('btn-toggle-click-move', 'clickToMove');
+          syncToggle('btn-toggle-always-sprint', 'alwaysSprint');
+          syncToggle('btn-toggle-player-names', 'showPlayerNames');
+          syncToggle('btn-toggle-player-health', 'showPlayerHealth');
+          syncToggle('btn-toggle-entity-names', 'showEntityNames');
+          syncToggle('btn-toggle-entity-health', 'showEntityHealth');
+          syncToggle('btn-toggle-invert-cam-x', 'invertCameraX');
+          syncToggle('btn-toggle-invert-cam-y', 'invertCameraY');
+          syncToggle('btn-toggle-middle-mouse', 'middleMouseRotation');
+
+          if (document.getElementById('select-powerbar-orient')) document.getElementById('select-powerbar-orient').value = targetSettings.powerbarOrientation || 'horizontal';
+          if (document.getElementById('select-combat-style')) document.getElementById('select-combat-style').value = targetSettings.combatStyle || 'hybrid';
+          if (document.getElementById('select-camera-snap')) document.getElementById('select-camera-snap').value = targetSettings.cameraAngleSnap !== undefined ? targetSettings.cameraAngleSnap : 0;
+          if (document.getElementById('slider-camera-sensitivity')) { document.getElementById('slider-camera-sensitivity').value = targetSettings.cameraSensitivity || 120; const v = document.getElementById('val-camera-sensitivity'); if(v) v.innerText = targetSettings.cameraSensitivity || 120; }
+          if (document.getElementById('slider-drag-sensitivity')) { document.getElementById('slider-drag-sensitivity').value = (targetSettings.dragRotationSensitivity !== undefined ? targetSettings.dragRotationSensitivity : 0.25) * 100; const v = document.getElementById('val-drag-sensitivity'); if(v) v.innerText = ((targetSettings.dragRotationSensitivity !== undefined ? targetSettings.dragRotationSensitivity : 0.25) * 100) + '%'; }
+          if (document.getElementById('slider-render-distance')) { document.getElementById('slider-render-distance').value = targetSettings.renderDistance || 2000; const v = document.getElementById('val-render-distance'); if(v) v.innerText = targetSettings.renderDistance || 2000; }
+          if (document.getElementById('slider-render-scale')) { document.getElementById('slider-render-scale').value = (targetSettings.renderScale || 1.0) * 100; const v = document.getElementById('val-render-scale'); if(v) v.innerText = ((targetSettings.renderScale || 1.0) * 100) + '%'; }
+          if (document.getElementById('slider-dynamic-lights')) { document.getElementById('slider-dynamic-lights').value = targetSettings.maxDynamicLights !== undefined ? targetSettings.maxDynamicLights : 48; const v = document.getElementById('val-dynamic-lights'); if(v) v.innerText = targetSettings.maxDynamicLights !== undefined ? targetSettings.maxDynamicLights : 48; }
 
           document.getElementById('settings-modal').style.display = 'flex';
         });
@@ -269,10 +320,6 @@ export class InGameMenuUIManager {
         });
       }
 
-      const defaultSettings = { combatStyle: 'hybrid', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, timezoneOffset: 0, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, enableShadows: true, enableDayNightCycle: true, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
-      const savedSettingsStr = localStorage.getItem('b_client_settings');
-      const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
-
       const uiScaleSlider = document.getElementById('slider-ui-scale');
       const uiScaleVal = document.getElementById('val-ui-scale');
       if (uiScaleSlider) {
@@ -304,55 +351,61 @@ export class InGameMenuUIManager {
         });
       }
 
-      const tzSlider = document.getElementById('slider-timezone');
-      const tzDisplay = document.getElementById('timezone-display');
-      if (tzSlider && tzDisplay) {
-        tzSlider.value = savedSettings.timezoneOffset || 0;
-        const updateTzDisplay = (val) => {
-          tzDisplay.innerText = val === 0 ? 'Server Time (+0h)' : `Local Time (${val > 0 ? '+' : ''}${val}h)`;
-        };
-        updateTzDisplay(parseInt(tzSlider.value, 10));
-        tzSlider.addEventListener('input', (e) => {
-          const val = parseInt(e.target.value, 10);
-          savedSettings.timezoneOffset = val;
-          if (window.currentGameEngine) window.currentGameEngine.clientSettings.timezoneOffset = val;
-          saveClientSettings(window.currentGameEngine ? window.currentGameEngine.clientSettings : savedSettings);
-          updateTzDisplay(val);
-        });
+      // Hide the legacy timezone slider if it still exists in the raw HTML file
+      const legacyTzSlider = document.getElementById('slider-timezone');
+      if (legacyTzSlider && legacyTzSlider.parentNode && legacyTzSlider.parentNode.parentNode) {
+         legacyTzSlider.parentNode.parentNode.style.display = 'none';
       }
 
       const setupSettingToggle = (rowId, btnId, settingKey) => {
         const row = document.getElementById(rowId);
-        const btn = document.getElementById(btnId);
-        if (!row || !btn) return;
+        if (!row) return;
 
-        let isEnabled = savedSettings[settingKey];
-        if ((settingKey === 'enableShadows' || settingKey === 'enableDayNightCycle') && isEnabled === undefined) isEnabled = true;
+        const initBtn = document.getElementById(btnId);
+        if (initBtn) {
+          let isEnabled = savedSettings[settingKey];
+          if ((settingKey === 'enableShadows' || settingKey === 'softShadows' || settingKey === 'enableDayNightCycle' || settingKey === 'enableCameraShake') && isEnabled === undefined) isEnabled = true;
 
-        if (isEnabled) {
-          btn.innerText = 'Enabled';
-          btn.className = 'btn-primary';
-          btn.style.width = 'auto';
-        } else {
-          btn.innerText = 'Disabled';
-          btn.className = 'btn-secondary';
+          if (isEnabled) {
+            initBtn.innerText = 'Enabled';
+            initBtn.className = 'btn-primary';
+            initBtn.style.width = '115px';
+          } else {
+            initBtn.innerText = 'Disabled';
+            initBtn.className = 'btn-secondary';
+            initBtn.style.width = '115px';
+          }
         }
+
+        if (row.dataset.hasToggleListener) return;
+        row.dataset.hasToggleListener = 'true';
 
         row.addEventListener('click', () => {
           const targetSettings = window.currentGameEngine ? window.currentGameEngine.clientSettings : savedSettings;
           let currentVal = targetSettings[settingKey];
-          if ((settingKey === 'enableShadows' || settingKey === 'enableDayNightCycle') && currentVal === undefined) currentVal = true;
+          if ((settingKey === 'enableShadows' || settingKey === 'softShadows' || settingKey === 'enableDayNightCycle' || settingKey === 'enableCameraShake') && currentVal === undefined) currentVal = true;
 
           const newVal = !currentVal;
           targetSettings[settingKey] = newVal;
           saveClientSettings(targetSettings);
 
-          btn.innerText = newVal ? 'Enabled' : 'Disabled';
-          btn.className = newVal ? 'btn-primary' : 'btn-secondary';
-          btn.style.width = 'auto';
+          const liveBtn = document.getElementById(btnId);
+          if (liveBtn) {
+            liveBtn.innerText = newVal ? 'Enabled' : 'Disabled';
+            liveBtn.className = newVal ? 'btn-primary' : 'btn-secondary';
+            liveBtn.style.width = '115px';
+          }
 
           if (settingKey === 'enableShadows' && window.currentGameEngine.renderer) {
             window.currentGameEngine.renderer.toggleShadows(newVal);
+          }
+          if (settingKey === 'softShadows' && window.currentGameEngine.renderer && window.currentGameEngine.renderer.toggleSoftShadows) {
+            window.currentGameEngine.renderer.toggleSoftShadows(newVal);
+          }
+
+          // Force the UI HUD to instantly redraw and reflect changes like the Synth Bar Merge
+          if (window.currentGameEngine && window.currentGameEngine.ui) {
+            window.currentGameEngine.ui.update();
           }
         });
       };
@@ -362,21 +415,44 @@ export class InGameMenuUIManager {
       setupSettingToggle('row-toggle-fps', 'btn-toggle-fps', 'showFPS');
       setupSettingToggle('row-toggle-ping', 'btn-toggle-ping', 'showPing');
       setupSettingToggle('row-toggle-baseplates', 'btn-toggle-baseplates', 'showBaseplates');
-      setupSettingToggle('row-toggle-merge-synth', 'btn-toggle-merge-synth', 'mergeSynthBar');
       setupSettingToggle('row-toggle-power-raytrace', 'btn-toggle-power-raytrace', 'showPowerRaytrace');
       setupSettingToggle('row-toggle-day-night', 'btn-toggle-day-night', 'enableDayNightCycle');
       setupSettingToggle('row-toggle-shadows', 'btn-toggle-shadows', 'enableShadows');
 
-      setupSettingToggle('row-toggle-lock-builder', 'btn-toggle-lock-builder', 'lockBuilderPanel');
+      // Fallback injection if the rows are missing from your HTML file
+      const ensureSettingRow = (rowId, btnId, settingKey, labelText, insertAfterId) => {
+        let row = document.getElementById(rowId);
+        if (!row) {
+          const anchor = document.getElementById(insertAfterId);
+          if (anchor && anchor.parentNode) {
+            row = document.createElement('div');
+            row.id = rowId;
+            row.className = 'settings-row';
+            row.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+            row.innerHTML = `<span style="color: #ccc;">${labelText}</span><button id="${btnId}" style="width: 115px;" class="${savedSettings[settingKey] ? 'btn-primary' : 'btn-secondary'}">${savedSettings[settingKey] ? 'Enabled' : 'Disabled'}</button>`;
+            anchor.parentNode.insertBefore(row, anchor.nextSibling);
+          }
+        } else {
+          const span = row.querySelector('span');
+          if (span && !span.innerText.includes('(N)')) span.innerText = labelText;
+        }
+        setupSettingToggle(rowId, btnId, settingKey);
+      };
+
+      ensureSettingRow('row-toggle-soft-shadows', 'btn-toggle-soft-shadows', 'softShadows', 'Enable Soft Shadows', 'row-toggle-shadows');
+      ensureSettingRow('row-toggle-lock-builder', 'btn-toggle-lock-builder', 'lockBuilderPanel', 'Lock Builder Panels', 'row-toggle-soft-shadows');
       setupSettingToggle('row-toggle-cam-jump', 'btn-toggle-cam-jump', 'cameraFollowsJump');
       setupSettingToggle('row-toggle-minimap', 'btn-toggle-minimap', 'showMinimap');
       setupSettingToggle('row-toggle-minimap-rotate', 'btn-toggle-minimap-rotate', 'rotateMinimap');
       setupSettingToggle('row-toggle-click-move', 'btn-toggle-click-move', 'clickToMove');
       setupSettingToggle('row-toggle-always-sprint', 'btn-toggle-always-sprint', 'alwaysSprint');
-      setupSettingToggle('row-toggle-player-names', 'btn-toggle-player-names', 'showPlayerNames');
-      setupSettingToggle('row-toggle-player-health', 'btn-toggle-player-health', 'showPlayerHealth');
-      setupSettingToggle('row-toggle-entity-names', 'btn-toggle-entity-names', 'showEntityNames');
-      setupSettingToggle('row-toggle-entity-health', 'btn-toggle-entity-health', 'showEntityHealth');
+
+      ensureSettingRow('row-toggle-merge-synth', 'btn-toggle-merge-synth', 'mergeSynthBar', 'Merge Synthetic Energy Bar', 'row-toggle-power-raytrace');
+      ensureSettingRow('row-toggle-entity-health', 'btn-toggle-entity-health', 'showEntityHealth', 'Show Entity Health (N)', 'row-toggle-always-sprint');
+      ensureSettingRow('row-toggle-entity-names', 'btn-toggle-entity-names', 'showEntityNames', 'Show Entity Names (N)', 'row-toggle-always-sprint');
+      ensureSettingRow('row-toggle-player-health', 'btn-toggle-player-health', 'showPlayerHealth', 'Show Player Health (N)', 'row-toggle-always-sprint');
+      ensureSettingRow('row-toggle-player-names', 'btn-toggle-player-names', 'showPlayerNames', 'Show Player Names (N)', 'row-toggle-always-sprint');
+      ensureSettingRow('row-toggle-camera-shake', 'btn-toggle-camera-shake', 'enableCameraShake', 'Enable Camera Shake', 'row-toggle-cam-jump');
 
       // Wire up the camera rotation and drag settings
       const oldInvertRows = ['row-toggle-invert-rot', 'row-toggle-invert-camera', 'row-toggle-invert', 'row-toggle-invert-qe', 'row-toggle-invert-q-e', 'row-toggle-drag-rot'];
@@ -420,6 +496,11 @@ export class InGameMenuUIManager {
         graphicsRow.id = 'graphics-settings-row';
         graphicsRow.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);';
         graphicsRow.innerHTML = `
+          <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+              <button id="btn-preset-potato" class="btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem;">Preset: Potato</button>
+              <button id="btn-preset-normal" class="btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem;">Preset: Normal</button>
+              <button id="btn-preset-ultra" class="btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem;">Preset: Ultra</button>
+          </div>
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #ccc;">Render Distance</span>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -444,7 +525,69 @@ export class InGameMenuUIManager {
         `;
         container.insertBefore(graphicsRow, camJumpRow);
 
+        const applyGraphicsPreset = (preset) => {
+            const targetSettings = window.currentGameEngine ? window.currentGameEngine.clientSettings : savedSettings;
+            if (preset === 'potato') {
+                targetSettings.renderDistance = 800;
+                targetSettings.renderScale = 0.5;
+                targetSettings.enableShadows = false;
+                targetSettings.softShadows = false;
+                targetSettings.maxDynamicLights = 0;
+            } else if (preset === 'normal') {
+                targetSettings.renderDistance = 2000;
+                targetSettings.renderScale = 1.0;
+                targetSettings.enableShadows = true;
+                targetSettings.softShadows = true;
+                targetSettings.maxDynamicLights = 48;
+            } else if (preset === 'ultra') {
+                targetSettings.renderDistance = 4000;
+                targetSettings.renderScale = 1.0;
+                targetSettings.enableShadows = true;
+                targetSettings.softShadows = true;
+                targetSettings.maxDynamicLights = 100;
+            }
+
+            saveClientSettings(targetSettings);
+
+            const rDistSlider = document.getElementById('slider-render-distance');
+            const rDistVal = document.getElementById('val-render-distance');
+            if (rDistSlider && rDistVal) { rDistSlider.value = targetSettings.renderDistance; rDistVal.innerText = targetSettings.renderDistance; }
+
+            const rScaleSlider = document.getElementById('slider-render-scale');
+            const rScaleVal = document.getElementById('val-render-scale');
+            if (rScaleSlider && rScaleVal) { rScaleSlider.value = targetSettings.renderScale * 100; rScaleVal.innerText = (targetSettings.renderScale * 100) + '%'; }
+
+            const dlSlider = document.getElementById('slider-dynamic-lights');
+            const dlVal = document.getElementById('val-dynamic-lights');
+            if (dlSlider && dlVal) { dlSlider.value = targetSettings.maxDynamicLights; dlVal.innerText = targetSettings.maxDynamicLights; }
+
+            const shadowBtn = document.getElementById('btn-toggle-shadows');
+            if (shadowBtn) {
+                shadowBtn.innerText = targetSettings.enableShadows ? 'Enabled' : 'Disabled';
+                shadowBtn.className = targetSettings.enableShadows ? 'btn-primary' : 'btn-secondary';
+            }
+
+            const softShadowBtn = document.getElementById('btn-toggle-soft-shadows');
+            if (softShadowBtn) {
+                softShadowBtn.innerText = targetSettings.softShadows ? 'Enabled' : 'Disabled';
+                softShadowBtn.className = targetSettings.softShadows ? 'btn-primary' : 'btn-secondary';
+            }
+
+            if (window.currentGameEngine && window.currentGameEngine.renderer) {
+                window.currentGameEngine.renderer.needsVoxelUpdate = true;
+                if (window.currentGameEngine.renderer.updateRenderScale) window.currentGameEngine.renderer.updateRenderScale(targetSettings.renderScale);
+                window.currentGameEngine.renderer.toggleShadows(targetSettings.enableShadows);
+                if (window.currentGameEngine.renderer.toggleSoftShadows) window.currentGameEngine.renderer.toggleSoftShadows(targetSettings.softShadows);
+            }
+        };
+        document.getElementById('btn-preset-potato').onclick = () => applyGraphicsPreset('potato');
+        document.getElementById('btn-preset-normal').onclick = () => applyGraphicsPreset('normal');
+        document.getElementById('btn-preset-ultra').onclick = () => applyGraphicsPreset('ultra');
+
         if (!document.getElementById('combat-style-row')) {
+          const combatChatRow = document.getElementById('row-toggle-combat-chat');
+          const combatContainer = combatChatRow ? combatChatRow.parentNode : container;
+
           const combatStyleRow = document.createElement('div');
           combatStyleRow.id = 'combat-style-row';
           combatStyleRow.className = 'settings-row';
@@ -457,7 +600,12 @@ export class InGameMenuUIManager {
               <option value="mouse" style="background: #111; color: #3498db;">Mouse Only</option>
             </select>
           `;
-          container.insertBefore(combatStyleRow, camJumpRow);
+
+          if (combatChatRow) {
+             combatContainer.insertBefore(combatStyleRow, combatChatRow.nextSibling);
+          } else {
+             container.insertBefore(combatStyleRow, camJumpRow);
+          }
 
           const selectCombatStyle = document.getElementById('select-combat-style');
           selectCombatStyle.value = savedSettings.combatStyle || 'hybrid';
@@ -465,6 +613,37 @@ export class InGameMenuUIManager {
             const val = e.target.value;
             savedSettings.combatStyle = val;
             if (window.currentGameEngine) window.currentGameEngine.clientSettings.combatStyle = val;
+            saveClientSettings(window.currentGameEngine ? window.currentGameEngine.clientSettings : savedSettings);
+          };
+        }
+
+        if (!document.getElementById('powerbar-orient-row')) {
+          const pbOrientRow = document.createElement('div');
+          pbOrientRow.id = 'powerbar-orient-row';
+          pbOrientRow.className = 'settings-row';
+          pbOrientRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: default;';
+          pbOrientRow.innerHTML = `
+            <span style="color: #ccc;">Powerbar Orientation</span>
+            <select id="select-powerbar-orient" style="background: rgba(0,0,0,0.5); color: #3498db; border: 1px solid #3498db; padding: 5px; font-weight: bold; cursor: pointer; border-radius: 4px;">
+              <option value="horizontal" style="background: #111; color: #3498db;">Horizontal</option>
+              <option value="vertical" style="background: #111; color: #3498db;">Vertical</option>
+            </select>
+          `;
+
+          const combatContainer = document.getElementById('combat-style-row') ? document.getElementById('combat-style-row').parentNode : container;
+          combatContainer.insertBefore(pbOrientRow, document.getElementById('combat-style-row') ? document.getElementById('combat-style-row').nextSibling : null);
+
+          const selectOrient = document.getElementById('select-powerbar-orient');
+          selectOrient.value = savedSettings.powerbarOrientation || 'horizontal';
+          selectOrient.onchange = (e) => {
+            const val = e.target.value;
+            savedSettings.powerbarOrientation = val;
+            if (window.currentGameEngine) {
+                window.currentGameEngine.clientSettings.powerbarOrientation = val;
+                if (window.currentGameEngine.ui && window.currentGameEngine.ui.powerbar) {
+                    window.currentGameEngine.ui.powerbar.setupPowerbar();
+                }
+            }
             saveClientSettings(window.currentGameEngine ? window.currentGameEngine.clientSettings : savedSettings);
           };
         }

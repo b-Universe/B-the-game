@@ -65,7 +65,7 @@ export class InputManager {
       if (!eng.renderer || !eng.renderer.camera) return;
       const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
       const camera = eng.renderer.camera;
-      camera.zoom = Math.max(1.0, Math.min(camera.zoom + zoomDelta, 3.0));
+      camera.zoom = Math.max(1.0, Math.min(camera.zoom + zoomDelta, 5.0));
       camera.updateProjectionMatrix();
     };
 
@@ -116,6 +116,7 @@ export class InputManager {
           if (hitId && hitId !== 'player_self' && !hitId.startsWith('proj_')) {
             if (hitId.startsWith('npc_')) clickedTarget = { type: 'npc', id: hitId.substring(4) };
             else if (hitId.startsWith('player_')) clickedTarget = { type: 'player', id: hitId.substring(7) };
+            else if (hitId.startsWith('drone_')) clickedTarget = { type: 'drone', id: hitId.substring(6) };
             break;
           }
         }
@@ -217,12 +218,14 @@ export class InputManager {
                   const parts = matchShape.split('_');
                   matchShape = parts[0];
                   matchDir = parts[1] || 'n';
-                } else if (matchShape.startsWith('door_')) {
+                } else if (matchShape.startsWith('door_') && !FURNITURE_REGISTRY[matchShape.replace('_open', '')]) {
                   const parts = matchShape.split('_');
                   matchShape = 'door';
                   matchDir = parts[1] || 'n';
                   matchFlip = matchShape.includes('_flip') || clickedVoxel.shape.includes('_flip');
                 } else if (FURNITURE_REGISTRY[matchShape]) {
+                  matchDir = clickedVoxel.dir || 'n';
+                } else if (matchShape === 'decal') {
                   matchDir = clickedVoxel.dir || 'n';
                 } else if (matchShape.endsWith('_player')) {
                   const parts = matchShape.split('_');
@@ -276,14 +279,6 @@ export class InputManager {
               eng.mapManager.setVoxelAt(targetX, targetY, targetZ, null);
               eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: null });
 
-              if (clickedVoxelOld && clickedVoxelOld.tex === 'wood-door-bottom') {
-                eng.mapManager.setVoxelAt(targetX, targetY, targetZ + 32, null);
-                eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ + 32, voxelData: null });
-              } else if (clickedVoxelOld && clickedVoxelOld.tex === 'wood-door-top') {
-                eng.mapManager.setVoxelAt(targetX, targetY, targetZ - 32, null);
-                eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ - 32, voxelData: null });
-              }
-
               eng.renderer.needsVoxelUpdate = true;
               // Deletion particle effect
               for (let i = 0; i < 25; i++) {
@@ -320,6 +315,7 @@ export class InputManager {
               if (hitExistingBlock) {
                 if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1) {
                   placeShape = 'cube';
+                } else if (clickedVoxel && clickedVoxel.shape === 'decal' && normal.z === 1) {
                 } else {
                   targetX += normal.x * 32;
                   targetY += normal.y * 32;
@@ -338,19 +334,10 @@ export class InputManager {
               let finalTex = tex;
               if (finalTex === 'water' && eng.editFluid === 'flow') finalTex = 'water_flow';
 
-              if (finalTex.includes('door') && !placeShape.startsWith('door')) {
-                placeShape = 'door_' + eng.editShapeDir + (eng.editShapeFlip ? '_flip' : '');
-              } else if (!finalTex.includes('door') && placeShape.startsWith('door')) {
-                placeShape = 'cube';
-              }
+              const finalUVMode = eng.editShapeUV === 'auto' ? undefined : (eng.editShapeUV === 'mesh');
 
-              eng.mapManager.setVoxelAt(targetX, targetY, targetZ, { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir });
-              eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir } });
-
-              if (finalTex === 'wood-door-bottom') {
-                eng.mapManager.setVoxelAt(targetX, targetY, targetZ + 32, { tex: 'wood-door-top', color, shape: placeShape, dir: eng.editShapeDir });
-                eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ + 32, voxelData: { tex: 'wood-door-top', color, shape: placeShape, dir: eng.editShapeDir } });
-              }
+              eng.mapManager.setVoxelAt(targetX, targetY, targetZ, { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode });
+              eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode } });
 
               eng.renderer.needsVoxelUpdate = true;
               // Todo: Creation particle effect
@@ -412,7 +399,7 @@ export class InputManager {
           rootY = eng.cursorGridPos.y;
           rootZ = eng.cursorGridPos.z;
           let v = eng.mapManager.getVoxelAt(rootX, rootY, rootZ);
-          if (v && v.shape && (v.shape.startsWith('door') || FURNITURE_REGISTRY[v.shape])) {
+              if (v && v.shape && (v.shape.includes('door') || FURNITURE_REGISTRY[v.shape.replace('_open', '')])) {
             clickedVoxel = v;
           }
         }
@@ -423,7 +410,7 @@ export class InputManager {
             for (let dy = -32; dy <= 32; dy += 32) {
               for (let dz = -96; dz <= 32; dz += 32) {
                 let v = eng.mapManager.getVoxelAt(rc.gx * 32 + dx, rc.gy * 32 + dy, rc.z * 32 + dz);
-                if (v && v.shape && (v.shape.startsWith('door') || FURNITURE_REGISTRY[v.shape])) {
+                    if (v && v.shape && (v.shape.includes('door') || FURNITURE_REGISTRY[v.shape.replace('_open', '')])) {
                   clickedVoxel = v;
                   rootX = rc.gx * 32 + dx; rootY = rc.gy * 32 + dy; rootZ = rc.z * 32 + dz;
                   break;
@@ -438,7 +425,7 @@ export class InputManager {
         if (clickedVoxel && !eng.editMode) {
           const dist = Math.hypot(eng.player.x - rootX, eng.player.y - rootY);
           if (dist <= 160) {
-            if (clickedVoxel.shape.startsWith('door')) {
+            if (clickedVoxel.shape.includes('door')) {
               let entityInWay = false;
               [...eng.npcs, ...Object.values(eng.otherPlayers), eng.player].forEach(ent => {
                 if (ent.state !== 'dead' && ent.state !== 'death') {
@@ -454,16 +441,30 @@ export class InputManager {
               const isOp = clickedVoxel.shape.includes('_open');
               const toggleDoor = (tx, ty, tz) => {
                 const v = eng.mapManager.getVoxelAt(tx, ty, tz);
-                if (v && v.shape && v.shape.startsWith('door')) {
+                if (v && v.shape && v.shape.includes('door')) {
                   v.shape = isOp ? v.shape.replace('_open', '') : v.shape + '_open';
+                  if (!isOp) v._openedAt = performance.now();
                   eng.mapManager.setVoxelAt(tx, ty, tz, v);
+
+                  if (eng.doors) {
+                      const doorObj = eng.doors.find(d => d.x === tx && d.y === ty && d.z === tz);
+                      if (doorObj) {
+                          doorObj.shape = v.shape;
+                      } else {
+                          eng.doors.push({ x: tx, y: ty, z: tz, shape: v.shape, tex: v.tex, color: v.color, dir: v.dir });
+                      }
+                  }
+
+                  if (!isOp) {
+                      eng.autoOpenedDoors.set(`${tx}_${ty}_${tz}`, { x: tx, y: ty, z: tz, timer: 3000 });
+                  } else {
+                      eng.autoOpenedDoors.delete(`${tx}_${ty}_${tz}`);
+                  }
                 }
               };
               toggleDoor(rootX, rootY, rootZ);
-              toggleDoor(rootX, rootY, rootZ + 32);
-              toggleDoor(rootX, rootY, rootZ - 32);
               return;
-            } else if (FURNITURE_REGISTRY[clickedVoxel.shape]) {
+            } else if (FURNITURE_REGISTRY[clickedVoxel.shape.replace('_open', '')]) {
               let otherEntityInWay = false;
               [...eng.npcs, ...Object.values(eng.otherPlayers)].forEach(ent => {
                 if (ent.state !== 'dead' && ent.state !== 'death') {
@@ -547,10 +548,14 @@ export class InputManager {
            endPos.z += eng.cursorGridPos.normal.z * 32;
         }
 
-        // Lock the Z-axis during the drag to prevent the selection volume from
-        // chaotically expanding into a massive 3D cube if the mouse brushes against walls or empty space
+        // Lock the appropriate axis during the drag
         if (eng.selectionStart) {
-          endPos.z = eng.selectionStart.z;
+          if (eng.editDragAxis === 'vertical') {
+             endPos.x = eng.selectionStart.x;
+             endPos.y = eng.selectionStart.y;
+          } else {
+             endPos.z = eng.selectionStart.z;
+          }
         }
 
         if (!eng.selectionEnd || eng.selectionEnd.x !== endPos.x || eng.selectionEnd.y !== endPos.y || eng.selectionEnd.z !== endPos.z) {

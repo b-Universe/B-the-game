@@ -131,6 +131,18 @@ export class AuthUIManager {
         if (selectedChar) {
           document.getElementById('creation-screen').style.display = 'none';
           document.getElementById('selection-screen').style.display = 'none';
+
+          let loader = document.getElementById('loading-screen');
+          if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'loading-screen';
+            loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: monospace; pointer-events: auto;';
+            loader.innerHTML = '<h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1><p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Loading Engine...</p>';
+            document.body.appendChild(loader);
+          } else {
+            loader.style.display = 'flex';
+          }
+
           document.getElementById('game-screen').style.display = 'block';
 
           import(`./game/engine.js?v=${Date.now()}`).then(module => {
@@ -172,6 +184,18 @@ export class AuthUIManager {
         }
 
         document.getElementById('selection-screen').style.display = 'none';
+
+        let loader = document.getElementById('loading-screen');
+        if (!loader) {
+          loader = document.createElement('div');
+          loader.id = 'loading-screen';
+          loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: monospace; pointer-events: auto;';
+          loader.innerHTML = '<h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1><p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Loading Engine...</p>';
+          document.body.appendChild(loader);
+        } else {
+          loader.style.display = 'flex';
+        }
+
         document.getElementById('game-screen').style.display = 'block';
 
         import(`./game/engine.js?v=${Date.now()}`).then(module => {

@@ -17,21 +17,26 @@
 
 ## The AI & Automation Boundary
 
-We value efficiency, but we have no room for "AI slop." This project is about human intent and technical precision. If you use tools to speed up your workflow, stay transparent about where the logic ends and the automation begins.
+We understand that the rapid rise of Generative AI is a massive, highly valid concern for digital artists, writers, and traditional developers. We want to be unequivocally clear: **B is a project driven by raw human creativity.** We have absolutely zero interest in replacing the human soul of game development with prompt-generated content.
 
-### What to Avoid
-We are building a specific vision; don't let a model hallucinate it for you.
-* **Content Dumping**: Prompts like "scan the wiki and add more lore" result in generic filler that dilutes our real ideas for a fun place to be.
-* **Blind Refactoring**: Using AI to hunt for manual code refactors. If the code needs a change, it needs a human who understands the context of what we're doing.
-* **Generative Concepts**: Do not use AI to invent new ideas, facts, or lore archetypes. Those must come from the team.
+Our aesthetic, our lore, and our core game logic come directly from our team. We stand with creatives. 
 
-### High-Efficiency Automation
-We encourage "Force Multipliers" - tools that handle the mind-numbing repetitive work so you can focus on the core build.
-* **Structure & QA**: Using an LLM to apply tags over terms or to review a page for consistency against our style guide. This is a maintenance check, not a creative shortcut. **Never blindly accept every suggestion.**
-* **Procedural Scripting**: Writing a **Python** or **Bash** script to procedurally generate file structures or batch-rename assets. This is manual automation, not generative AI.
-* **Logical Flow**: Complex **DenizenScript** utilizing `if`/`else`, `choose`/`case`, or `determine` is just good scripting.
-* **Batch Processing**: Speeding up image exports by using **GIMP** filters and **AHK** macros to handle hue/saturation shifts for the powerset icons. This is the equivalent of a mechanical assembly line.
-* **Validation Tools**: Writing a custom tool to scan the repository for broken links, missing **NLAEOF** lines, or indentation errors. This ensures the page stays clean without a bot guessing at the content.
+With that said, maintaining a large-scale MMO architecture with a small team requires immense technical efficiency. To bridge this gap, we draw a strict, hard line between **Generative AI** and **Structural Automation**.
+
+### What is Strictly Prohibited (Generative AI)
+We do not allow LLMs or image generators to create the identity of **B**.
+* **No AI Art:** All sprites, textures, and illustrations must be crafted by humans. We want the charm, intent, and grit of real pixel art.
+* **No AI Lore or Writing:** Characters, world-building, dialogue, and quest lines must be written by people. We don't want generic, hallucinated filler.
+* **No Generative Game Design:** The rules, mechanics, and balancing of powersets are meticulously crafted and argued over by our team.
+
+### How We Actually Use Automation (Our Process So Far)
+We treat automation and coding assistants strictly as **Force Multipliers** for tedious, mind-numbing maintenance. Our process so far restricts automation to the following structural tasks:
+* **Boilerplate & Refactoring:** Using tools to apply a consistent CSS style across 50 UI elements, or rewriting a messy `switch` statement into a cleaner object map.
+* **Bug Hunting & Regex:** Utilizing tools to spot a missing bracket in a 1,000-line JSON file, or to write complex Regular Expressions for string parsing.
+* **Batch Processing:** Speeding up image exports by using **GIMP** filters and **AutoHotkey (AHK)** macros to batch-process hue/saturation shifts for powerset icons. This is the equivalent of a mechanical assembly line.
+* **Validation:** Running custom scripts to verify that every item in our `FURNITURE_REGISTRY` actually has a corresponding 3D `.glb` model file in the repository.
+
+If you use tools to speed up your workflow, stay transparent about where your logic ends and the automation begins. We respect the craft, and we want you to feel secure sharing your talents here.
 
 ---
 

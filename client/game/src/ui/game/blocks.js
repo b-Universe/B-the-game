@@ -75,6 +75,102 @@ export const BLOCK_REGISTRY = {
     isSolid: true,
     isFluid: false
   },
+  'line-dashed': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-solid': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-double-solid': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-sidewalk-2': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-sidewalk-4': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-edge-1-dashed': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-edge-2-dashed': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-double-dashed-solid': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-corner-3-dashed': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-t-dashed': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-split-1': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-split-2': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-t-1': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-t-2': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-x': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-corner-1': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-corner-2': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-corner-3': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-corner-4': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-corner-5': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-edge-1': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-edge-2': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-edge-end-1': {
+    isSolid: false,
+    isFluid: false
+  },
+  'line-edge-end-2': {
+    isSolid: false,
+    isFluid: false
+  },
   'air': {
     isSolid: false,
     isFluid: false

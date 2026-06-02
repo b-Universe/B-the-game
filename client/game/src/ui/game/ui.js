@@ -6,6 +6,7 @@ import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-330';
 import { FriendsUIManager } from './friends-ui.js?v=new-engine-330';
 import { GAME_TIPS } from './tips.js?v=new-engine-330';
 import { PowerEditorUIManager } from '../power-editor-ui.js?v=new-engine-330';
+import { PlayerModifierUIManager } from './player-modifier-ui.js?v=new-engine-330';
 
 export class UIManager {
   constructor(engine) {
@@ -18,10 +19,152 @@ export class UIManager {
     this.playerList = new PlayerListUIManager(engine, this);
     this.friendsList = new FriendsUIManager(engine, this);
     this.powerEditor = new PowerEditorUIManager(engine);
+    this.playerModifier = new PlayerModifierUIManager(engine, this);
 
     this.setupContextMenu();
     this.setupLoadingScreen();
     this.makeDraggable('power-editor-panel', '.dev-panel-header');
+    this.makeDraggable('game-chat-container', '#chat-drag-handle');
+    this.makeDraggable('player-manager-panel', '.dev-panel-header');
+    this.makeDraggable('player-modifier-modal', '.dev-panel-header');
+    this.makeDraggable('account-manager-modal', '.dev-panel-header');
+    this.makeDraggable('system-message-dialog', '.dev-panel-header');
+
+    this.panelStack = [];
+    this.panelObserver = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+          const t = mutation.target;
+          const isVisible = t.style.display !== 'none' && t.style.display !== '';
+          const idx = this.panelStack.indexOf(t);
+          if (isVisible && idx === -1) {
+            this.panelStack.push(t);
+          } else if (!isVisible && idx !== -1) {
+            this.panelStack.splice(idx, 1);
+          }
+        }
+      });
+    });
+
+    this.trackPanel = (el) => {
+      if (!el || el.dataset.tracked) return;
+      el.dataset.tracked = 'true';
+      this.panelObserver.observe(el, { attributes: true, attributeFilter: ['style'] });
+      if (el.style.display !== 'none' && el.style.display !== '') this.panelStack.push(el);
+    };
+
+    const trackSelectors = '.dev-panel, .modal-overlay, #trainer-dialog-modal, .builder-hotbar';
+    document.querySelectorAll(trackSelectors).forEach(el => this.trackPanel(el));
+
+    const domObserver = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === 1) {
+             if (node.matches && node.matches(trackSelectors)) this.trackPanel(node);
+             if (node.querySelectorAll) node.querySelectorAll(trackSelectors).forEach(el => this.trackPanel(el));
+          }
+        });
+      });
+    });
+    domObserver.observe(document.body, { childList: true, subtree: true });
+
+    const closeSysMsg = () => { document.getElementById('system-message-dialog').style.display = 'none'; };
+    const btnCloseSys = document.getElementById('btn-close-sys-msg');
+    const btnOkSys = document.getElementById('btn-ok-sys-msg');
+    if (btnCloseSys) btnCloseSys.onclick = closeSysMsg;
+    if (btnOkSys) btnOkSys.onclick = closeSysMsg;
+
+    const applySavedPos = (id, storageKey) => {
+      const saved = localStorage.getItem(storageKey);
+      const el = document.getElementById(id);
+      if (saved && el) {
+        try {
+          const pos = JSON.parse(saved);
+          if (pos.left !== undefined) el.style.left = pos.left;
+          if (pos.top !== undefined) el.style.top = pos.top;
+          if (pos.right !== undefined) el.style.right = pos.right;
+          if (pos.bottom !== undefined) el.style.bottom = pos.bottom;
+          el.style.transform = 'none';
+        } catch(e) {}
+      }
+    };
+
+    applySavedPos('game-chat-container', 'b_chat_pos');
+    applySavedPos('powerbar-container', 'b_powerbar_pos');
+
+    const reconnectOverlay = document.getElementById('reconnecting-overlay');
+    if (reconnectOverlay) reconnectOverlay.style.display = 'none';
+
+    let buffContainer = document.getElementById('buff-indicator-container');
+    if (!buffContainer) {
+      buffContainer = document.createElement('div');
+      buffContainer.id = 'buff-indicator-container';
+      buffContainer.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; z-index: 9999; background: rgba(5, 7, 10, 0.85); border: 2px solid #333; border-radius: 8px; padding: 10px; pointer-events: auto; align-items: center; min-height: 48px;';
+
+      const header = document.createElement('div');
+      header.id = 'buff-drag-handle';
+      header.style.cssText = 'width: 15px; height: 100%; min-height: 24px; background: rgba(255,255,255,0.1); border-radius: 4px; cursor: move; align-self: stretch;';
+      buffContainer.appendChild(header);
+
+      let list = document.getElementById('buff-indicator-list');
+      if (list) {
+        list.style.display = 'flex';
+        list.style.gap = '5px';
+        buffContainer.appendChild(list);
+      } else {
+        list = document.createElement('div');
+        list.id = 'buff-indicator-list';
+        list.style.display = 'flex';
+        list.style.gap = '5px';
+        buffContainer.appendChild(list);
+      }
+
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(buffContainer);
+      else document.body.appendChild(buffContainer);
+    }
+
+    applySavedPos('buff-indicator-container', 'b_buff_pos');
+    this.makeDraggable('buff-indicator-container', '#buff-drag-handle');
+
+    let zoneContainer = document.getElementById('zone-display-container');
+    if (!zoneContainer) {
+      zoneContainer = document.createElement('div');
+      zoneContainer.id = 'zone-display-container';
+      zoneContainer.style.cssText = 'position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(5, 7, 10, 0.85); border: 2px solid #3498db; border-radius: 6px; padding: 5px 15px; color: #f1c40f; font-family: var(--font-mono); font-size: 0.9rem; font-weight: bold; z-index: 1000; text-transform: uppercase; letter-spacing: 2px; pointer-events: none; text-shadow: 1px 1px 0 #000, 0 0 5px rgba(241, 196, 15, 0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(zoneContainer);
+      else document.body.appendChild(zoneContainer);
+    }
+
+    // Ensure panels stay on screen during window resize
+    window.addEventListener('resize', () => {
+      const draggablePanels = [
+        'dev-panel', 'builder-panel', 'npc-manager-panel', 'npc-edit-modal',
+        'inventory-panel', 'trade-panel', 'power-editor-panel', 'player-modifier-panel',
+        'player-list-panel', 'game-chat-container', 'powerbar-container', 'buff-indicator-container',
+        'builder-hotbar', 'object-library-panel',
+        'player-manager-panel', 'player-modifier-modal', 'account-manager-modal'
+      ];
+
+      draggablePanels.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.style.display !== 'none' && el.offsetParent) {
+          let scale = 1;
+          if (el.style.zoom) scale = parseFloat(el.style.zoom) || 1;
+          const maxLeft = (window.innerWidth / scale) - el.offsetWidth;
+          const maxTop = (window.innerHeight / scale) - el.offsetHeight;
+          if (el.style.left && el.style.left !== 'auto') {
+            let left = parseFloat(el.style.left);
+            if (left > maxLeft) el.style.left = `${Math.max(0, maxLeft)}px`;
+          }
+          if (el.style.top && el.style.top !== 'auto') {
+            let top = parseFloat(el.style.top);
+            if (top > maxTop) el.style.top = `${Math.max(0, maxTop)}px`;
+          }
+        }
+      });
+    });
 
     // Cache frequently accessed elements to avoid DOM lookups in high-frequency update()
     this.els = {
@@ -32,6 +175,7 @@ export class UIManager {
       hpText: document.getElementById('health-bar-text'),
       epFill: document.getElementById('energy-bar-fill'),
       epText: document.getElementById('energy-bar-text'),
+      buffList: document.getElementById('buff-indicator-list'),
       btnEditTarget: document.getElementById('btn-dev-edit-target'),
       npcEditModal: document.getElementById('npc-edit-modal'),
       targetWindow: document.getElementById('target-window'),
@@ -41,8 +185,20 @@ export class UIManager {
       targetEnergyFill: document.getElementById('target-energy-fill'),
       targetEnergyText: document.getElementById('target-energy-text'),
       targetActions: document.getElementById('target-actions'),
-      btnTargetTalk: document.getElementById('btn-target-talk')
+      btnTargetTalk: document.getElementById('btn-target-talk'),
+      zoneDisplay: document.getElementById('zone-display-container')
     };
+  }
+
+  showSystemMessage(text) {
+    const dialog = document.getElementById('system-message-dialog');
+    const msgText = document.getElementById('sys-msg-text');
+    if (dialog && msgText) {
+      msgText.innerText = text;
+      dialog.style.display = 'flex';
+      const idx = this.panelStack.indexOf(dialog);
+      if (idx !== -1) { this.panelStack.splice(idx, 1); this.panelStack.push(dialog); }
+    }
   }
 
   updateUIScale() {
@@ -53,7 +209,8 @@ export class UIManager {
       document.getElementById('powerbar-container'),
       document.getElementById('target-window'),
       document.getElementById('game-chat-container'),
-      document.getElementById('map-controls')
+      document.getElementById('map-controls'),
+      document.getElementById('zone-display-container')
     ];
     elements.forEach(el => {
       if (el) el.style.zoom = scale;
@@ -152,26 +309,35 @@ export class UIManager {
     const checkPerm = (perm) => {
       if (!perm) return true; // No permission required
       const allowed = perms[perm];
+      if (perm === 'playermanager' && perms['dev'] && (perms['dev'].includes('*') || perms['dev'].includes(pName))) return true;
       if (!allowed) return false;
       if (allowed.includes('*')) return true;
       return allowed.includes(pName);
     };
 
     const commands = [
+      // General / Player Commands
       { cmd: '/stuck', syntax: '/stuck', desc: 'Nudges your character back to a safe location if you are trapped in walls or blocked terrain.', perm: null, color: '#3498db' },
       { cmd: '/pm, /w, /whisper', syntax: '/pm &lt;name&gt; &lt;message&gt;', desc: 'Sends a private direct message to a specific player.', perm: null, color: '#3498db' },
       { cmd: '/patchnotes, /news', syntax: '/patchnotes', desc: 'Pulls up the latest patch notes and news.', perm: null, color: '#3498db' },
+      { cmd: '/teleport_zone, /tpz', syntax: '/tpz &lt;zoneName&gt;', desc: 'Instantly warp your character to another dimension/zone.', perm: null, color: '#3498db' },
+
+      // Builder & Developer Tools
       { cmd: '/editmode', syntax: '/editmode', desc: 'Toggles the builder interface and block placing tools.', perm: 'editmode', color: '#f1c40f' },
       { cmd: '/dev', syntax: '/dev', desc: 'Toggles the developer tool panel for inspecting hitboxes, LoS, and coordinates.', perm: 'dev', color: '#f1c40f' },
+      { cmd: '/applymap', syntax: '/applymap &lt;zoneName&gt; [x] [y] [z]', desc: 'Saves current zone and loads the target zone.', perm: 'dev', color: '#f1c40f' },
       { cmd: '/time', syntax: '/time &lt;0-24&gt;', desc: 'Overrides the time of day locally. E.g., "/time 12" sets it to High Noon.', perm: 'dev', color: '#f1c40f' },
       { cmd: '/givemoney', syntax: '/givemoney &lt;amount&gt;', desc: 'Grants yourself currency. Account will permanently be removed from Hi-Scores.', perm: 'dev', color: '#f1c40f' },
-      { cmd: '/announce', syntax: '/announce &lt;message&gt;', desc: 'Broadcasts a high-priority server-wide modal announcement.', perm: 'dev', color: '#e74c3c' },
-      { cmd: '/npc create', syntax: '/npc create &lt;Name&gt; &lt;Health&gt;', desc: 'Spawns an NPC at your current mouse pointer location.', perm: 'npc', color: '#9b59b6' },
+      { cmd: '/integrity', syntax: '/integrity &lt;value&gt;', desc: 'Sets your Integrity from -100 (Synthetic) to 100 (Mutated).', perm: 'dev', color: '#f1c40f' },
+
+      // Moderation & Admin
       { cmd: '/players', syntax: '/players', desc: 'Opens the Player Manager to view and moderate online players.', perm: 'playermanager', color: '#9b59b6' },
+      { cmd: '/npc create', syntax: '/npc create &lt;Name&gt; &lt;Health&gt;', desc: 'Spawns an NPC at your current mouse pointer location.', perm: 'npc', color: '#9b59b6' },
       { cmd: '/tp, /teleport', syntax: '/tp &lt;x&gt; &lt;y&gt; [z]', desc: 'Teleports you to the specified coordinates.', perm: 'tp', color: '#e74c3c' },
       { cmd: '/tpo, /teleport-other', syntax: '/tpo &lt;player&gt; &lt;x&gt; &lt;y&gt; [z]', desc: 'Teleports another player to the specified coordinates.', perm: 'tp', color: '#e74c3c' },
       { cmd: '/speed', syntax: '/speed &lt;value&gt;', desc: 'Sets your base movement speed.', perm: 'speed', color: '#e74c3c' },
-      { cmd: '/reload, /forceupdate', syntax: '/reload', desc: 'Forces all clients and the server to reload assets and code.', perm: 'reload', color: '#e74c3c' },
+      { cmd: '/announce', syntax: '/announce &lt;message&gt;', desc: 'Broadcasts a high-priority server-wide modal announcement.', perm: 'dev', color: '#e74c3c' },
+      { cmd: '/reload, /forceupdate', syntax: '/reload', desc: 'Forces all clients and the server to reload assets and code.', perm: 'reload', color: '#e74c3c' }
     ];
 
     list.innerHTML = '';
@@ -197,9 +363,17 @@ export class UIManager {
 
   setupLoadingScreen() {
     this.loadingStartTime = performance.now();
-    this.loadingScreen = document.createElement('div');
-    this.loadingScreen.id = 'loading-screen';
-    this.loadingScreen.style.cssText = 'position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 9999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: var(--font-mono);';
+    this.loadingScreen = document.getElementById('loading-screen');
+    if (!this.loadingScreen) {
+      this.loadingScreen = document.createElement('div');
+      this.loadingScreen.id = 'loading-screen';
+      this.loadingScreen.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: var(--font-mono); pointer-events: auto;';
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(this.loadingScreen);
+      else document.body.appendChild(this.loadingScreen);
+    } else {
+      this.loadingScreen.style.display = 'flex';
+    }
 
     const randomTip = GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
 
@@ -210,7 +384,6 @@ export class UIManager {
         <span style="color: #f39c12; font-weight: bold;">TIP:</span> <span style="color: #fff;">${randomTip}</span>
       </div>
     `;
-    document.body.appendChild(this.loadingScreen);
   }
 
   hideLoadingScreen() {
@@ -230,7 +403,9 @@ export class UIManager {
       overlay.id = 'reconnecting-overlay';
       overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 14, 20, 0.8); z-index: 9999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ff4757; font-family: var(--font-mono); font-size: 2rem; text-shadow: 0 0 10px #ff4757; pointer-events: auto;';
       overlay.innerHTML = 'CONNECTION LOST<br><span style="font-size: 1.2rem; color: #ccc; margin-top: 10px;">Attempting to reconnect...</span>';
-      document.body.appendChild(overlay);
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(overlay);
+      else document.body.appendChild(overlay);
     }
     overlay.style.display = isReconnecting ? 'flex' : 'none';
   }
@@ -266,12 +441,65 @@ export class UIManager {
 
       const onMouseMove = (moveEvent) => {
         if (!isDragging) return;
-        const dx = moveEvent.clientX - startX;
-        const dy = moveEvent.clientY - startY;
-        panel.style.left = `${initialLeft + dx}px`;
-        panel.style.top = `${initialTop + dy}px`;
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
+
+        let scale = 1;
+        if (panel.style.zoom) {
+            scale = parseFloat(panel.style.zoom) || 1;
+        }
+
+        const dx = (moveEvent.clientX - startX) / scale;
+        const dy = (moveEvent.clientY - startY) / scale;
+
+        const SNAP_DIST = 20 / scale;
+        let newLeft = initialLeft + dx;
+        let newTop = initialTop + dy;
+
+        const maxLeft = (window.innerWidth / scale) - panel.offsetWidth;
+        const maxTop = (window.innerHeight / scale) - panel.offsetHeight;
+
+        let snappedLeft = false;
+        let snappedRight = false;
+        let snappedTop = false;
+        let snappedBottom = false;
+
+        // Snapping logic
+        if (newLeft < SNAP_DIST) {
+          newLeft = 0;
+          snappedLeft = true;
+        } else if (newLeft > maxLeft - SNAP_DIST) {
+          newLeft = maxLeft;
+          snappedRight = true;
+        }
+
+        if (newTop < SNAP_DIST) {
+          newTop = 0;
+          snappedTop = true;
+        } else if (newTop > maxTop - SNAP_DIST) {
+          newTop = maxTop;
+          snappedBottom = true;
+        }
+
+        if (snappedRight) {
+          panel.style.left = 'auto';
+          panel.style.right = '0px';
+        } else {
+          panel.style.left = `${newLeft}px`;
+          panel.style.right = 'auto';
+        }
+
+        if (panelId === 'game-chat-container') {
+          const newBottom = (window.innerHeight / scale) - (newTop + panel.offsetHeight);
+          panel.style.bottom = `${Math.max(0, newBottom)}px`;
+          panel.style.top = 'auto';
+        } else {
+          if (snappedBottom) {
+            panel.style.top = 'auto';
+            panel.style.bottom = '0px';
+          } else {
+            panel.style.top = `${newTop}px`;
+            panel.style.bottom = 'auto';
+          }
+        }
       };
 
       const onMouseUp = () => {
@@ -279,21 +507,29 @@ export class UIManager {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
 
+        const posObj = { left: panel.style.left, top: panel.style.top, right: panel.style.right, bottom: panel.style.bottom };
+
         if (panelId === 'builder-panel') {
           const eng = window.currentGameEngine;
           if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-            localStorage.setItem('b_builder_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+            localStorage.setItem('b_builder_pos', JSON.stringify(posObj));
           }
         } else if (panelId === 'builder-hotbar') {
           const eng = window.currentGameEngine;
           if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-            localStorage.setItem('b_hotbar_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+            localStorage.setItem('b_hotbar_pos', JSON.stringify(posObj));
           }
         } else if (panelId === 'object-library-panel') {
           const eng = window.currentGameEngine;
           if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-            localStorage.setItem('b_objlib_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+            localStorage.setItem('b_objlib_pos', JSON.stringify(posObj));
           }
+        } else if (panelId === 'game-chat-container') {
+          localStorage.setItem('b_chat_pos', JSON.stringify(posObj));
+        } else if (panelId === 'powerbar-container') {
+          localStorage.setItem('b_powerbar_pos', JSON.stringify(posObj));
+        } else if (panelId === 'buff-indicator-container') {
+          localStorage.setItem('b_buff_pos', JSON.stringify(posObj));
         }
       };
 
@@ -334,11 +570,35 @@ export class UIManager {
   update() {
     const eng = this.engine;
 
+    if (this.els.zoneDisplay && eng.currentZone) {
+      const zoneText = `ZONE: ${eng.currentZone}`;
+      if (this.els.zoneDisplay.innerText !== zoneText) {
+         this.els.zoneDisplay.innerText = zoneText;
+      }
+    }
+
     if (this.els.hpFill) this.els.hpFill.style.width = `${(eng.player.hp / eng.player.maxHp) * 100}%`;
     if (this.els.hpText) this.els.hpText.innerText = `${Math.floor(eng.player.hp)} / ${eng.player.maxHp}`;
 
     if (this.els.epFill) this.els.epFill.style.width = `${(eng.player.energy / eng.player.maxEnergy) * 100}%`;
     if (this.els.epText) this.els.epText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
+
+    const addLabel = (fillEl, className, text, color) => {
+      if (fillEl && fillEl.parentNode) {
+        const container = fillEl.parentNode;
+        container.style.position = 'relative';
+        if (!container.querySelector('.' + className)) {
+           const label = document.createElement('div');
+           label.className = className;
+           label.innerText = text;
+           label.style.cssText = `position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: ${color}; font-weight: bold; pointer-events: none; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.9); letter-spacing: 1px; z-index: 2;`;
+           container.appendChild(label);
+        }
+      }
+    };
+
+    addLabel(this.els.hpFill, 'hp-label', 'Health', '#2ecc71');
+    addLabel(this.els.epFill, 'ep-label', 'Energy', '#0984e3');
 
     if (eng.player.synthEnergy === undefined) eng.player.synthEnergy = 1000;
     if (!eng.player.maxSynthEnergy) eng.player.maxSynthEnergy = 1000;
@@ -348,14 +608,110 @@ export class UIManager {
       if (this.els.synthContainer) this.els.synthContainer.style.display = 'none';
       if (this.els.epText) this.els.epText.innerText = `${Math.floor(eng.player.energy)} E / ${Math.floor(eng.player.synthEnergy)} S`;
       if (this.els.epFill) {
-        this.els.epFill.style.background = `linear-gradient(to bottom, #0984e3 50%, #00d2ff 50%)`;
-        this.els.epFill.style.width = `${Math.max((eng.player.energy / eng.player.maxEnergy), synthPercent) * 100}%`;
+        const epPercent = Math.max(0, eng.player.energy / eng.player.maxEnergy) * 100;
+        const synthPercent = Math.max(0, eng.player.synthEnergy / (eng.player.maxSynthEnergy || 1000)) * 100;
+        this.els.epFill.style.width = '100%';
+        this.els.epFill.style.background = `
+          linear-gradient(to right, #0984e3 ${epPercent}%, transparent ${epPercent}%),
+          linear-gradient(to right, #00d2ff ${synthPercent}%, transparent ${synthPercent}%)
+        `;
+        this.els.epFill.style.backgroundSize = `100% 50%, 100% 50%`;
+        this.els.epFill.style.backgroundRepeat = `no-repeat, no-repeat`;
+        this.els.epFill.style.backgroundPosition = `top left, bottom left`;
       }
     } else {
-      if (this.els.synthContainer) this.els.synthContainer.style.display = 'flex';
+      if (this.els.synthContainer) {
+        this.els.synthContainer.style.display = 'flex';
+        this.els.synthContainer.style.position = 'relative';
+        if (!this.els.synthContainer.querySelector('.synth-label')) {
+           const label = document.createElement('div');
+           label.className = 'synth-label';
+           label.innerText = 'Battery Charge';
+           label.style.cssText = 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: #aaddff; font-weight: bold; pointer-events: none; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.9); letter-spacing: 1px; z-index: 2;';
+           this.els.synthContainer.appendChild(label);
+        }
+      }
       if (this.els.synthFill) this.els.synthFill.style.width = `${synthPercent * 100}%`;
-      if (this.els.synthText) this.els.synthText.innerText = `${Math.floor(eng.player.synthEnergy)} / ${eng.player.maxSynthEnergy} (Synth)`;
-      if (this.els.epFill) this.els.epFill.style.background = ''; // Allow standard CSS to apply
+      if (this.els.synthText) this.els.synthText.innerText = `${Math.floor(eng.player.synthEnergy)} / ${eng.player.maxSynthEnergy}`;
+      if (this.els.epFill)
+        this.els.epFill.style.background = '';
+        this.els.epFill.style.backgroundSize = '';
+        this.els.epFill.style.backgroundRepeat = '';
+        this.els.epFill.style.backgroundPosition = '';
+    }
+
+    if (this.els.buffList) {
+      this.els.buffList.style.flexWrap = 'wrap';
+
+      const effects = eng.player.activeEffects || [];
+      // Filter out passives in case they were accidentally clicked and added to activePowers
+      const activeToggles = (eng.player.activePowers || []).filter(pId => {
+          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+          return !pDef || pDef.type?.toLowerCase() !== 'passive';
+      });
+      // Passives are learned powers, so they reside on playerData.powers, not the physical player entity state
+      const passives = (eng.playerData.powers || []).filter(pId => {
+          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+          return pDef && pDef.type && pDef.type.toLowerCase() === 'passive';
+      });
+
+      const currentEffIds = [
+        ...effects.map(e => e.id),
+        ...activeToggles.map(p => `toggle_${p}`),
+        ...passives.map(p => `passive_${p}`)
+      ].join(',');
+
+      if (this.els.buffList.dataset.effIds !== currentEffIds) {
+        this.els.buffList.dataset.effIds = currentEffIds;
+        this.els.buffList.innerHTML = '';
+
+        passives.forEach(pId => {
+          const pDef = window.POWER_REGISTRY[pId];
+          const icon = document.createElement('div');
+          icon.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; border: 1px solid #3498db; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); position: relative; overflow: hidden; color: #3498db;';
+          icon.innerText = pDef && pDef.name ? pDef.name.substring(0, 1).toUpperCase() : 'P';
+          icon.title = `${pDef ? pDef.name : pId} (Passive)`;
+          this.els.buffList.appendChild(icon);
+        });
+
+        activeToggles.forEach(pId => {
+          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+          const name = pDef && pDef.name ? pDef.name : pId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          const icon = document.createElement('div');
+          icon.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; border: 1px solid #2ecc71; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); position: relative; overflow: hidden; color: #2ecc71;';
+          icon.innerText = name.substring(0, 1).toUpperCase();
+          icon.title = `${name} (Active Toggle)`;
+          this.els.buffList.appendChild(icon);
+        });
+
+        effects.forEach((eff, i) => {
+          const icon = document.createElement('div');
+          icon.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; border: 1px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); position: relative; overflow: hidden;';
+
+          let color = '#fff'; let letter = 'B';
+          if (eff.type === 'DoT') { color = '#e67e22'; letter = 'D'; }
+          else if (eff.type === 'Heal') { color = '#2ecc71'; letter = 'H'; }
+          else if (eff.type === 'MaxHP' || eff.type === 'MaxEnergy' || eff.type === 'MaxSynth') { color = '#3498db'; letter = 'M'; }
+          else if (eff.type === 'Status') { color = '#9b59b6'; letter = 'S'; }
+          else if (eff.type === 'Proc') { color = '#f1c40f'; letter = 'P'; }
+
+          icon.style.borderColor = color; icon.style.color = color; icon.innerText = letter;
+          icon.title = `${eff.type} (${eff.magnitude || 0})`;
+
+          const sweep = document.createElement('div');
+          sweep.id = `buff-sweep-${i}`;
+          sweep.style.cssText = `position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.5); pointer-events: none; height: 0%;`;
+          icon.appendChild(sweep);
+          this.els.buffList.appendChild(icon);
+        });
+      }
+      effects.forEach((eff, i) => {
+        const sweep = document.getElementById(`buff-sweep-${i}`);
+        if (sweep) {
+          const pct = Math.max(0, Math.min(100, ((eff.endTime - Date.now()) / (eff.endTime - eff.startTime)) * 100));
+          sweep.style.height = `${100 - pct}%`;
+        }
+      });
     }
 
     if (this.els.btnEditTarget) {
@@ -390,17 +746,25 @@ export class UIManager {
     }
 
     if (eng.selectedTarget && this.els.targetWindow) {
-      let targetObj = null;
+      let targetObj = eng.selectedTarget.entity;
       let tName = '';
-      if (eng.selectedTarget.type === 'npc') {
-        targetObj = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
-        if (targetObj) tName = targetObj.name;
-      } else if (eng.selectedTarget.type === 'player') {
-        targetObj = eng.otherPlayers[eng.selectedTarget.id];
-        if (targetObj) tName = targetObj.name;
-      } else if (eng.selectedTarget.type === 'self') {
-        targetObj = eng.player;
-        tName = eng.playerData.name;
+      if (!targetObj) {
+        if (eng.selectedTarget.type === 'npc') {
+          targetObj = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+        } else if (eng.selectedTarget.type === 'player') {
+          targetObj = eng.otherPlayers[eng.selectedTarget.id];
+        } else if (eng.selectedTarget.type === 'self') {
+          targetObj = eng.player;
+        } else if (eng.selectedTarget.type === 'drone') {
+          targetObj = eng.drones[eng.selectedTarget.id];
+        }
+        if (targetObj) eng.selectedTarget.entity = targetObj;
+      }
+
+      if (targetObj) {
+        if (eng.selectedTarget.type === 'npc' || eng.selectedTarget.type === 'player') tName = targetObj.name;
+        else if (eng.selectedTarget.type === 'self') tName = eng.playerData.name;
+        else if (eng.selectedTarget.type === 'drone') tName = `${targetObj.ownerName}'s Drone`;
       }
 
       if (targetObj && targetObj.state !== 'dead' && targetObj.state !== 'death') {

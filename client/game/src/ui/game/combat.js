@@ -143,7 +143,7 @@ export class CombatManager {
           if (
             voxel &&
             voxel.shape &&
-            voxel.shape.startsWith('door') &&
+            voxel.shape.includes('door') &&
             voxel.shape.includes('_open')
           ) {
             voxel.shape = voxel.shape.replace('_open', '');
@@ -159,22 +159,40 @@ export class CombatManager {
 
     if (!eng.player.activePowers) eng.player.activePowers = [];
     const idx = eng.player.activePowers.indexOf(powerName);
-    if (idx !== -1) {
+
+    if (idx === -1) {
+      const powerDef = POWER_REGISTRY[powerName];
+      if (powerDef) {
+        const energyCost = powerDef.stats?.energyCost || 0;
+        const batteryCost = powerDef.stats?.batteryCost || 0;
+        if (eng.player.energy < energyCost) {
+          if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
+          return;
+        }
+        if (eng.player.synthEnergy < batteryCost) {
+          if (eng.showFloatingText) eng.showFloatingText('Not Enough Power', '#00d2ff');
+          return;
+        }
+        eng.player.energy -= energyCost;
+        eng.player.synthEnergy -= batteryCost;
+      }
+      eng.player.activePowers.push(powerName);
+    } else {
       eng.player.activePowers.splice(idx, 1);
       if (powerName === 'super-speed') eng.player.superSpeedMult = 1.0;
-    } else {
-      eng.player.activePowers.push(powerName);
     }
 
     if (eng.ui && eng.ui.powerbar) eng.ui.powerbar.updatePowerbar();
+    eng.ui.update();
   }
 
-  usePower(powerId) {
+  usePower(powerId, isRepeat = false) {
     const eng = this.engine;
     const powerDef = POWER_REGISTRY[powerId];
     const engineScript = powerDef?.engineScript || powerId;
 
     if (powerDef?.type?.toLowerCase() === 'toggle' || ['fly', 'super-jump', 'super-speed', 'mighty-leap', 'dash', 'speed-serum', 'combat-flight', 'combat-jumping', 'jetpack', 'flashlight'].includes(engineScript)) {
+      if (isRepeat) return; // Prevent rapid toggling when holding down the key
       this.toggleTravelPower(powerId);
       return;
     }

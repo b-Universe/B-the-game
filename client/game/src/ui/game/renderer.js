@@ -1,10 +1,13 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import { mergeGeometries } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { AssetManager } from './asset-manager.js?v=new-engine-330';
 import { DebugRenderer } from './debug-renderer.js?v=new-engine-330';
 import { VoxelManager } from './voxel-manager.js?v=new-engine-330';
 import { ParticleManager } from './particle-manager.js?v=new-engine-330';
+import { ChunkMesher } from './chunk-mesher.js?v=new-engine-330';
 import { LightingManager } from './lighting-manager.js?v=new-engine-330';
 import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
+import { SpriteBatcher } from './sprite-batcher.js?v=new-engine-330';
 
 export class Renderer {
   constructor(engine) {
@@ -32,16 +35,16 @@ export class Renderer {
     this.projectileMeshes = new Map();
     this.debrisMeshes = new Map();
     this.otherPlayerLights = new Map();
+    this.chunkMeshes = new Map();
+    this.chunkTransparentMeshes = new Map();
 
     this.voxelManager = new VoxelManager(this);
+    this.chunkMesher = new ChunkMesher(this.engine);
     this.particleManager = new ParticleManager(this);
     this.lightingManager = new LightingManager(this);
     this.assetManager = new AssetManager(this);
     this.assetManager.loadAssets();
   }
-
-  get doorMap() { return this.voxelManager.doorMap; }
-  get doorPhysics() { return this.voxelManager.doorPhysics; }
 
   setupWebGL() {
     this.webgl = new THREE.WebGLRenderer({
@@ -54,7 +57,7 @@ export class Renderer {
     this.webgl.setClearColor(0x0b0e14, 1);
 
     this.webgl.shadowMap.enabled = this.engine.clientSettings.enableShadows !== false;
-    this.webgl.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.webgl.shadowMap.type = this.engine.clientSettings.softShadows !== false ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   }
 
   updateRenderScale(scale) {
@@ -131,6 +134,8 @@ export class Renderer {
     this.scene.add(this.sunLight);
     this.scene.add(this.sunLight.target);
 
+    this.spriteBatcher = new SpriteBatcher(this);
+
     this.debugRenderer.setupDebugMeshes();
 
     this.blockLights = [];
@@ -153,6 +158,121 @@ export class Renderer {
     this.scene.add(this.playerLight.target);
   }
 
+  updateChunkColumn(cx, cy, chunkMap, forceRebuild = false) {
+    if (!this.chunkMesher) return;
+    const activeCZs = new Set();
+    if (chunkMap) {
+        for (const key of chunkMap.keys()) {
+            const z = parseInt(key.substring(key.lastIndexOf('_') + 1), 10);
+            activeCZs.add(Math.floor(z / 16));
+        }
+    }
+    const prefix = `${cx}_${cy}_`;
+    for (const meshKey of this.chunkMeshes.keys()) {
+        if (meshKey.startsWith(prefix)) activeCZs.add(parseInt(meshKey.substring(prefix.length), 10));
+    }
+    for (const meshKey of this.chunkTransparentMeshes.keys()) {
+        if (meshKey.startsWith(prefix)) activeCZs.add(parseInt(meshKey.substring(prefix.length), 10));
+    }
+    for (const cz of activeCZs) {
+        this.updateChunkMesh(cx, cy, cz, chunkMap, forceRebuild);
+    }
+  }
+
+  async updateChunkMesh(cx, cy, cz, chunkMap, forceRebuild = false) {
+    if (!this.chunkMesher) return;
+    const key = `${cx}_${cy}_${cz}`;
+
+    this.pendingChunkUpdates = this.pendingChunkUpdates || new Map();
+    const updateId = Date.now() + Math.random();
+    this.pendingChunkUpdates.set(key, updateId);
+
+    this.pendingMeshes = (this.pendingMeshes || 0) + 1;
+
+    try {
+      const geos = await this.chunkMesher.buildChunkMesh(cx, cy, cz, chunkMap, forceRebuild);
+
+      // Ensure this is still the most recent mesh generation request for this chunk!
+      if (this.pendingChunkUpdates.get(key) !== updateId) {
+          return;
+      }
+      this.pendingChunkUpdates.delete(key);
+
+      if (geos.opaque) {
+        geos.opaque.computeBoundingBox();
+        geos.opaque.computeBoundingSphere();
+        let mesh = this.chunkMeshes.get(key);
+        if (!mesh) {
+          mesh = new THREE.Mesh(geos.opaque, this.chunkMaterial);
+          mesh.position.set(cx * 512, cy * 512, cz * 512);
+          mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+          mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
+          mesh.customDepthMaterial = this.chunkDepthMaterial;
+          mesh.customDistanceMaterial = this.chunkDistanceMaterial;
+          this.scene.add(mesh);
+          this.chunkMeshes.set(key, mesh);
+        } else {
+          mesh.geometry.dispose();
+          mesh.geometry = geos.opaque;
+          mesh.position.set(cx * 512, cy * 512, cz * 512);
+        }
+      } else {
+        let mesh = this.chunkMeshes.get(key);
+        if (mesh) { this.scene.remove(mesh); mesh.geometry.dispose(); this.chunkMeshes.delete(key); }
+      }
+
+      if (geos.transparent) {
+        geos.transparent.computeBoundingBox();
+        geos.transparent.computeBoundingSphere();
+        let tMesh = this.chunkTransparentMeshes.get(key);
+        if (!tMesh) {
+          tMesh = new THREE.Mesh(geos.transparent, this.chunkTransparentMaterial);
+          tMesh.position.set(cx * 512, cy * 512, cz * 512);
+          tMesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
+          this.scene.add(tMesh);
+          this.chunkTransparentMeshes.set(key, tMesh);
+        } else {
+          tMesh.geometry.dispose();
+          tMesh.geometry = geos.transparent;
+          tMesh.position.set(cx * 512, cy * 512, cz * 512);
+        }
+      } else {
+        let tMesh = this.chunkTransparentMeshes.get(key);
+        if (tMesh) { this.scene.remove(tMesh); tMesh.geometry.dispose(); this.chunkTransparentMeshes.delete(key); }
+      }
+    } catch (e) {
+      console.error("[Renderer] Failed to update chunk mesh:", key, e);
+    } finally {
+      this.pendingMeshes--;
+      this.checkInitialLoad();
+    }
+  }
+
+  checkInitialLoad() {
+    if (this.engine.mapReceived && (this.pendingMeshes || 0) === 0 && !this.initialLoadComplete) {
+      this.initialLoadComplete = true;
+      if (this.engine.ui) this.engine.ui.hideLoadingScreen();
+      const hint = document.getElementById('load-hint-msg');
+      if (hint) hint.remove();
+    }
+  }
+
+  removeChunkColumn(cx, cy) {
+    const prefix = `${cx}_${cy}_`;
+    const toRemove = [];
+    for (const key of this.chunkMeshes.keys()) { if (key.startsWith(prefix)) toRemove.push(key); }
+    for (const key of toRemove) {
+      const mesh = this.chunkMeshes.get(key);
+      this.scene.remove(mesh); mesh.geometry.dispose(); this.chunkMeshes.delete(key);
+    }
+    const toRemoveT = [];
+    for (const key of this.chunkTransparentMeshes.keys()) { if (key.startsWith(prefix)) toRemoveT.push(key); }
+    for (const key of toRemoveT) {
+      const mesh = this.chunkTransparentMeshes.get(key);
+      this.scene.remove(mesh); mesh.geometry.dispose(); this.chunkTransparentMeshes.delete(key);
+    }
+  }
+
   setupInstancedMesh() {
     this.instancedMaterial = new THREE.MeshPhongMaterial({
       color: 0xffffff,
@@ -169,48 +289,225 @@ export class Renderer {
     });
     this.glassMaterial.userData = { time: { value: 0 } };
 
-    this.modelMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 0 });
+    this.modelMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 0, alphaTest: 0.5 });
     this.modelMaterial.onBeforeCompile = (shader) => {
       shader.vertexShader = `
-        attribute vec4 instanceUVTop;
-        varying vec4 vInstanceUVTop;
-        varying vec3 vWorldNormal;
-        varying vec3 vLocalNormal;
+        attribute uvec3 packedUVs;
+        attribute uint packedColor;
+        attribute float useMeshUV;
+        flat varying uint vPackedUVTop;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
+        flat varying vec3 vInstanceColor;
+        varying float vUseMeshUV;
       ` + shader.vertexShader.replace(
         '#include <uv_vertex>',
         `
         #include <uv_vertex>
-        vInstanceUVTop = instanceUVTop;
+        vPackedUVTop = packedUVs.x;
         vLocalNormal = normal;
         vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
         vLocalPosition = position;
+        vUseMeshUV = useMeshUV;
+
+        float r = float(packedColor & 255u) / 255.0;
+        float g = float((packedColor >> 8u) & 255u) / 255.0;
+        float b = float((packedColor >> 16u) & 255u) / 255.0;
+        vInstanceColor = vec3(r, g, b);
         `
       );
       shader.fragmentShader = `
-        varying vec4 vInstanceUVTop;
-        varying vec3 vWorldNormal;
-        varying vec3 vLocalNormal;
+        flat varying uint vPackedUVTop;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
+        flat varying vec3 vInstanceColor;
+        varying float vUseMeshUV;
       ` + shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
         #ifdef USE_MAP
           vec2 baseUV = vec2(0.0);
-          if (abs(vLocalNormal.z) > 0.5) {
-             baseUV = vec2(vLocalPosition.x, -vLocalPosition.y) / 32.0;
-          } else if (abs(vLocalNormal.x) > 0.5) {
-             baseUV = vec2(vLocalNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
+          if (vUseMeshUV > 0.5) {
+             baseUV = vMapUv;
           } else {
-             baseUV = vec2(vLocalNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
+             if (abs(vLocalNormal.z) > 0.5) {
+                baseUV = vec2(vLocalPosition.x, -vLocalPosition.y) / 32.0;
+             } else if (abs(vLocalNormal.x) > 0.5) {
+                baseUV = vec2(vLocalNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
+             } else {
+                baseUV = vec2(vLocalNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
+             }
           }
-          vec2 modifiedUV = fract(baseUV) * vInstanceUVTop.zw + vInstanceUVTop.xy;
+
+          uint faceUVData = vPackedUVTop;
+          float ux = float(faceUVData & 255u);
+          float uy = float((faceUVData >> 8u) & 255u);
+          uint scaleLevel = (faceUVData >> 16u) & 7u;
+          float isFlipped = float((faceUVData >> 19u) & 1u);
+          float size = 64.0;
+          if (scaleLevel == 1u) size = 32.0;
+          else if (scaleLevel == 2u) size = 16.0;
+          else if (scaleLevel == 3u) size = 8.0;
+          float uvScale = size / 2048.0;
+          vec4 iuv;
+          iuv.xy = vec2(ux * 8.0 / 2048.0, 1.0 - ((uy * 8.0 + size) / 2048.0));
+          iuv.zw = vec2(uvScale, uvScale);
+          if (isFlipped > 0.5) {
+              iuv.z = -iuv.z;
+              iuv.x += abs(iuv.z);
+          }
+
+          vec2 modifiedUV = fract(baseUV) * iuv.zw + iuv.xy;
           vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
           diffuseColor *= sampledDiffuseColor;
         #endif
         `
+      ).replace(
+        '#include <color_fragment>',
+        `
+        #include <color_fragment>
+        diffuseColor.rgb *= vInstanceColor;
+        `
       );
     };
+
+    this.chunkMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      shininess: 0,
+      alphaTest: 0.5
+    });
+    this.chunkMaterial.userData = { time: { value: 0 } };
+    this.chunkMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = this.chunkMaterial.userData.time;
+      shader.vertexShader = `
+        attribute uint packedUV;
+        attribute uint packedColor;
+        attribute uint packedData;
+
+        flat varying uint vPackedUV;
+        flat varying vec3 vColor;
+        flat varying float vIsFluid;
+        varying vec3 vWorldPos;
+        flat varying vec3 vWorldNormal;
+        varying float vAO;
+      ` + shader.vertexShader.replace(
+        '#include <uv_vertex>',
+        `
+        #include <uv_vertex>
+        vPackedUV = packedUV;
+
+        uint pData = uint(packedData);
+        vIsFluid = float((pData >> 6u) & 7u);
+
+        float aoLevel = float(pData & 3u);
+        vAO = 0.4 + (aoLevel * 0.2); // Maps 0, 1, 2, 3 to 0.4, 0.6, 0.8, 1.0
+
+        float r = float(packedColor & 255u) / 255.0;
+        float g = float((packedColor >> 8u) & 255u) / 255.0;
+        float b = float((packedColor >> 16u) & 255u) / 255.0;
+        vColor = vec3(r, g, b);
+
+        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+        `
+      );
+      shader.fragmentShader = `
+        uniform float uTime;
+        flat varying uint vPackedUV;
+        flat varying vec3 vColor;
+        flat varying float vIsFluid;
+        varying vec3 vWorldPos;
+        flat varying vec3 vWorldNormal;
+        varying float vAO;
+      ` + shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `
+        #ifdef USE_MAP
+          uint faceUVData = vPackedUV;
+          float ux = float(faceUVData & 255u);
+          float uy = float((faceUVData >> 8u) & 255u);
+          uint scaleLevel = (faceUVData >> 16u) & 7u;
+          float isFlipped = float((faceUVData >> 19u) & 1u);
+
+          float size = scaleLevel == 1u ? 32.0 : (scaleLevel == 2u ? 16.0 : (scaleLevel == 3u ? 8.0 : 64.0));
+          float uvScale = size / 2048.0;
+          vec4 iuv = vec4(ux * 8.0 / 2048.0, 1.0 - ((uy * 8.0 + size) / 2048.0), uvScale, uvScale);
+          if (isFlipped > 0.5) { iuv.z = -iuv.z; iuv.x += abs(iuv.z); }
+
+          vec2 baseUV = vMapUv; // Use the standard UVs provided by the BufferGeometry
+
+          // --- Fluid Animation Override ---
+          if (vIsFluid > 0.5 && vIsFluid < 3.5) {
+              if (vWorldNormal.z > 0.9) { // Flat Top face ONLY
+                  // Seamless world-aligned mapping, NO time sliding
+                  baseUV = fract(vec2(vWorldPos.x, -vWorldPos.y) / 32.0);
+              }
+          }
+
+          vec2 modifiedUV = fract(baseUV) * iuv.zw + iuv.xy;
+          vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
+
+          diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      ).replace(
+        '#include <color_fragment>',
+        `
+        #include <color_fragment>
+        diffuseColor.rgb *= vColor * vAO;
+
+        if (vIsFluid == 2.0) {
+           totalEmissiveRadiance += diffuseColor.rgb * 0.8;
+        } else if (vIsFluid == 3.0) {
+           totalEmissiveRadiance += diffuseColor.rgb * 0.3;
+        } else if (vIsFluid == 4.0) {
+           totalEmissiveRadiance += diffuseColor.rgb * 1.0;
+        } else if (vIsFluid == 5.0) {
+           float luma = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+           if (luma > 0.6) {
+               totalEmissiveRadiance += diffuseColor.rgb * 0.5;
+           }
+        }
+        `
+      );
+    };
+
+    this.chunkDepthMaterial = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      alphaTest: 0.5
+    });
+    this.chunkDepthMaterial.userData = this.chunkMaterial.userData;
+    this.chunkDepthMaterial.onBeforeCompile = this.chunkMaterial.onBeforeCompile;
+
+    this.chunkDistanceMaterial = new THREE.MeshDistanceMaterial({
+      alphaTest: 0.5
+    });
+    this.chunkDistanceMaterial.userData = this.chunkMaterial.userData;
+    this.chunkDistanceMaterial.onBeforeCompile = this.chunkMaterial.onBeforeCompile;
+
+    this.modelDepthMaterial = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      alphaTest: 0.5
+    });
+    this.modelDepthMaterial.onBeforeCompile = this.modelMaterial.onBeforeCompile;
+
+    this.modelDistanceMaterial = new THREE.MeshDistanceMaterial({
+      alphaTest: 0.5
+    });
+    this.modelDistanceMaterial.onBeforeCompile = this.modelMaterial.onBeforeCompile;
+
+
+    this.chunkTransparentMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      shininess: 40,
+      transparent: true,
+      alphaTest: 0.05,
+      depthWrite: false
+    });
+    this.chunkTransparentMaterial.userData = this.chunkMaterial.userData;
+    this.chunkTransparentMaterial.onBeforeCompile = this.chunkMaterial.onBeforeCompile;
 
     this.previewModelMaterial = this.modelMaterial.clone();
     this.previewModelMaterial.onBeforeCompile = this.modelMaterial.onBeforeCompile;
@@ -221,45 +518,86 @@ export class Renderer {
     this.previewModelMaterial.polygonOffsetFactor = -2;
     this.previewModelMaterial.polygonOffsetUnits = -2;
 
-    this.neonModelMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 0 });
+    this.neonModelMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 0, alphaTest: 0.5 });
     this.neonModelMaterial.onBeforeCompile = (shader) => {
       shader.vertexShader = `
-        attribute vec4 instanceUVTop;
-        varying vec4 vInstanceUVTop;
-        varying vec3 vWorldNormal;
-        varying vec3 vLocalNormal;
+        attribute uvec3 packedUVs;
+        attribute uint packedColor;
+        attribute float useMeshUV;
+        flat varying uint vPackedUVTop;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
+        flat varying vec3 vInstanceColor;
+        varying float vUseMeshUV;
       ` + shader.vertexShader.replace(
         '#include <uv_vertex>',
         `
         #include <uv_vertex>
-        vInstanceUVTop = instanceUVTop;
+        vPackedUVTop = packedUVs.x;
         vLocalNormal = normal;
         vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
         vLocalPosition = position;
+        vUseMeshUV = useMeshUV;
+
+        float r = float(packedColor & 255u) / 255.0;
+        float g = float((packedColor >> 8u) & 255u) / 255.0;
+        float b = float((packedColor >> 16u) & 255u) / 255.0;
+        vInstanceColor = vec3(r, g, b);
         `
       );
       shader.fragmentShader = `
-        varying vec4 vInstanceUVTop;
-        varying vec3 vWorldNormal;
-        varying vec3 vLocalNormal;
+        flat varying uint vPackedUVTop;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
+        flat varying vec3 vInstanceColor;
+        varying float vUseMeshUV;
       ` + shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
         #ifdef USE_MAP
           vec2 baseUV = vec2(0.0);
-          if (abs(vLocalNormal.z) > 0.5) {
-             baseUV = vec2(vLocalPosition.x, -vLocalPosition.y) / 32.0;
-          } else if (abs(vLocalNormal.x) > 0.5) {
-             baseUV = vec2(vLocalNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
+          if (vUseMeshUV > 0.5) {
+             baseUV = vMapUv;
           } else {
-             baseUV = vec2(vLocalNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
+             if (abs(vLocalNormal.z) > 0.5) {
+                baseUV = vec2(vLocalPosition.x, -vLocalPosition.y) / 32.0;
+             } else if (abs(vLocalNormal.x) > 0.5) {
+                baseUV = vec2(vLocalNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
+             } else {
+                baseUV = vec2(vLocalNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
+             }
           }
-          vec2 modifiedUV = fract(baseUV) * vInstanceUVTop.zw + vInstanceUVTop.xy;
+
+          uint faceUVData = vPackedUVTop;
+          float ux = float(faceUVData & 255u);
+          float uy = float((faceUVData >> 8u) & 255u);
+          uint scaleLevel = (faceUVData >> 16u) & 7u;
+          float isFlipped = float((faceUVData >> 19u) & 1u);
+          float size = 64.0;
+          if (scaleLevel == 1u) size = 32.0;
+          else if (scaleLevel == 2u) size = 16.0;
+          else if (scaleLevel == 3u) size = 8.0;
+          float uvScale = size / 2048.0;
+          vec4 iuv;
+          iuv.xy = vec2(ux * 8.0 / 2048.0, 1.0 - ((uy * 8.0 + size) / 2048.0));
+          iuv.zw = vec2(uvScale, uvScale);
+          if (isFlipped > 0.5) {
+              iuv.z = -iuv.z;
+              iuv.x += abs(iuv.z);
+          }
+
+          vec2 modifiedUV = fract(baseUV) * iuv.zw + iuv.xy;
           vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
           diffuseColor *= sampledDiffuseColor;
         #endif
+        `
+      ).replace(
+        '#include <color_fragment>',
+        `
+        #include <color_fragment>
+        diffuseColor.rgb *= vInstanceColor;
         `
       ).replace(
         '#include <emissivemap_fragment>',
@@ -282,64 +620,86 @@ export class Renderer {
     const setupShader = (shader, userData) => {
       shader.uniforms.uTime = userData.time;
       shader.vertexShader = `
-        attribute float isFluid;
-        attribute vec4 instanceUVTop;
-        attribute vec4 instanceUVSide;
-        attribute vec4 instanceUVBottom;
-        attribute vec4 instanceNeighbors1;
-        attribute vec2 instanceNeighbors2;
-        varying float vIsFluid;
-        varying vec4 vInstanceUVTop;
-        varying vec4 vInstanceUVSide;
-        varying vec4 vInstanceUVBottom;
-        varying vec4 vInstanceNeighbors1;
-        varying vec2 vInstanceNeighbors2;
-        varying vec3 vWorldNormal;
-        varying vec3 vLocalNormal;
+        attribute uint packedData;
+        attribute uvec3 packedUVs;
+        attribute uint packedColor;
+        flat varying float vIsFluid;
+        flat varying uvec3 vPackedUVs;
+        flat varying vec3 vInstanceColor;
+        flat varying float vFaceVisE;
+        flat varying float vFaceVisW;
+        flat varying float vFaceVisS;
+        flat varying float vFaceVisN;
+        flat varying float vFaceVisT;
+        flat varying float vFaceVisB;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
-        varying vec3 vInstancePosition;
+        flat varying vec3 vInstancePosition;
       ` + shader.vertexShader.replace(
         '#include <uv_vertex>',
         `
         #include <uv_vertex>
-        vIsFluid = isFluid;
-        vInstanceUVTop = instanceUVTop;
-        vInstanceUVSide = instanceUVSide;
-        vInstanceUVBottom = instanceUVBottom;
-        vInstanceNeighbors1 = instanceNeighbors1;
-        vInstanceNeighbors2 = instanceNeighbors2;
+        uint pData = uint(packedData);
+        vFaceVisE = float(pData & 1u);
+        vFaceVisW = float((pData >> 1u) & 1u);
+        vFaceVisS = float((pData >> 2u) & 1u);
+        vFaceVisN = float((pData >> 3u) & 1u);
+        vFaceVisT = float((pData >> 4u) & 1u);
+        vFaceVisB = float((pData >> 5u) & 1u);
+        vIsFluid  = float((pData >> 6u) & 7u);
+        vPackedUVs = packedUVs;
         vLocalNormal = normal;
         vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
         vLocalPosition = position;
         vInstancePosition = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+        float r = float(packedColor & 255u) / 255.0;
+        float g = float((packedColor >> 8u) & 255u) / 255.0;
+        float b = float((packedColor >> 16u) & 255u) / 255.0;
+        vInstanceColor = vec3(r, g, b);
         `
       );
       shader.fragmentShader = `
         uniform float uTime;
-        varying float vIsFluid;
-        varying vec4 vInstanceUVTop;
-        varying vec4 vInstanceUVSide;
-        varying vec4 vInstanceUVBottom;
-        varying vec4 vInstanceNeighbors1;
-        varying vec2 vInstanceNeighbors2;
-        varying vec3 vWorldNormal;
-        varying vec3 vLocalNormal;
+        flat varying float vIsFluid;
+        flat varying uvec3 vPackedUVs;
+        flat varying vec3 vInstanceColor;
+        flat varying float vFaceVisE;
+        flat varying float vFaceVisW;
+        flat varying float vFaceVisS;
+        flat varying float vFaceVisN;
+        flat varying float vFaceVisT;
+        flat varying float vFaceVisB;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
-        varying vec3 vInstancePosition;
+        flat varying vec3 vInstancePosition;
       ` + shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
         #ifdef USE_MAP
-          vec2 baseUV = vMapUv;
+          uint faceUVData = vPackedUVs.y; // Side Default
+          if (vLocalNormal.z > 0.5) { faceUVData = vPackedUVs.x; } // Top
+          else if (vLocalNormal.z < -0.5) { faceUVData = vPackedUVs.z; } // Bottom
 
+          float ux = float(faceUVData & 255u);
+          float uy = float((faceUVData >> 8u) & 255u);
+          uint scaleLevel = (faceUVData >> 16u) & 7u;
+          float isFlipped = float((faceUVData >> 19u) & 1u);
+          float size = 64.0;
+          if (scaleLevel == 1u) size = 32.0;
+          else if (scaleLevel == 2u) size = 16.0;
+          else if (scaleLevel == 3u) size = 8.0;
+          float uvScale = size / 2048.0;
           vec4 iuv;
-          if (vLocalNormal.z > 0.5) { // Top
-            iuv = vInstanceUVTop;
-          } else if (vLocalNormal.z < -0.5) { // Bottom
-            iuv = vInstanceUVBottom;
-          } else { // Sides
-            iuv = vInstanceUVSide;
+          iuv.xy = vec2(ux * 8.0 / 2048.0, 1.0 - ((uy * 8.0 + size) / 2048.0));
+          iuv.zw = vec2(uvScale, uvScale);
+          if (isFlipped > 0.5) { iuv.z = -iuv.z; iuv.x += abs(iuv.z); }
+
+          vec2 baseUV = vMapUv;
             // Force ALL side faces to mathematically orient V directly downwards (-Z)
+          if (abs(vLocalNormal.z) <= 0.5) {
             if (abs(vLocalNormal.x) > 0.5) {
                 baseUV.x = vLocalNormal.x > 0.0 ? fract(0.5 - vLocalPosition.y / 32.0) : fract(vLocalPosition.y / 32.0 + 0.5);
             } else {
@@ -362,23 +722,36 @@ export class Renderer {
 
           // --- Interior Face Culling ---
           float faceVis = 1.0;
-          if (vLocalNormal.z > 0.5) faceVis = vInstanceNeighbors2.x;
-          else if (vLocalNormal.z < -0.5) faceVis = vInstanceNeighbors2.y;
-          else if (vLocalNormal.x > 0.5) faceVis = vInstanceNeighbors1.x; // East
-          else if (vLocalNormal.x < -0.5) faceVis = vInstanceNeighbors1.y; // West
-          else if (vLocalNormal.y > 0.5) faceVis = vInstanceNeighbors1.z; // South
-          else if (vLocalNormal.y < -0.5) faceVis = vInstanceNeighbors1.w; // North
+          if (vLocalNormal.z > 0.5) faceVis = vFaceVisT;
+          else if (vLocalNormal.z < -0.5) faceVis = vFaceVisB;
+          else if (vLocalNormal.x > 0.5) faceVis = vFaceVisE; // East
+          else if (vLocalNormal.x < -0.5) faceVis = vFaceVisW; // West
+          else if (vLocalNormal.y > 0.5) faceVis = vFaceVisS; // South
+          else if (vLocalNormal.y < -0.5) faceVis = vFaceVisN; // North
 
           if (faceVis < 0.5) discard;
 
           diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      ).replace(
+        '#include <color_fragment>',
+        `
+        #include <color_fragment>
+        #ifdef USE_MAP
+          diffuseColor.rgb *= vInstanceColor;
 
           if (vIsFluid == 2.0) {
-             totalEmissiveRadiance += sampledDiffuseColor.rgb * 0.8;
+             totalEmissiveRadiance += diffuseColor.rgb * 0.8;
           } else if (vIsFluid == 3.0) {
-             totalEmissiveRadiance += sampledDiffuseColor.rgb * 0.3;
+             totalEmissiveRadiance += diffuseColor.rgb * 0.3;
           } else if (vIsFluid == 4.0) {
-             totalEmissiveRadiance += sampledDiffuseColor.rgb * 1.0;
+             totalEmissiveRadiance += diffuseColor.rgb * 1.0;
+          } else if (vIsFluid == 5.0) {
+             float luma = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+             if (luma > 0.6) {
+                 totalEmissiveRadiance += diffuseColor.rgb * 0.5;
+             }
           }
         #endif
         `
@@ -388,49 +761,14 @@ export class Renderer {
     this.instancedMaterial.onBeforeCompile = (shader) => setupShader(shader, this.instancedMaterial.userData);
     this.glassMaterial.onBeforeCompile = (shader) => setupShader(shader, this.glassMaterial.userData);
 
-    const createMesh = (geometry, material = this.instancedMaterial, instCount = 400000) => {
-      const uvsTop = new Float32Array(instCount * 4);
-      geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(uvsTop, 4));
-      const uvsSide = new Float32Array(instCount * 4);
-      geometry.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(uvsSide, 4));
-      const uvsBottom = new Float32Array(instCount * 4);
-      geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(uvsBottom, 4));
-      geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(instCount), 1));
-
-      const neighbors1 = new Float32Array(instCount * 4);
-      geometry.setAttribute('instanceNeighbors1', new THREE.InstancedBufferAttribute(neighbors1, 4));
-      const neighbors2 = new Float32Array(instCount * 2);
-      geometry.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(neighbors2, 2));
-
-      const mesh = new THREE.InstancedMesh(geometry, material, instCount);
-      mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
-      mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
-
-      mesh.frustumCulled = false;
-      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
-      geometry.boundingSphere = mesh.boundingSphere;
-
-      const colors = new Float32Array(instCount * 3);
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
-
-      this.scene.add(mesh);
-      return mesh;
-    };
-
     const cubeGeo = new THREE.BoxGeometry(32, 32, 32);
     cubeGeo.computeBoundingBox();
     cubeGeo.computeBoundingSphere();
-    this.voxelMesh = createMesh(cubeGeo, this.instancedMaterial, 400000);
-    this.glassMesh = createMesh(cubeGeo.clone(), this.glassMaterial, 50000);
-    this.glassMesh.renderOrder = 1;
 
     const slabGeo = new THREE.BoxGeometry(32, 32, 16);
     slabGeo.translate(0, 0, -8);
     slabGeo.computeBoundingBox();
     slabGeo.computeBoundingSphere();
-    this.slabMesh = createMesh(slabGeo, this.instancedMaterial, 50000);
-    this.glassSlabMesh = createMesh(slabGeo.clone(), this.glassMaterial, 20000);
-    this.glassSlabMesh.renderOrder = 1;
 
     const rampGeo = new THREE.BoxGeometry(32, 32, 32);
     let pos = rampGeo.attributes.position;
@@ -448,9 +786,6 @@ export class Renderer {
     rampGeo.computeVertexNormals();
     rampGeo.computeBoundingBox();
     rampGeo.computeBoundingSphere();
-    this.rampMesh = createMesh(rampGeo, this.instancedMaterial, 50000);
-    this.glassRampMesh = createMesh(rampGeo.clone(), this.glassMaterial, 20000);
-    this.glassRampMesh.renderOrder = 1;
 
     // Merge two boxes manually to form a stair block
     const stairGeo = new THREE.BufferGeometry();
@@ -487,9 +822,6 @@ export class Renderer {
 
     stairGeo.computeBoundingBox();
     stairGeo.computeBoundingSphere();
-    this.stairMesh = createMesh(stairGeo, this.instancedMaterial, 50000);
-    this.glassStairMesh = createMesh(stairGeo.clone(), this.glassMaterial, 20000);
-    this.glassStairMesh.renderOrder = 1;
 
     const doorGeo = new THREE.BufferGeometry();
     const doorBaseBox = new THREE.BoxGeometry(32, 4, 32);
@@ -524,21 +856,31 @@ export class Renderer {
 
     doorGeo.computeBoundingBox();
     doorGeo.computeBoundingSphere();
-    this.doorMesh = createMesh(doorGeo, this.instancedMaterial, 20000);
-    this.glassDoorMesh = createMesh(doorGeo.clone(), this.glassMaterial, 20000);
-    this.glassDoorMesh.renderOrder = 1;
 
-    const lightBlockGeo = new THREE.BoxGeometry(32, 32, 32);
-    lightBlockGeo.computeBoundingBox();
-    lightBlockGeo.computeBoundingSphere();
-    const lightBlockMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, wireframe: true, transparent: true, opacity: 0.4, depthWrite: false });
-    this.lightBlockMesh = new THREE.InstancedMesh(lightBlockGeo, lightBlockMat, 10000);
-    this.lightBlockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.lightBlockMesh.frustumCulled = false;
-    this.lightBlockMesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
-    lightBlockGeo.boundingSphere = this.lightBlockMesh.boundingSphere;
-    this.lightBlockMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(10000 * 3), 3);
-    this.scene.add(this.lightBlockMesh);
+    const decalGeo = new THREE.PlaneGeometry(32, 32);
+    decalGeo.translate(0, 0, -15.9);
+    decalGeo.computeBoundingBox();
+    decalGeo.computeBoundingSphere();
+    const decalUseMeshUVArray = new Float32Array(decalGeo.attributes.position.count).fill(1);
+    decalGeo.setAttribute('useMeshUV', new THREE.BufferAttribute(decalUseMeshUVArray, 1));
+
+    this.blockGeometries = { fence: [] };
+    const postGeo = new THREE.BoxGeometry(8, 8, 32);
+    const railN = new THREE.BoxGeometry(4, 12, 24); railN.translate(0, -10, 0);
+    const railS = new THREE.BoxGeometry(4, 12, 24); railS.translate(0, 10, 0);
+    const railE = new THREE.BoxGeometry(12, 4, 24); railE.translate(10, 0, 0);
+    const railW = new THREE.BoxGeometry(12, 4, 24); railW.translate(-10, 0, 0);
+    for (let i = 0; i < 16; i++) {
+        const parts = [postGeo.clone()];
+        if (i & 1) parts.push(railN.clone());
+        if (i & 2) parts.push(railS.clone());
+        if (i & 4) parts.push(railE.clone());
+        if (i & 8) parts.push(railW.clone());
+        const merged = mergeGeometries(parts, false);
+        merged.computeBoundingBox();
+        merged.computeBoundingSphere();
+        this.blockGeometries.fence[i] = merged;
+    }
 
     this.previewMaterial = this.instancedMaterial.clone();
     this.previewMaterial.onBeforeCompile = this.instancedMaterial.onBeforeCompile;
@@ -551,19 +893,13 @@ export class Renderer {
 
     const createPreviewMesh = (geometry) => {
       const maxPreview = 4096;
-      geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 4), 4));
-      geometry.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 4), 4));
-      geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 4), 4));
-      geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview), 1));
-      const n1 = new Float32Array(maxPreview * 4); n1.fill(1);
-      geometry.setAttribute('instanceNeighbors1', new THREE.InstancedBufferAttribute(n1, 4));
-      const n2 = new Float32Array(maxPreview * 2); n2.fill(1);
-      geometry.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(n2, 2));
+      geometry.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(new Uint32Array(maxPreview * 3), 3));
+      geometry.setAttribute('packedData', new THREE.InstancedBufferAttribute(new Uint32Array(maxPreview), 1));
+      geometry.setAttribute('packedColor', new THREE.InstancedBufferAttribute(new Uint32Array(maxPreview), 1));
       const mesh = new THREE.InstancedMesh(geometry, this.previewMaterial, maxPreview);
       mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
       mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
       mesh.frustumCulled = false; mesh.count = 0; mesh.renderOrder = 998;
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 3), 3);
       this.scene.add(mesh); return mesh;
     };
 
@@ -571,7 +907,9 @@ export class Renderer {
     this.previewSlabMesh = createPreviewMesh(slabGeo.clone());
     this.previewRampMesh = createPreviewMesh(rampGeo.clone());
     this.previewStairMesh = createPreviewMesh(stairGeo.clone());
+    this.previewDecalMesh = createPreviewMesh(decalGeo.clone());
     this.previewDoorMesh = createPreviewMesh(doorGeo.clone());
+    this.previewFenceMesh = createPreviewMesh(this.blockGeometries.fence[15].clone());
 
     this.decorMaterial = this.instancedMaterial.clone();
     this.decorMaterial.side = THREE.DoubleSide;
@@ -579,29 +917,53 @@ export class Renderer {
     this.decorMaterial.alphaTest = 0.5;
     this.decorMaterial.onBeforeCompile = (shader) => {
       shader.vertexShader = `
-        attribute vec4 instanceUVTop;
-        attribute vec4 instanceNeighbors1;
-        attribute vec2 instanceNeighbors2;
-        varying vec4 vInstanceUVTop;
-        varying vec3 vWorldNormal;
+        attribute uvec3 packedUVs;
+        attribute uint packedColor;
+        flat varying uint vPackedUVTop;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vInstanceColor;
       ` + shader.vertexShader.replace(
         '#include <uv_vertex>',
         `
         #include <uv_vertex>
-        vInstanceUVTop = instanceUVTop;
+        vPackedUVTop = packedUVs.x;
         vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
+
+        float r = float(packedColor & 255u) / 255.0;
+        float g = float((packedColor >> 8u) & 255u) / 255.0;
+        float b = float((packedColor >> 16u) & 255u) / 255.0;
+        vInstanceColor = vec3(r, g, b);
         `
       );
       shader.fragmentShader = `
-        varying vec4 vInstanceUVTop;
-        varying vec3 vWorldNormal;
+        flat varying uint vPackedUVTop;
+        flat varying vec3 vWorldNormal;
+        flat varying vec3 vInstanceColor;
       ` + shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
         #ifdef USE_MAP
-          vec2 modifiedUV = vMapUv * vInstanceUVTop.zw + vInstanceUVTop.xy;
+          uint faceUVData = vPackedUVTop;
+          float ux = float(faceUVData & 255u);
+          float uy = float((faceUVData >> 8u) & 255u);
+          uint scaleLevel = (faceUVData >> 16u) & 7u;
+          float isFlipped = float((faceUVData >> 19u) & 1u);
+          float size = scaleLevel == 1u ? 32.0 : (scaleLevel == 2u ? 16.0 : (scaleLevel == 3u ? 8.0 : 64.0));
+          float uvScale = size / 2048.0;
+          vec4 iuv = vec4(ux * 8.0 / 2048.0, 1.0 - ((uy * 8.0 + size) / 2048.0), uvScale, uvScale);
+          if (isFlipped > 0.5) { iuv.z = -iuv.z; iuv.x += abs(iuv.z); }
+
+          vec2 modifiedUV = vMapUv * iuv.zw + iuv.xy;
           vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
           diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      ).replace(
+        '#include <color_fragment>',
+        `
+        #include <color_fragment>
+        #ifdef USE_MAP
+          diffuseColor.rgb *= vInstanceColor;
         #endif
         `
       );
@@ -619,8 +981,207 @@ export class Renderer {
     decorGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
     decorGeo.setAttribute('uv', new THREE.BufferAttribute(uvsGeo, 2));
     decorGeo.computeVertexNormals();
-    this.decorMesh = createMesh(decorGeo, this.decorMaterial, 50000);
-    this.decorMesh.castShadow = false;
+
+    Object.assign(this.blockGeometries, {
+        cube: cubeGeo,
+        slab: slabGeo,
+        ramp: rampGeo,
+        stair: stairGeo,
+        door: doorGeo,
+        decor: decorGeo,
+        decal: decalGeo
+    });
+  }
+
+  getOrCreateDoorMesh(baseShape) {
+      if (!this.dynamicDoorMeshes) this.dynamicDoorMeshes = new Map();
+      if (this.dynamicDoorMeshes.has(baseShape)) return this.dynamicDoorMeshes.get(baseShape);
+
+      let geo;
+      let useMeshUVDefault = 0;
+      if (this.assetManager.modelMeshes[baseShape]) {
+          geo = this.assetManager.modelMeshes[baseShape].geometry.clone();
+          if (FURNITURE_REGISTRY[baseShape] && FURNITURE_REGISTRY[baseShape].useMeshUV) {
+              useMeshUVDefault = 1;
+          }
+      } else {
+          // Fallback legacy mapping for 'door' to wooden-door-1
+          if (baseShape === 'door' && this.assetManager.modelMeshes['wooden-door-1']) {
+             geo = this.assetManager.modelMeshes['wooden-door-1'].geometry.clone();
+             useMeshUVDefault = 1;
+          } else {
+             return null;
+          }
+      }
+
+      geo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(new Uint32Array(4000 * 3), 3));
+      geo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(new Uint32Array(4000), 1));
+
+      if (!geo.attributes.useMeshUV) {
+          const useMeshUVDummy = new Float32Array(geo.attributes.position.count).fill(useMeshUVDefault);
+          geo.setAttribute('useMeshUV', new THREE.BufferAttribute(useMeshUVDummy, 1));
+      }
+
+      const mesh = new THREE.InstancedMesh(geo, this.modelMaterial, 4000);
+      mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+      mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.customDepthMaterial = this.modelDepthMaterial;
+      mesh.customDistanceMaterial = this.modelDistanceMaterial;
+      mesh.frustumCulled = false;
+      mesh.count = 0;
+      mesh.userData.doorMap = {};
+      this.scene.add(mesh);
+
+      this.dynamicDoorMeshes.set(baseShape, mesh);
+      return mesh;
+  }
+
+  updateDoors() {
+    if (!this.engine.doors) return;
+    const doors = this.engine.doors;
+
+    if (this.dynamicDoorMeshes) {
+        for (const mesh of this.dynamicDoorMeshes.values()) {
+            mesh.count = 0;
+            mesh.userData.doorMap = {};
+        }
+    }
+
+    if (!this.doorStates) this.doorStates = new Map();
+
+    const now = performance.now();
+
+    const doorsByShape = new Map();
+    for (let i = 0; i < doors.length; i++) {
+        const d = doors[i];
+        let actualBaseShape = 'door';
+        if (d.shape.startsWith('door_')) {
+            actualBaseShape = 'door';
+        } else {
+            actualBaseShape = d.shape.replace('_open', '').replace('_flip', '');
+        }
+
+        if (!doorsByShape.has(actualBaseShape)) doorsByShape.set(actualBaseShape, []);
+        doorsByShape.get(actualBaseShape).push(d);
+    }
+
+    for (const [baseShape, shapeDoors] of doorsByShape.entries()) {
+        const mesh = this.getOrCreateDoorMesh(baseShape);
+        if (!mesh) continue;
+
+        const maxDoors = 4000;
+        const count = Math.min(shapeDoors.length, maxDoors);
+
+        for (let i = 0; i < count; i++) {
+            const d = shapeDoors[i];
+            let rot = 0;
+            const isOp = d.shape.includes('_open');
+            const isFlip = d.shape.includes('_flip');
+
+            if (baseShape === 'door') {
+                if (d.shape.includes('door_e')) rot = -Math.PI / 2;
+                else if (d.shape.includes('door_n')) rot = Math.PI;
+                else if (d.shape.includes('door_w')) rot = Math.PI / 2;
+                else if (d.shape.includes('door_s')) rot = 0;
+            } else {
+                if (d.dir === 'e') rot = -Math.PI / 2;
+                else if (d.dir === 'n') rot = Math.PI;
+                else if (d.dir === 'w') rot = Math.PI / 2;
+                else if (d.dir === 's') rot = 0;
+            }
+
+            let targetRot = rot;
+            if (isOp) {
+                targetRot += isFlip ? -Math.PI / 2 : Math.PI / 2;
+            }
+
+            const doorKey = `${d.x}_${d.y}_${d.z}`;
+            let state = this.doorStates.get(doorKey);
+            if (!state) {
+                state = {
+                    currentRot: targetRot,
+                    targetRot: targetRot,
+                    startRot: targetRot,
+                    animStartTime: 0,
+                    tex: d.tex,
+                    color: d.color
+                };
+                this.doorStates.set(doorKey, state);
+            }
+
+            if (state.targetRot !== targetRot) {
+                state.startRot = state.currentRot;
+                state.targetRot = targetRot;
+                state.animStartTime = now;
+            }
+
+            if (state.currentRot !== state.targetRot) {
+                const animDuration = 250; // 250ms fast smooth swing
+                const elapsed = now - state.animStartTime;
+                let progress = Math.min(1.0, elapsed / animDuration);
+                progress = -(Math.cos(Math.PI * progress) - 1) / 2;
+
+                let diff = state.targetRot - state.startRot;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+
+                state.currentRot = state.startRot + (diff * progress);
+
+                if (progress >= 1.0) {
+                    state.currentRot = state.targetRot;
+                }
+            }
+
+            const m = new THREE.Matrix4();
+            m.makeTranslation(d.x, d.y, d.z);
+
+            let hingeOffset = new THREE.Vector3(-16, 0, 0);
+            if (isFlip) hingeOffset.set(16, 0, 0);
+            hingeOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), rot);
+
+            m.multiply(new THREE.Matrix4().makeTranslation(hingeOffset.x, hingeOffset.y, 0));
+            m.multiply(new THREE.Matrix4().makeRotationZ(state.currentRot));
+            if (isFlip) {
+                 m.multiply(new THREE.Matrix4().makeTranslation(-16, 0, 0));
+                 m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
+            } else {
+                 m.multiply(new THREE.Matrix4().makeTranslation(16, 0, 0));
+            }
+
+            mesh.setMatrixAt(i, m);
+
+            const color = new THREE.Color();
+            let cHex = d.color;
+            if (!cHex || typeof cHex !== 'string' || !cHex.startsWith('#') || cHex.includes('NaN')) cHex = '#ffffff';
+            color.setStyle(cHex);
+            const pr = Math.max(0, Math.min(255, color.r * 255)) | 0;
+            const pg = Math.max(0, Math.min(255, color.g * 255)) | 0;
+            const pb = Math.max(0, Math.min(255, color.b * 255)) | 0;
+
+            mesh.geometry.attributes.packedColor.setX(i, pr | (pg << 8) | (pb << 16));
+
+            let texName = d.tex;
+            const furn = FURNITURE_REGISTRY[baseShape];
+            if (furn && furn.customTexture) texName = baseShape;
+            else if (baseShape === 'door') texName = 'wooden-door-1'; // Legacy Fallback
+
+            let atlasPos = this.assetManager.atlasMap[texName] || this.assetManager.atlasMap['wooden-door-1'];
+            const ux = Math.round(atlasPos.x * 8);
+            const uy = Math.round(atlasPos.y * 8);
+            const scaleLevel = 0;
+            const flipVal = isFlip ? 1 : 0;
+            const packedUV = (ux & 255) | ((uy & 255) << 8) | (scaleLevel << 16) | (flipVal << 19);
+            mesh.geometry.attributes.packedUVs.setXYZ(i, packedUV, packedUV, packedUV);
+
+            mesh.userData.doorMap[i] = { cx: d.x, cy: d.y, cz: d.z };
+        }
+
+        mesh.count = count;
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.geometry.attributes.packedColor.needsUpdate = true;
+        mesh.geometry.attributes.packedUVs.needsUpdate = true;
+    }
   }
 
   setupCompass() {
@@ -735,7 +1296,11 @@ export class Renderer {
     this.camera.position.z = cz + (camOffsetDist * Math.tan(this.cameraPitch)) + shakeZ;
 
     this.camera.lookAt(cx + shakeX, cy + shakeY, cz + shakeZ);
-    // Force a matrix update so the Raycaster perfectly aligns with the new camera position!
+
+    if (this.engine.arcadeSystem) {
+      this.engine.arcadeSystem.cameraManager.applyOverride(this.camera);
+    }
+
     this.camera.updateMatrixWorld();
 
     if (this.sunLight) {
@@ -760,6 +1325,15 @@ export class Renderer {
     }
   }
 
+  toggleSoftShadows(isEnabled) {
+    this.webgl.shadowMap.type = isEnabled ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    this.scene.traverse((child) => {
+        if (child.material) {
+            child.material.needsUpdate = true;
+        }
+    });
+  }
+
   toggleShadows(isEnabled) {
     this.webgl.shadowMap.enabled = isEnabled;
     if (this.sunLight) this.sunLight.castShadow = isEnabled;
@@ -771,11 +1345,7 @@ export class Renderer {
     }
 
     const meshes = [
-      this.voxelMesh, this.slabMesh, this.rampMesh, this.stairMesh, this.decorMesh,
-      this.glassMesh, this.glassSlabMesh, this.glassRampMesh, this.glassStairMesh,
-      this.doorMesh, this.glassDoorMesh, ...Object.values(this.assetManager.modelMeshes || {}),
-      ...Object.values(this.assetManager.previewModelMeshes || {}), this.lightBlockMesh,
-      this.previewCubeMesh, this.previewSlabMesh, this.previewRampMesh, this.previewStairMesh, this.previewDoorMesh
+      this.previewCubeMesh, this.previewSlabMesh, this.previewRampMesh, this.previewStairMesh, this.previewDecalMesh, this.previewFenceMesh, this.previewDoorMesh
     ].filter(Boolean);
 
     meshes.forEach(mesh => {
@@ -783,6 +1353,22 @@ export class Renderer {
       mesh.receiveShadow = isEnabled;
       if (mesh.material) mesh.material.needsUpdate = true;
     });
+
+    this.chunkMeshes.forEach(mesh => {
+      mesh.castShadow = isEnabled;
+      mesh.receiveShadow = isEnabled;
+    });
+
+    this.chunkTransparentMeshes.forEach(mesh => {
+      mesh.receiveShadow = isEnabled;
+    });
+
+    if (this.dynamicDoorMeshes) {
+      for (const mesh of this.dynamicDoorMeshes.values()) {
+        mesh.castShadow = isEnabled;
+        mesh.receiveShadow = isEnabled;
+      }
+    }
 
     const updateSpriteShadows = (map) => {
       if (map) {
@@ -900,6 +1486,9 @@ export class Renderer {
     if (this.instancedMaterial && this.instancedMaterial.userData.time) {
         this.instancedMaterial.userData.time.value = performance.now() / 1000;
     }
+    if (this.chunkMaterial && this.chunkMaterial.userData.time) {
+        this.chunkMaterial.userData.time.value = performance.now() / 1000;
+    }
 
     const compassWrapper = document.getElementById('compass-wrapper');
     if (compassWrapper && eng.clientSettings.showMinimap) {
@@ -934,10 +1523,17 @@ export class Renderer {
     this.engine.entityManager.updateEntities();
     this.particleManager.updateProjectiles();
     this.particleManager.updateParticles();
+    this.updateDoors();
     this.engine.entityManager.updateDebris();
     this.debugRenderer.updateArrowHelper();
     this.debugRenderer.update3DDebug();
     this.debugRenderer.updateTeleportVisuals();
+
+    if (this.spriteBatcher) {
+       this.spriteBatcher.begin();
+       this.debugRenderer.updateWebGLUI();
+       this.spriteBatcher.end();
+    }
 
     if (this.debugCtx) {
       const ctx = this.debugCtx;
@@ -951,51 +1547,6 @@ export class Renderer {
       }
       this.debugRenderer.update2DOverlay();
       ctx.restore();
-    }
-
-    if (this.voxelManager.doorMap) {
-      this.voxelManager.doorPhysics = this.voxelManager.doorPhysics || {};
-      let doorsUpdated = false;
-      const spring = 0.15;
-      const friction = 0.80;
-
-      const rootObj = new THREE.Object3D();
-      const pivotObj = new THREE.Object3D();
-      const doorObj = new THREE.Object3D();
-      rootObj.add(pivotObj);
-      pivotObj.add(doorObj);
-
-      for (const [key, data] of Object.entries(this.voxelManager.doorMap)) {
-        let phys = this.voxelManager.doorPhysics[key];
-        if (!phys) { phys = { rot: data.targetRot, vel: 0 }; this.voxelManager.doorPhysics[key] = phys; }
-
-        phys.vel += (data.targetRot - phys.rot) * spring;
-        phys.vel *= friction;
-        phys.rot += phys.vel;
-
-        if (Math.abs(phys.vel) > 0.001 || Math.abs(data.targetRot - phys.rot) > 0.001 || !phys.initialized) {
-          phys.initialized = true;
-
-          rootObj.position.set(data.cx, data.cy, data.cz);
-          rootObj.rotation.set(0, 0, data.baseRot);
-
-          pivotObj.position.set(data.flip ? 16 : -16, -14, 0);
-          pivotObj.rotation.set(0, 0, phys.rot - data.baseRot);
-
-          doorObj.position.set(data.flip ? -16 : 16, 0, 0);
-          doorObj.rotation.set(0, 0, data.flip ? Math.PI : 0);
-
-          rootObj.updateMatrixWorld(true);
-
-          if (data.isGlass) this.glassDoorMesh.setMatrixAt(data.id, doorObj.matrixWorld);
-          else this.doorMesh.setMatrixAt(data.id, doorObj.matrixWorld);
-          doorsUpdated = true;
-        }
-      }
-      if (doorsUpdated) {
-        this.doorMesh.instanceMatrix.needsUpdate = true;
-        if (this.glassDoorMesh) this.glassDoorMesh.instanceMatrix.needsUpdate = true;
-      }
     }
 
     let frustumSize = 1000;

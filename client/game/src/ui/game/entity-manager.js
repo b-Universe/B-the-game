@@ -52,9 +52,22 @@ export class EntityManager {
     for (let id in this.engine.otherPlayers) updateBubbles(this.engine.otherPlayers[id]);
     this.engine.npcs.forEach(npc => updateBubbles(npc));
 
+    this.engine.entityGrid = new Map();
+    const cellSize = 128;
+    const addToGrid = (ent, type, id) => {
+      const gx = Math.floor(ent.x / cellSize);
+      const gy = Math.floor(ent.y / cellSize);
+      const key = `${gx}_${gy}`;
+      if (!this.engine.entityGrid.has(key)) this.engine.entityGrid.set(key, []);
+      this.engine.entityGrid.get(key).push({ ent, type, id });
+    };
+    this.engine.npcs.forEach(npc => addToGrid(npc, 'npc', npc.uuid));
+    for (let id in this.engine.otherPlayers) addToGrid(this.engine.otherPlayers[id], 'player', id);
+
     this.updatePlayer(dt);
     this.updateNpcs(dt);
     this.updateOtherPlayers(dt);
+    this.updateDrones(dt);
   }
 
   updatePlayer(dt) {
@@ -170,22 +183,6 @@ export class EntityManager {
       }
     }
 
-    if (player.actionTimer <= 0 && player.state !== 'death' && player.state !== 'dash' && !player.isSitting && !eng.editMode) {
-      const powerKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-      const powers = eng.playerData.powers || [];
-      for (let i = 0; i < powerKeys.length; i++) {
-        if (eng.keys[powerKeys[i]]) {
-          const powerName = powers[i];
-          const powerDef = POWER_REGISTRY[powerName];
-          const isToggle = powerDef?.type === 'toggle' || ['fly', 'super-jump', 'super-speed', 'mighty-leap', 'dash', 'speed-serum', 'combat-flight', 'combat-jumping', 'jetpack', 'flashlight'].includes(powerName);
-          if (powerName && !isToggle && powerName !== 'teleport') {
-            eng.combat?.usePower(powerName);
-            break;
-          }
-        }
-      }
-    }
-
     if (player.hurtTimer > 0) player.hurtTimer -= dt;
 
     if (player.state !== 'death' && player.hp < player.maxHp) {
@@ -197,10 +194,66 @@ export class EntityManager {
       }
     }
 
-    if (player.energy < player.maxEnergy) {
-      player.energy += 50 * (dt / 1000);
-      if (player.energy > player.maxEnergy) player.energy = player.maxEnergy;
-      if (player.state !== 'death') eng.ui.update();
+    if (player.state !== 'death') {
+      let netEnergy = 0;
+      let netBattery = 0;
+
+      if (eng.playerData.powers) {
+         eng.playerData.powers.forEach(pId => {
+            const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+            if (pDef && pDef.type?.toLowerCase() === 'passive') {
+               let canRecover = true;
+               if (pDef.engineScript?.trim().toLowerCase() === 'solar_recovery') {
+                  const cycleDuration = 480000;
+                  let realT = ((Date.now() % cycleDuration) / cycleDuration);
+                  let realAngle = (realT < (2 / 3)) ? (realT / (2 / 3)) * Math.PI : Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
+                  if (Math.sin(realAngle) <= 0) canRecover = false;
+               }
+               if (pDef.engineScript?.trim().toLowerCase() === 'lunar_recovery') {
+                  const cycleDuration = 480000;
+                  let realT = ((Date.now() % cycleDuration) / cycleDuration);
+                  let realAngle = (realT < (2 / 3)) ? (realT / (2 / 3)) * Math.PI : Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
+                  if (Math.sin(realAngle) > 0) canRecover = false;
+               }
+               if (canRecover) {
+                 netEnergy += pDef.stats?.recoveryRatePerSecond || 0;
+                 netBattery += pDef.stats?.batteryRecoveryRatePerSecond || 0;
+               }
+            }
+         });
+      }
+      if (player.activePowers) {
+         player.activePowers.forEach(pId => {
+            const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+            if (pDef && pDef.type?.toLowerCase() === 'toggle') {
+               netEnergy -= pDef.stats?.energyCostPerSecond || 0;
+               netBattery -= pDef.stats?.batteryCostPerSecond || 0;
+            }
+         });
+      }
+
+      if (netBattery > 0 && player.synthEnergy < (player.maxSynthEnergy || 1000)) {
+         if (Math.random() > 0.6) {
+             eng.spawnParticle({
+                 x: player.x + (Math.random() - 0.5) * 32,
+                 y: player.y + (Math.random() - 0.5) * 32,
+                 z: (player.z || 0) + Math.random() * 20,
+                 vx: (Math.random() - 0.5) * 15,
+                 vy: (Math.random() - 0.5) * 15,
+                 vz: 30 + Math.random() * 30,
+                 life: 0.3 + Math.random() * 0.4,
+                 maxLife: 0.7,
+                 color: '#00d2ff', // Cyan / Battery color
+                 size: 2 + Math.random() * 3,
+                 noGravity: true
+             });
+         }
+      }
+
+      let updatedUI = false;
+      if (netEnergy !== 0) { const oldE = player.energy; player.energy = Math.max(0, Math.min(player.maxEnergy, player.energy + netEnergy * (dt / 1000))); if (Math.floor(player.energy) !== Math.floor(oldE)) updatedUI = true; }
+      if (netBattery !== 0) { const oldB = player.synthEnergy; player.synthEnergy = Math.max(0, Math.min(player.maxSynthEnergy || 1000, player.synthEnergy + netBattery * (dt / 1000))); if (Math.floor(player.synthEnergy) !== Math.floor(oldB)) updatedUI = true; }
+      if (updatedUI) eng.ui.update();
     }
 
     let screenDx = 0; let screenDy = 0;
@@ -265,7 +318,7 @@ export class EntityManager {
         if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(0, camSens * 1.5 * invertY * (dt / 1000));
       }
 
-      if (player.isSitting || player.teleportTarget) {
+      if (player.isSitting || player.teleportTarget || (eng.arcadeSystem && eng.arcadeSystem.isActive)) {
          screenDx = 0; screenDy = 0;
          isPressingShift = false; isPressingSpace = false;
          player.vx = 0; player.vy = 0;
@@ -388,7 +441,8 @@ export class EntityManager {
               const fxData = {
                 x: player.x, y: player.y, z: (player.z || 0) + 32,
                 vx: 0, vy: 0, vz: 0, life: 0.5, maxLife: 0.5, crumpleTimer: 0, wasteTex: 'fx_speed_start', isFX: true,
-                color: '#f1c40f'
+                color: '#f1c40f',
+                flipX: Math.random() > 0.5
               };
               eng.debris.push(fxData);
               if (eng.network) eng.network.sendSpawnFX(fxData);
@@ -396,9 +450,10 @@ export class EntityManager {
 
             if (Math.random() > 0.6) {
               const stepFx = {
-                x: player.x + (Math.random() - 0.5) * 16, y: player.y + (Math.random() - 0.5) * 16, z: (player.z || 0) + 16,
+                x: player.x + (Math.random() - 0.5) * 16, y: player.y + (Math.random() - 0.5) * 16, z: (player.z || 0) + 19,
                 vx: 0, vy: 0, vz: 0, life: 0.3, maxLife: 0.3, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
-                color: '#f1c40f'
+                color: '#f1c40f',
+                flipX: Math.random() > 0.5
               };
               eng.debris.push(stepFx);
             }
@@ -722,7 +777,7 @@ export class EntityManager {
     else if (player.state.startsWith('throw-attack')) currentInterval /= 2;
     else if (player.state.startsWith('attack')) currentInterval /= 2;
     if (player.frameTimer >= currentInterval) {
-      player.frameTimer = 0;
+      player.frameTimer -= currentInterval;
       const maxFrames = this.getFrameCount(player.state);
       if (player.state === 'death') {
         if (player.frame < maxFrames - 1) player.frame++;
@@ -740,7 +795,7 @@ export class EntityManager {
       if (npc.state === 'death') npcInterval *= 3;
       else if (npc.state && (npc.state.startsWith('throw-attack') || npc.state.startsWith('attack') || npc.state.startsWith('cast:'))) npcInterval /= 2;
       if (npc.frameTimer >= npcInterval) {
-        npc.frameTimer = 0;
+        npc.frameTimer -= npcInterval;
         const maxFrames = this.getFrameCount(npc.state);
         if (npc.state === 'dead') {
           if (npc.frame < maxFrames - 1) npc.frame++;
@@ -759,7 +814,7 @@ export class EntityManager {
       if (op.state === 'death') opInterval *= 3;
       else if (op.state && (op.state.startsWith('throw-attack') || op.state.startsWith('attack') || op.state.startsWith('cast:'))) opInterval /= 2;
       if (op.frameTimer >= opInterval) {
-        op.frameTimer = 0;
+        op.frameTimer -= opInterval;
         const maxFrames = this.getFrameCount(op.state || 'idle');
         if (op.state === 'death') {
           if ((op.frame || 0) < maxFrames - 1) op.frame = (op.frame || 0) + 1;
@@ -772,9 +827,10 @@ export class EntityManager {
       if (op.activePowers && op.activePowers.includes('super-speed') && (op.state === 'run' || op.state === 'dash') && Math.abs((op.z || 0) - opGroundZ) < 1.0) {
          if (Math.random() > 0.6) {
              this.engine.debris.push({
-               x: op.x + (Math.random() - 0.5) * 16, y: op.y + (Math.random() - 0.5) * 16, z: (op.z || 0) + 16,
+               x: op.x + (Math.random() - 0.5) * 16, y: op.y + (Math.random() - 0.5) * 16, z: (op.z || 0) + 19,
                vx: 0, vy: 0, vz: 0, life: 0.3, maxLife: 0.3, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
-               color: '#f1c40f'
+               color: '#f1c40f',
+               flipX: Math.random() > 0.5
              });
          }
          if (Math.random() > 0.4) {
@@ -795,6 +851,29 @@ export class EntityManager {
     });
   }
 
+  updateDrones(dt) {
+    const eng = this.engine;
+    for (const id in eng.drones) {
+        const drone = eng.drones[id];
+        drone.frameTimer = (drone.frameTimer || 0) + dt;
+
+        let state = 'idle';
+        if (drone.dir) {
+            if (drone.dir.includes('up')) state = 'forward';
+            else if (drone.dir.includes('down')) state = 'backward';
+        }
+        drone.state = state;
+
+        const maxFrames = 1; // Drones are single-frame for now
+        const animSpeed = 120;
+
+        if (drone.frameTimer >= animSpeed) {
+            drone.frameTimer -= animSpeed;
+            drone.frame = ((drone.frame || 0) + 1) % maxFrames;
+        }
+    }
+  }
+
   updateEntities() {
     const activeEntities = new Set();
     const renderer = this.engine.renderer;
@@ -807,23 +886,42 @@ export class EntityManager {
       if (!group) {
         group = new THREE.Group();
 
-        const mat = new THREE.MeshPhongMaterial({
-          transparent: true,
-          alphaTest: 0.5,
-          depthWrite: true,
-          side: THREE.FrontSide,
-          polygonOffset: true,
-          polygonOffsetFactor: -1,
-          polygonOffsetUnits: -1,
-          shininess: 0
-        });
-        // Force the sprite normal to always point UP in world space so the daylight hits it uniformly!
-        mat.onBeforeCompile = (shader) => {
-          shader.vertexShader = shader.vertexShader.replace(
-            '#include <defaultnormal_vertex>',
-            `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
-          );
-        };
+        if (!renderer.baseEntityMaterial) {
+            renderer.baseEntityMaterial = new THREE.MeshPhongMaterial({
+              transparent: true,
+              alphaTest: 0.5,
+              depthWrite: true,
+              side: THREE.FrontSide,
+              polygonOffset: true,
+              polygonOffsetFactor: -1,
+              polygonOffsetUnits: -1,
+              shininess: 0
+            });
+            // Force the sprite normal to always point UP in world space so the daylight hits it uniformly!
+            renderer.baseEntityMaterial.onBeforeCompile = (shader) => {
+              shader.vertexShader = shader.vertexShader.replace(
+                '#include <defaultnormal_vertex>',
+                `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+              ).replace(
+                '#include <project_vertex>',
+                `
+                vec4 mvPosition = vec4( transformed, 1.0 );
+                #ifdef USE_INSTANCING
+                    mvPosition = instanceMatrix * mvPosition;
+                #endif
+                mvPosition = modelViewMatrix * mvPosition;
+                mvPosition.z += (position.y + 0.5) * 60.0;
+                gl_Position = projectionMatrix * mvPosition;
+                `
+              );
+            };
+            renderer.baseEntityMaterial.customProgramCacheKey = () => 'baseEntityMat';
+        }
+
+        const mat = renderer.baseEntityMaterial.clone();
+        mat.onBeforeCompile = renderer.baseEntityMaterial.onBeforeCompile;
+        mat.customProgramCacheKey = renderer.baseEntityMaterial.customProgramCacheKey;
+
         const geo = new THREE.PlaneGeometry(1, 1);
         const sprite = new THREE.Mesh(geo, mat);
         sprite.castShadow = false;
@@ -833,9 +931,9 @@ export class EntityManager {
         group.add(sprite);
         group.userData.sprite = sprite;
 
-        const proxyGeo = new THREE.CylinderGeometry(10, 10, 48, 8);
+        const proxyGeo = new THREE.CylinderGeometry(8, 8, 38, 8);
         proxyGeo.rotateX(Math.PI / 2);
-        proxyGeo.translate(0, 0, 24);
+        proxyGeo.translate(0, 0, 19);
         const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
         const shadowProxy = new THREE.Mesh(proxyGeo, proxyMat);
         shadowProxy.castShadow = this.engine.clientSettings.enableShadows !== false;
@@ -844,7 +942,7 @@ export class EntityManager {
         group.userData.shadowProxy = shadowProxy;
 
         if (!id.startsWith('proj_')) {
-          const shadowGeo = new THREE.CircleGeometry(12, 16);
+          const shadowGeo = new THREE.CircleGeometry(10, 16);
           const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
           const shadow = new THREE.Mesh(shadowGeo, shadowMat);
           group.add(shadow);
@@ -862,19 +960,26 @@ export class EntityManager {
       if (state === 'dead') state = 'death';
       else if (entity.hurtTimer > 0) state = 'hurt';
 
-      let width = 192;
-      let height = 192;
+      let width = 154;
+      let height = 154;
 
-      if (state === 'attack1' || state === 'attack2' || state === 'throw-attack1') {
-        width = 288;
-        height = 288;
+      if (entity.type === 'drone') {
+        state = `drone_${state}`;
+        width = 64;
+        height = 64;
+        sprite.position.copy(camUp).multiplyScalar(0); // Drones are centered
+      } else if (state === 'attack1' || state === 'attack2' || state === 'throw-attack1') {
+        width = 230;
+        height = 230;
       }
 
       sprite.scale.set(width, height, 1);
 
-      // By shifting the sprite 46 units along the camera's local Y axis,
+      // By shifting the sprite 37 units along the camera's local Y axis,
       // its physical feet perfectly anchor to the exact center of the world group!
-      sprite.position.copy(camUp).multiplyScalar(46);
+      if (entity.type !== 'drone') {
+        sprite.position.copy(camUp).multiplyScalar(37);
+      }
       sprite.quaternion.copy(renderer.camera.quaternion);
 
       group.position.set(entity.x, entity.y, entity.z || 0);
@@ -894,22 +999,26 @@ export class EntityManager {
 
       if (tex) {
 
-        if (sprite.userData.state !== state) {
+        if (sprite.userData.mapUuid !== tex.uuid) {
           sprite.material.map = tex.clone();
+          sprite.userData.mapUuid = tex.uuid;
           sprite.userData.state = state;
           sprite.material.needsUpdate = true;
         }
 
-        let dirCols = {
-          'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
-          'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
-        };
-
-        const colIndex = dirCols[relDir] !== undefined ? dirCols[relDir] : 3;
-        const rows = tex.userData.rows || 8;
-
-        sprite.material.map.offset.x = colIndex / 8;
-        sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);
+        if (entity.type === 'drone') {
+            sprite.material.map.repeat.set(1, 1);
+            sprite.material.map.offset.set(0, 0);
+        } else {
+            let dirCols = {
+              'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
+              'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
+            };
+            const colIndex = dirCols[relDir] !== undefined ? dirCols[relDir] : 3;
+            const rows = tex.userData.rows || 8;
+            sprite.material.map.offset.x = colIndex / 8;
+            sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);
+        }
 
         const maxFrames = this.getFrameCount(entity.state || 'idle');
         if (state === 'death' && (entity.frame || 0) >= maxFrames - 1) {
@@ -921,9 +1030,11 @@ export class EntityManager {
     };
     if (this.engine.player) updateEntityMesh(this.engine.player, 'player_self');
     for (const id in this.engine.otherPlayers) updateEntityMesh(this.engine.otherPlayers[id], `player_${id}`);
-    this.engine.npcs.forEach(npc => updateEntityMesh(npc, `npc_${npc.uuid}`));
+    for (const npc of this.engine.npcs) updateEntityMesh(npc, `npc_${npc.uuid}`);
+    for (const id in this.engine.drones) updateEntityMesh(this.engine.drones[id], `drone_${id}`);
+
     for (const [id, group] of renderer.entityMeshes.entries()) {
-      if (!activeEntities.has(id) && !id.startsWith('proj_')) {
+      if (!activeEntities.has(id) && !id.startsWith('proj_') && !id.startsWith('drone_')) {
         renderer.scene.remove(group);
         if (group.userData.sprite) group.userData.sprite.material.dispose();
         if (group.userData.shadow) {
@@ -947,13 +1058,33 @@ export class EntityManager {
       let group = renderer.debrisMeshes.get(id);
       if (!group) {
         group = new THREE.Group();
-        const mat = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0 });
-        mat.onBeforeCompile = (shader) => {
-          shader.vertexShader = shader.vertexShader.replace(
-            '#include <defaultnormal_vertex>',
-            `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
-          );
-        };
+
+        if (!renderer.baseDebrisMaterial) {
+            renderer.baseDebrisMaterial = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0 });
+            renderer.baseDebrisMaterial.onBeforeCompile = (shader) => {
+              shader.vertexShader = shader.vertexShader.replace(
+                '#include <defaultnormal_vertex>',
+                `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+              ).replace(
+                '#include <project_vertex>',
+                `
+                vec4 mvPosition = vec4( transformed, 1.0 );
+                #ifdef USE_INSTANCING
+                    mvPosition = instanceMatrix * mvPosition;
+                #endif
+                mvPosition = modelViewMatrix * mvPosition;
+                mvPosition.z += (position.y + 0.5) * 60.0;
+                gl_Position = projectionMatrix * mvPosition;
+                `
+              );
+            };
+            renderer.baseDebrisMaterial.customProgramCacheKey = () => 'baseDebrisMat';
+        }
+
+        const mat = renderer.baseDebrisMaterial.clone();
+        mat.onBeforeCompile = renderer.baseDebrisMaterial.onBeforeCompile;
+        mat.customProgramCacheKey = renderer.baseDebrisMaterial.customProgramCacheKey;
+
         const geo = new THREE.PlaneGeometry(1, 1);
         const sprite = new THREE.Mesh(geo, mat);
         sprite.castShadow = id !== 'player_self' && this.engine.clientSettings.enableShadows !== false;
@@ -982,8 +1113,9 @@ export class EntityManager {
       else if (deb.crumpleTimer > 0) texName = 'cronched_3';
 
       const tex = renderer.assetManager.textures[texName];
-      if (tex && sprite.userData.tex !== texName) {
+      if (tex && sprite.userData.mapUuid !== tex.uuid) {
         sprite.material.map = tex.clone();
+        sprite.userData.mapUuid = tex.uuid;
         sprite.userData.tex = texName;
         sprite.material.needsUpdate = true;
       }
@@ -1022,7 +1154,7 @@ export class EntityManager {
       }
 
       if (deb.isFX) {
-        sprite.scale.set(96, 192, 1);
+        sprite.scale.set(deb.flipX ? -96 : 96, 192, 1);
         const seqLib = renderer.assetManager.sequenceLibrary;
         const seqData = seqLib[texName];
 
@@ -1035,12 +1167,14 @@ export class EntityManager {
             sprite.scale.set(192, 192, 1);
           } else {
             const speed = seqData.speed || 80;
-            const frameIndex = Math.floor(performance.now() / speed) % frameCount;
+              const elapsedMs = (deb.maxLife - deb.life) * 1000;
+              const frameIndex = Math.floor(elapsedMs / speed) % frameCount;
             if (sprite.material.map) sprite.material.map.offset.set(frameIndex / frameCount, 0);
           }
         } else if ((texName === 'fx_teleport' || texName === 'fx_teleport_2' || texName === 'fx_speed_start' || texName === 'fx_speed_step') && tex) {
            const frameCount = texName === 'fx_speed_start' ? 9 : 8;
-           const frameIndex = Math.floor(performance.now() / 80) % frameCount;
+             const elapsedMs = (deb.maxLife - deb.life) * 1000;
+             const frameIndex = Math.floor(elapsedMs / 80) % frameCount;
            if (sprite.material.map) sprite.material.map.offset.set(frameIndex / frameCount, 0);
         }
       } else {

@@ -4,6 +4,7 @@ export class PowerbarUIManager {
     this.engine = engine;
     this.ui = mainUIManager;
     this.powerSlots = [];
+    this.numTrays = parseInt(localStorage.getItem('b_powerbar_trays'), 10) || 1;
 
     this.ui.makeDraggable('powers-panel', '.dev-panel-header');
 
@@ -13,6 +14,7 @@ export class PowerbarUIManager {
 
   setupPowerbar() {
     let container = document.getElementById('powerbar-container');
+    const isNew = !container;
     if (!container) {
         container = document.createElement('div');
         container.id = 'powerbar-container';
@@ -26,19 +28,63 @@ export class PowerbarUIManager {
             document.body.appendChild(container);
         }
     }
-    container.style.cssText = 'position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 999999; padding: 10px; background: rgba(5, 7, 10, 0.85); border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
 
-    container.innerHTML = '';
+    const orient = (this.engine.clientSettings && this.engine.clientSettings.powerbarOrientation) || 'horizontal';
+
+    if (isNew) {
+        const savedPowerbarPos = localStorage.getItem('b_powerbar_pos');
+        if (savedPowerbarPos) {
+           container.style.cssText = `position: absolute; display: flex; z-index: 999999; padding: 10px; background: rgba(5, 7, 10, 0.85); border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;`;
+        } else {
+            container.style.cssText = `position: absolute; bottom: 85px; right: 0; display: flex; z-index: 999999; padding: 10px; background: rgba(5, 7, 10, 0.85); border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;`;
+        }
+    }
+
+    const flexDirContainer = orient === 'horizontal' ? 'row' : 'column';
+    const controlsFlexDir = orient === 'horizontal' ? 'column' : 'row';
+    const gridCols = orient === 'horizontal' ? `repeat(10, 44px)` : `repeat(${this.numTrays}, 44px)`;
+    const gridRows = orient === 'horizontal' ? `repeat(${this.numTrays}, 44px)` : `repeat(10, 44px)`;
+    const gridFlow = orient === 'horizontal' ? 'row' : 'column';
+
+    container.style.flexDirection = flexDirContainer;
+    container.style.alignItems = 'center';
+
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: ${controlsFlexDir}; gap: 5px; align-items: center; justify-content: center;">
+        <div id="powerbar-drag-handle" style="width: 20px; height: 20px; background: rgba(255,255,255,0.1); border: 1px solid var(--text-dim); border-radius: 4px; cursor: move; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #aaa;" title="Drag Powerbar">⋮</div>
+        <button id="btn-add-tray" class="btn-secondary" style="width: 20px; height: 20px; padding: 0; font-size: 16px; line-height: 1; border-color: #2ecc71; color: #2ecc71; display: flex; align-items: center; justify-content: center;" title="Add Power Tray">+</button>
+        <button id="btn-remove-tray" class="btn-secondary" style="width: 20px; height: 20px; padding: 0; font-size: 16px; line-height: 1; border-color: #e74c3c; color: #e74c3c; display: flex; align-items: center; justify-content: center;" title="Remove Power Tray">-</button>
+      </div>
+      <div id="powerbar-slots" style="display: grid; grid-template-columns: ${gridCols}; grid-template-rows: ${gridRows}; grid-auto-flow: ${gridFlow}; gap: 6px;"></div>
+    `;
+
+    document.getElementById('btn-add-tray').onclick = () => {
+      if (this.numTrays < 3) {
+        this.numTrays++;
+        localStorage.setItem('b_powerbar_trays', this.numTrays);
+        this.setupPowerbar();
+      }
+    };
+
+    document.getElementById('btn-remove-tray').onclick = () => {
+      if (this.numTrays > 1) {
+        this.numTrays--;
+        localStorage.setItem('b_powerbar_trays', this.numTrays);
+        this.setupPowerbar();
+      }
+    };
+
     this.powerSlots = [];
+    const slotsContainer = document.getElementById('powerbar-slots');
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < this.numTrays * 10; i++) {
         const slot = document.createElement('div');
         slot.className = 'powerbar-slot';
         slot.style.cssText = 'width: 44px; height: 44px; background: rgba(0, 0, 0, 0.7); border: 2px solid #444; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);';
 
         const keyLabel = document.createElement('span');
-        keyLabel.innerText = keys[i];
+        keyLabel.innerText = i < 10 ? keys[i] : '';
         keyLabel.style.cssText = 'position: absolute; top: 2px; left: 4px; font-size: 0.75rem; font-weight: bold; color: #888; font-family: var(--font-mono, monospace); text-shadow: 1px 1px 0 #000;';
 
         const iconOrName = document.createElement('div');
@@ -51,55 +97,66 @@ export class PowerbarUIManager {
         slot.appendChild(overlay);
         slot.appendChild(keyLabel);
         slot.appendChild(iconOrName);
-        container.appendChild(slot);
+        slotsContainer.appendChild(slot);
 
         slot.onmouseenter = () => {
-            const powers = this.engine.playerData.powers || [];
-            const powerName = powers[i];
+            const tray = this.engine.playerData.powerTray || [];
+            const powerName = tray[i];
             if (powerName) slot.style.background = 'rgba(52, 152, 219, 0.4)';
         };
         slot.onmouseleave = () => slot.style.background = 'rgba(0, 0, 0, 0.7)';
 
         slot.draggable = true;
         slot.ondragstart = (e) => {
-            const powers = this.engine.playerData.powers || [];
-            if (powers[i]) {
-                e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'powerbar', index: i }));
+            const tray = this.engine.playerData.powerTray || [];
+            if (tray[i]) {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'tray', index: i }));
             } else {
                 e.preventDefault(); // Prevent dragging completely empty slots
             }
         };
         slot.ondragover = (e) => e.preventDefault();
+        slot.ondragend = (e) => {
+            if (e.dataTransfer.dropEffect === 'none') {
+                const tray = this.engine.playerData.powerTray || [];
+                tray[i] = null;
+                while(tray.length > 0 && tray[tray.length - 1] === null) tray.pop();
+                this.engine.playerData.powerTray = tray;
+                this.updatePowerbar();
+            }
+        };
         slot.ondrop = (e) => {
             e.preventDefault();
             try {
                 const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                if (data.source === 'powerbar') {
+                const tray = this.engine.playerData.powerTray || [];
+                if (data.source === 'tray') {
                     const fromIdx = data.index;
                     const toIdx = i;
                     if (fromIdx !== toIdx) {
-                        const powers = this.engine.playerData.powers || [];
-                        while (powers.length <= Math.max(fromIdx, toIdx)) powers.push(null);
+                        while (tray.length <= Math.max(fromIdx, toIdx)) tray.push(null);
 
-                        const temp = powers[fromIdx];
-                        powers[fromIdx] = powers[toIdx];
-                        powers[toIdx] = temp;
+                        const temp = tray[fromIdx];
+                        tray[fromIdx] = tray[toIdx];
+                        tray[toIdx] = temp;
 
-                        while(powers.length > 0 && powers[powers.length - 1] === null) powers.pop();
+                        while(tray.length > 0 && tray[tray.length - 1] === null) tray.pop();
 
-                        this.engine.playerData.powers = powers;
+                        this.engine.playerData.powerTray = tray;
                         this.updatePowerbar();
-
-                        const pPanel = document.getElementById('powers-panel');
-                        if (pPanel && pPanel.style.display === 'flex') this.renderPowersUI();
                     }
+                } else if (data.source === 'powersList') {
+                    while (tray.length <= i) tray.push(null);
+                    tray[i] = data.powerId;
+                    this.engine.playerData.powerTray = tray;
+                    this.updatePowerbar();
                 }
             } catch (err) {}
         };
 
         slot.onclick = () => {
-            const powers = this.engine.playerData.powers || [];
-            const powerName = powers[i];
+            const tray = this.engine.playerData.powerTray || [];
+            const powerName = tray[i];
             if (powerName) {
                 this.engine.combat?.usePower(powerName);
             }
@@ -108,15 +165,18 @@ export class PowerbarUIManager {
         this.powerSlots.push({ element: slot, iconEl: iconOrName, overlayEl: overlay });
     }
     this.updatePowerbar();
+    if (this.ui && this.ui.makeDraggable) {
+        this.ui.makeDraggable('powerbar-container', '#powerbar-drag-handle');
+    }
   }
 
   updatePowerbar() {
       if (!this.powerSlots) return;
-      const powers = this.engine.playerData.powers || [];
+      const tray = this.engine.playerData.powerTray || [];
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < this.powerSlots.length; i++) {
           const slotData = this.powerSlots[i];
-          const powerId = powers[i];
+          const powerId = tray[i];
           if (powerId) {
               const powerName = POWER_REGISTRY[powerId] ? POWER_REGISTRY[powerId].name : powerId;
               const words = powerName.split(' ');
@@ -145,13 +205,13 @@ export class PowerbarUIManager {
 
   updateCooldowns() {
       if (!this.powerSlots) return;
-      const powers = this.engine.playerData.powers || [];
+      const tray = this.engine.playerData.powerTray || [];
       const now = Date.now();
       const lastAttackTimes = this.engine.player.lastAttackTimes || {};
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < this.powerSlots.length; i++) {
           const slotData = this.powerSlots[i];
-          const powerId = powers[i];
+          const powerId = tray[i];
           if (powerId && POWER_REGISTRY[powerId]) {
               const cooldownMs = POWER_REGISTRY[powerId].cooldown || 0;
               const lastTime = lastAttackTimes[powerId] || 0;
@@ -221,7 +281,7 @@ export class PowerbarUIManager {
         pDiv.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); cursor: grab;';
         pDiv.draggable = true;
         pDiv.ondragstart = (e) => {
-           e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'powerbar', index: idx }));
+           e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'powersList', powerId: pId }));
         };
         pDiv.innerHTML = `
           <span style="color: var(--accent-neon); font-weight: bold; font-size: 0.95rem;">${pName}</span>

@@ -5,6 +5,9 @@ const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up'
 
 const baseScripts = {
   ...TravelPowerScripts,
+  'satelite-support': (eng, powerId = 'satelite-support') => {
+    eng.combat.toggleTravelPower(powerId);
+  },
   'teleport': (eng, powerId = 'teleport') => {
     eng.targetingPower = powerId;
     document.body.style.cursor = 'crosshair';
@@ -19,16 +22,24 @@ const baseScripts = {
     ) return;
 
     const powerDef = POWER_REGISTRY[powerId];
-    const energyCost = powerDef?.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 20;
-    const energyType = powerDef?.stats?.energySource === 'synthEnergy' ? 'synthEnergy' : 'energy';
-    if (eng.player[energyType] < energyCost) return;
+    const energyCost = powerDef?.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 10;
+    const batteryCost = powerDef?.stats?.batteryCost || 0;
+    if (eng.player.energy < energyCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
+      return;
+    }
+    if (eng.player.synthEnergy < batteryCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Power', '#00d2ff');
+      return;
+    }
 
     eng.player.lastAttackTimes = eng.player.lastAttackTimes || {};
     const now = Date.now();
     const cooldownMs = powerDef?.stats?.rechargeRate !== undefined ? powerDef.stats.rechargeRate * 1000 : 500;
     if (now - (eng.player.lastAttackTimes[powerId] || 0) < cooldownMs) return;
 
-    eng.player[energyType] -= energyCost;
+    eng.player.energy -= energyCost;
+    eng.player.synthEnergy -= batteryCost;
     eng.player.lastAttackTimes[powerId] = now;
     eng.ui.update();
 
@@ -156,16 +167,24 @@ const baseScripts = {
     ) return;
 
     const powerDef = POWER_REGISTRY[powerId];
-    const energyCost = powerDef?.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 15;
-    const energyType = powerDef?.stats?.energySource === 'synthEnergy' ? 'synthEnergy' : 'energy';
-    if (eng.player[energyType] < energyCost) return;
+    const energyCost = powerDef?.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 10;
+    const batteryCost = powerDef?.stats?.batteryCost || 0;
+    if (eng.player.energy < energyCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
+      return;
+    }
+    if (eng.player.synthEnergy < batteryCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Power', '#00d2ff');
+      return;
+    }
 
     eng.player.lastAttackTimes = eng.player.lastAttackTimes || {};
     const now = Date.now();
     const cooldownMs = powerDef?.stats?.rechargeRate !== undefined ? powerDef.stats.rechargeRate * 1000 : 500;
     if (now - (eng.player.lastAttackTimes[powerId] || 0) < cooldownMs) return;
 
-    eng.player[energyType] -= energyCost;
+    eng.player.energy -= energyCost;
+    eng.player.synthEnergy -= batteryCost;
     eng.player.lastAttackTimes[powerId] = now;
     eng.ui.update();
 
@@ -228,16 +247,24 @@ export const PowerScripts = new Proxy(baseScripts, {
        if (!powerDef) return;
 
        if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump') || eng.player.isSitting) return;
-       const energyCost = powerDef.stats?.energyCost || 10;
-       const energyType = powerDef.stats?.energySource === 'synthEnergy' ? 'synthEnergy' : 'energy';
-       if (eng.player[energyType] < energyCost) return;
+       const energyCost = powerDef.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 10;
+       const batteryCost = powerDef.stats?.batteryCost || 0;
+       if (eng.player.energy < energyCost) {
+         if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
+         return;
+       }
+       if (eng.player.synthEnergy < batteryCost) {
+         if (eng.showFloatingText) eng.showFloatingText('Not Enough Power', '#00d2ff');
+         return;
+       }
 
        eng.player.lastAttackTimes = eng.player.lastAttackTimes || {};
        const now = Date.now();
        const cooldownMs = (powerDef.stats?.rechargeRate || 1.0) * 1000;
        if (now - (eng.player.lastAttackTimes[prop] || 0) < cooldownMs) return;
 
-       eng.player[energyType] -= energyCost;
+       eng.player.energy -= energyCost;
+       eng.player.synthEnergy -= batteryCost;
        eng.player.lastAttackTimes[prop] = now;
        eng.ui.update();
 
@@ -331,18 +358,30 @@ export const PowerExecutors = {
 
     if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump') || eng.player.isSitting) return;
 
-    const energyCost = powerDef.stats?.energyCost || 30;
-    const energyType = powerDef.stats?.energySource === 'synthEnergy' ? 'synthEnergy' : 'energy';
-    if (eng.player[energyType] < energyCost) return;
+    const energyCost = powerDef.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 30;
+    const batteryCost = powerDef.stats?.batteryCost || 0;
+    if (eng.player.energy < energyCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
+      return;
+    }
+    if (eng.player.synthEnergy < batteryCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Power', '#00d2ff');
+      return;
+    }
 
     eng.player.lastAttackTimes = eng.player.lastAttackTimes || {};
     const now = Date.now();
     const cooldownMs = (powerDef.stats?.rechargeRate || 2.0) * 1000;
     if (now - (eng.player.lastAttackTimes[powerId] || 0) < cooldownMs) return;
 
-    eng.player[energyType] -= energyCost;
+    eng.player.energy -= energyCost;
+    eng.player.synthEnergy -= batteryCost;
     eng.player.lastAttackTimes[powerId] = now;
     eng.ui.update();
+
+    if (eng.network && eng.network.socket) {
+      eng.network.socket.emit('power_cast_start', { powerId });
+    }
 
     eng.player.teleportTarget = { x: targetX, y: targetY, timer: 0.5 };
     eng.player.state = `cast:teleport`;

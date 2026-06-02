@@ -3,15 +3,27 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 export class LightingManager {
   constructor(renderer) {
     this.renderer = renderer;
+
+    // Color palettes for day/night cycle
+    this.dayHemi = new THREE.Color(0xffffff);
+    this.dayGround = new THREE.Color(0x444444);
+    this.daySun = new THREE.Color(0xffffee);
+
+    this.duskHemi = new THREE.Color(0xffaa55);
+    this.duskGround = new THREE.Color(0x221100);
+    this.duskSun = new THREE.Color(0xff6600);
+
+    this.nightHemi = new THREE.Color(0x334466);
+    this.nightGround = new THREE.Color(0x1a2233);
+    this.nightSun = new THREE.Color(0x6677aa);
   }
 
   updateTimeOfDay() {
     const renderer = this.renderer;
     const engine = renderer.engine;
     const cycleDuration = 480000;
-    const tzOffsetHours = engine.clientSettings.timezoneOffset || 0;
 
-    let realT = ((Date.now() % cycleDuration) / cycleDuration) + (tzOffsetHours / 24);
+    let realT = ((Date.now() % cycleDuration) / cycleDuration);
     realT = realT % 1.0;
     if (realT < 0) realT += 1.0;
 
@@ -50,24 +62,39 @@ export class LightingManager {
       renderer.sunLight.shadow.radius = 2.0; // Moonlight shadow softness
     }
 
-    if (height > 0.2) {
-      renderer.hemiLight.color.setHex(0xffffff);
-      renderer.hemiLight.groundColor.setHex(0x444444);
-      renderer.hemiLight.intensity = 0.7;
-      renderer.sunLight.color.setHex(0xffffee);
-      renderer.sunLight.intensity = 1.2;
-    } else if (height > 0) {
-      renderer.hemiLight.color.setHex(0xffaa55);
-      renderer.hemiLight.groundColor.setHex(0x221100);
-      renderer.hemiLight.intensity = 0.55;
-      renderer.sunLight.color.setHex(0xff6600);
-      renderer.sunLight.intensity = 0.9;
+    const dayHemiInt = 0.7;
+    const daySunInt = 1.2;
+    const duskHemiInt = 0.55;
+    const duskSunInt = 0.9;
+    const nightHemiInt = 0.4;
+    const nightSunInt = 0.6;
+
+    if (height >= 0.2) {
+      renderer.hemiLight.color.copy(this.dayHemi);
+      renderer.hemiLight.groundColor.copy(this.dayGround);
+      renderer.hemiLight.intensity = dayHemiInt;
+      renderer.sunLight.color.copy(this.daySun);
+      renderer.sunLight.intensity = daySunInt;
+    } else if (height >= 0) {
+      const t = height / 0.2; // 0 at dusk, 1 at day
+      renderer.hemiLight.color.copy(this.duskHemi).lerp(this.dayHemi, t);
+      renderer.hemiLight.groundColor.copy(this.duskGround).lerp(this.dayGround, t);
+      renderer.hemiLight.intensity = duskHemiInt + (dayHemiInt - duskHemiInt) * t;
+      renderer.sunLight.color.copy(this.duskSun).lerp(this.daySun, t);
+      renderer.sunLight.intensity = duskSunInt + (daySunInt - duskSunInt) * t;
+    } else if (height >= -0.2) {
+      const t = (height + 0.2) / 0.2; // 0 at night, 1 at dusk
+      renderer.hemiLight.color.copy(this.nightHemi).lerp(this.duskHemi, t);
+      renderer.hemiLight.groundColor.copy(this.nightGround).lerp(this.duskGround, t);
+      renderer.hemiLight.intensity = nightHemiInt + (duskHemiInt - nightHemiInt) * t;
+      renderer.sunLight.color.copy(this.nightSun).lerp(this.duskSun, t);
+      renderer.sunLight.intensity = nightSunInt + (duskSunInt - nightSunInt) * t;
     } else {
-      renderer.hemiLight.color.setHex(0x334466);
-      renderer.hemiLight.groundColor.setHex(0x1a2233);
-      renderer.hemiLight.intensity = 0.4; // Boosted ambient light at night
-      renderer.sunLight.color.setHex(0x6677aa);
-      renderer.sunLight.intensity = 0.6; // Boosted moonlight casting shadows
+      renderer.hemiLight.color.copy(this.nightHemi);
+      renderer.hemiLight.groundColor.copy(this.nightGround);
+      renderer.hemiLight.intensity = nightHemiInt;
+      renderer.sunLight.color.copy(this.nightSun);
+      renderer.sunLight.intensity = nightSunInt;
     }
 
     if (renderer.playerLight) {

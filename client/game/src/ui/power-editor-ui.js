@@ -45,6 +45,8 @@ export class PowerEditorUIManager {
     this.els.btnCreate = document.getElementById('btn-pe-create-new');
 
     if (this.els.btnOpen && this.els.panel) {
+      this.els.btnOpen.style.borderColor = '#e056fd';
+      this.els.btnOpen.style.color = '#e056fd';
       this.els.btnOpen.addEventListener('click', () => {
         this.els.panel.style.display = 'block';
         this.loadData();
@@ -104,18 +106,29 @@ export class PowerEditorUIManager {
 
     const updateDisabledFields = () => {
       const type = document.getElementById('pe-power-type')?.value || 'Click';
-      const source = document.getElementById('pe-stat-energy-type')?.value || 'energy';
-      toggleDisabled('pe-stat-ener-cost', type !== 'Toggle' || source === 'none');
+      const isToggle = type === 'Toggle';
+      const isPassive = type === 'Passive';
+
+      toggleDisabled('pe-stat-ener-cost', !isToggle);
+      toggleDisabled('pe-stat-battery-cost', !isToggle);
+      toggleDisabled('pe-stat-ener-cast', isPassive);
+      toggleDisabled('pe-stat-battery-cast', isPassive);
+      toggleDisabled('pe-stat-recovery', !isPassive);
+      toggleDisabled('pe-stat-battery-recovery', !isPassive);
+
       toggleDisabled('pe-stat-aoe', type !== 'Targeted AoE' && type !== 'PBAoE');
       toggleDisabled('pe-stat-cone', type !== 'Click' && type !== 'Targeted');
-      toggleDisabled('pe-stat-ener-cast', source === 'none');
+
+      const disableCombatStats = isToggle || type === 'Passive' || type === 'Summon' || type === 'Targeted Summon';
+
+      toggleDisabled('pe-stat-range', isToggle || type === 'Passive' || type === 'Summon');
+      toggleDisabled('pe-stat-accuracy', disableCombatStats);
+      toggleDisabled('pe-stat-crit-chance', disableCombatStats);
+      toggleDisabled('pe-stat-crit-mult', disableCombatStats);
     };
 
     const powerTypeSelect = document.getElementById('pe-power-type');
     if (powerTypeSelect) powerTypeSelect.addEventListener('change', updateDisabledFields);
-
-    const energySourceSelect = document.getElementById('pe-stat-energy-type');
-    if (energySourceSelect) energySourceSelect.addEventListener('change', updateDisabledFields);
 
     this.setupVisualsEngine();
   }
@@ -351,8 +364,8 @@ export class PowerEditorUIManager {
         // Flatten categories into a single searchable array
         for (const cat in rawPowersets) {
           rawPowersets[cat].forEach(ps => {
-            const name = ps.Name || ps.name;
             const id = ps.Id || ps.id;
+            const name = ps.Name || ps.name || id;
             if (name && id) this.powersets.push({ id, name });
           });
         }
@@ -402,10 +415,33 @@ export class PowerEditorUIManager {
     this.powers.forEach(p => {
       // Filters
       if (filterVal !== 'all' && (!p.assignedPowersets || !p.assignedPowersets.includes(filterVal))) return;
-      if (searchVal && !p.name.toLowerCase().includes(searchVal) && !p.id.toLowerCase().includes(searchVal)) return;
+
+      if (searchVal) {
+        const nameMatch = p.name.toLowerCase().includes(searchVal);
+        const idMatch = p.id.toLowerCase().includes(searchVal);
+        let psMatch = false;
+
+        if (p.assignedPowersets) {
+          psMatch = p.assignedPowersets.some(psId => {
+            const psData = this.powersets.find(ps => ps.id === psId);
+            return psData && psData.name.toLowerCase().includes(searchVal);
+          });
+        }
+        if (!nameMatch && !idMatch && !psMatch) return;
+      }
 
       const item = document.createElement('div');
       item.className = 'list-item' + (this.currentPowerId === p.id ? ' active' : '');
+
+      let assignedNames = [];
+      if (p.assignedPowersets && p.assignedPowersets.length > 0) {
+        assignedNames = p.assignedPowersets.map(psId => {
+          const psData = this.powersets.find(ps => ps.id === psId);
+          return psData ? psData.name : psId;
+        });
+      }
+      item.title = assignedNames.length > 0 ? `Powersets:\n• ${assignedNames.join('\n• ')}` : 'Not assigned to any powerset';
+
       item.innerHTML = `<strong>${p.name}</strong><br><span style="font-size: 0.75rem; color: #888;">${p.id}</span>`;
       item.addEventListener('click', () => this.loadPowerIntoEditor(p.id));
       this.els.rosterList.appendChild(item);
@@ -434,6 +470,9 @@ export class PowerEditorUIManager {
             <option value="DoT" ${effect.type === 'DoT' ? 'selected' : ''}>DoT</option>
             <option value="Proc" ${effect.type === 'Proc' ? 'selected' : ''}>Proc</option>
             <option value="Status" ${effect.type === 'Status' ? 'selected' : ''}>Status</option>
+            <option value="MaxHP" ${effect.type === 'MaxHP' ? 'selected' : ''}>Max HP Bonus</option>
+            <option value="MaxEnergy" ${effect.type === 'MaxEnergy' ? 'selected' : ''}>Max Energy Bonus</option>
+            <option value="MaxSynth" ${effect.type === 'MaxSynth' ? 'selected' : ''}>Max Battery Bonus</option>
           </select>
         </div>
         <div class="pe-input-row" style="flex: 1; margin: 0;">
@@ -594,11 +633,15 @@ export class PowerEditorUIManager {
       id: safeId, name: "New Power", type: 'Click', description: "", assignedPowersets: [],
       engineScript: '',
       stats: {
+        tier: 1,
         rechargeRate: 1.0,
         activationTime: 0.5,
-        energySource: 'energy',
         energyCost: 10,
         energyCostPerSecond: 5,
+        batteryCost: 0,
+        batteryCostPerSecond: 0,
+        recoveryRatePerSecond: 0,
+        batteryRecoveryRatePerSecond: 0,
         range: 200,
         aoeRadius: 0,
         coneRadius: 45,
@@ -638,11 +681,15 @@ export class PowerEditorUIManager {
     checkboxes.forEach(cb => { cb.checked = power.assignedPowersets && power.assignedPowersets.includes(cb.value); });
 
     const stats = power.stats || {};
+    const tierInput = document.getElementById('pe-stat-tier');
     const rechInput = document.getElementById('pe-stat-rech');
     const activInput = document.getElementById('pe-stat-activation');
-    const enerTypeInput = document.getElementById('pe-stat-energy-type');
     const enerCastInput = document.getElementById('pe-stat-ener-cast');
     const enerCostInput = document.getElementById('pe-stat-ener-cost');
+    const batteryCastInput = document.getElementById('pe-stat-battery-cast');
+    const batteryCostInput = document.getElementById('pe-stat-battery-cost');
+    const recoveryInput = document.getElementById('pe-stat-recovery');
+    const batteryRecoveryInput = document.getElementById('pe-stat-battery-recovery');
     const rangeInput = document.getElementById('pe-stat-range');
     const aoeInput = document.getElementById('pe-stat-aoe');
     const coneInput = document.getElementById('pe-stat-cone');
@@ -650,11 +697,15 @@ export class PowerEditorUIManager {
     const critChanceInput = document.getElementById('pe-stat-crit-chance');
     const critMultInput = document.getElementById('pe-stat-crit-mult');
 
+    if (tierInput) tierInput.value = stats.tier !== undefined ? stats.tier : 1;
     if (rechInput) rechInput.value = stats.rechargeRate !== undefined ? stats.rechargeRate : 1.0;
     if (activInput) activInput.value = stats.activationTime !== undefined ? stats.activationTime : 0.5;
-    if (enerTypeInput) enerTypeInput.value = stats.energySource || 'energy';
     if (enerCastInput) enerCastInput.value = stats.energyCost !== undefined ? stats.energyCost : 10;
-    if (enerCostInput) enerCostInput.value = stats.energyCostPerSecond !== undefined ? stats.energyCostPerSecond : 5;
+    if (enerCostInput) enerCostInput.value = stats.energyCostPerSecond !== undefined ? stats.energyCostPerSecond : 0;
+    if (batteryCastInput) batteryCastInput.value = stats.batteryCost !== undefined ? stats.batteryCost : 0;
+    if (batteryCostInput) batteryCostInput.value = stats.batteryCostPerSecond !== undefined ? stats.batteryCostPerSecond : 0;
+    if (recoveryInput) recoveryInput.value = stats.recoveryRatePerSecond !== undefined ? stats.recoveryRatePerSecond : 0;
+    if (batteryRecoveryInput) batteryRecoveryInput.value = stats.batteryRecoveryRatePerSecond !== undefined ? stats.batteryRecoveryRatePerSecond : 0;
     if (rangeInput) rangeInput.value = stats.range !== undefined ? stats.range : 200;
     if (aoeInput) aoeInput.value = stats.aoeRadius !== undefined ? stats.aoeRadius : 0;
     if (coneInput) coneInput.value = stats.coneRadius !== undefined ? stats.coneRadius : 45;
@@ -694,12 +745,16 @@ export class PowerEditorUIManager {
     if (!this.currentPowerId) return;
 
     const type = document.getElementById('pe-power-type').value;
-    const source = document.getElementById('pe-stat-energy-type').value;
 
+    const tierVal = parseInt(document.getElementById('pe-stat-tier').value, 10);
     const rechVal = parseFloat(document.getElementById('pe-stat-rech').value);
     const activVal = parseFloat(document.getElementById('pe-stat-activation').value);
     const enerCastVal = parseInt(document.getElementById('pe-stat-ener-cast').value, 10);
     const enerCostVal = parseInt(document.getElementById('pe-stat-ener-cost').value, 10);
+    const battCastVal = parseInt(document.getElementById('pe-stat-battery-cast')?.value, 10);
+    const battCostVal = parseInt(document.getElementById('pe-stat-battery-cost')?.value, 10);
+    const recoveryVal = parseFloat(document.getElementById('pe-stat-recovery').value);
+    const battRecVal = parseFloat(document.getElementById('pe-stat-battery-recovery')?.value);
     const rangeVal = parseInt(document.getElementById('pe-stat-range').value, 10);
     const aoeVal = parseInt(document.getElementById('pe-stat-aoe').value, 10);
     const coneVal = parseInt(document.getElementById('pe-stat-cone').value, 10);
@@ -717,11 +772,15 @@ export class PowerEditorUIManager {
       engineScript: document.getElementById('pe-engine-script').value,
       assignedPowersets: Array.from(document.querySelectorAll('.pe-powerset-cb:checked')).map(cb => cb.value),
       stats: {
+        tier: isNaN(tierVal) ? 1 : tierVal,
         rechargeRate: isNaN(rechVal) ? 1.0 : rechVal,
         activationTime: isNaN(activVal) ? 0.5 : activVal,
-        energySource: source,
-        energyCost: source === 'none' ? 0 : (isNaN(enerCastVal) ? 10 : enerCastVal),
-        energyCostPerSecond: (source === 'none' || type !== 'Toggle') ? 0 : (isNaN(enerCostVal) ? 5 : enerCostVal),
+        energyCost: isNaN(enerCastVal) ? 10 : enerCastVal,
+        energyCostPerSecond: type !== 'Toggle' ? 0 : (isNaN(enerCostVal) ? 0 : enerCostVal),
+        batteryCost: isNaN(battCastVal) ? 0 : battCastVal,
+        batteryCostPerSecond: type !== 'Toggle' ? 0 : (isNaN(battCostVal) ? 0 : battCostVal),
+        recoveryRatePerSecond: (type !== 'Passive') ? 0 : (isNaN(recoveryVal) ? 0 : recoveryVal),
+        batteryRecoveryRatePerSecond: (type !== 'Passive') ? 0 : (isNaN(battRecVal) ? 0 : battRecVal),
         range: isNaN(rangeVal) ? 200 : rangeVal,
         aoeRadius: (type !== 'Targeted AoE' && type !== 'PBAoE') ? 0 : (isNaN(aoeVal) ? 0 : aoeVal),
         coneRadius: (type !== 'Click' && type !== 'Targeted') ? 0 : (isNaN(coneVal) ? 45 : coneVal),
@@ -760,6 +819,14 @@ export class PowerEditorUIManager {
     }).then(res => {
       if (res.ok) {
         btn.innerText = "Saved!";
+        if (this.engine && this.engine.loadPowersets) {
+          this.engine.loadPowersets().then(() => {
+             const tModal = document.getElementById('trainer-dialog-modal');
+             if (tModal && tModal.style.display === 'flex' && this.engine.activeTrainer) {
+                this.engine.ui.trainer.openTrainerUI(this.engine.activeTrainer);
+             }
+          });
+        }
       } else {
         btn.innerText = "Error Saving!";
         btn.style.borderColor = "#e74c3c";

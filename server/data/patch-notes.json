@@ -1,0 +1,152 @@
+[
+  {
+    "version": "v2.3.8",
+    "color": "#f39c12",
+    "changes": [
+      { "type": "Content", "text": "Released 'Bepis' (Tetris clone) and 'Operius' (Pseudo-3D Tube Shooter), officially concluding B's First Generation Arcade Finale!" },
+      { "type": "Design", "text": "There are now 8 fully playable, networked arcade cabinets available to place in your zones: Pixel, Bonk, Invaders, B-Man, Flappy Bee, Pixel-Cross, Bepis, and Operius." },
+      { "type": "Fix", "text": "Fixed an issue in Operius where the player's ship would eventually outrun its own bullets at high speeds." }
+    ]
+  },
+  {
+    "version": "v2.3.7",
+    "color": "#1dd1a1",
+    "changes": [
+      { "type": "Content", "text": "Introduced three brand new arcade games: B-Man, Flappy Bee, and Pixel-Cross!" },
+      { "type": "Design", "text": "Added a new 3D Cabinet Highlighter tool to the Arcade Manager, rendering a neon wireframe box around the cabinet you are actively editing." },
+      { "type": "Design", "text": "The Arcade Manager now features a Global Leaderboard display to easily view the reigning high scores across all installed games." },
+      { "type": "Engine", "text": "Safeguarded the Chunk Mesher to prevent Arcade Cabinets from popping in completely invisible during heavy world loads." }
+    ]
+  },
+  {
+    "version": "v2.3.6",
+    "color": "#f1c40f",
+    "changes": [
+      { "type": "Content", "text": "Introduced the interactive Arcade System to the game world. Players can now interact with arcade cabinet furniture to play mini-games." },
+      { "type": "Content", "text": "Added three fully playable classic arcade mini-games: Bonk, Pixel, and Invaders." },
+      { "type": "Design", "text": "Arcade cabinets now feature networked high-score leaderboards. Show off your skills and compete with other players." },
+      { "type": "Gameplay", "text": "Bonk supports networked 2-player matchmaking! Queue up and face off against other players in real-time." },
+      { "type": "Fix", "text": "Resolved an issue where the 'Connection Lost' overlay would persistently display when safely returning to the character selection or login screens." }
+    ]
+  },
+  {
+    "version": "v2.3.5",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "Design", "text": "Added Cutout Transparency to the engine's shaders. 3D objects like doors can now feature transparent windows while maintaining perfect depth-sorting and shadows." },
+      { "type": "Engine", "text": "Introduced the 'useMeshUV' registry flag. Builders can now map dynamic hotbar materials seamlessly onto complex Blockbench Per-Face UV coordinates." },
+      { "type": "UI", "text": "Upgraded the Builder Tools placement preview. The ghost block now perfectly projects 3D furniture meshes, custom textures, and directional rotations before you build." },
+      { "type": "Fix", "text": "Patched a silent crash in the Chunk Mesher Web Worker that caused standard terrain to vanish when placing new blocks." }
+    ]
+  },
+  {
+    "version": "v2.3.4",
+    "color": "#f39c12",
+    "changes": [
+      { "type": "Engine", "text": "Successfully refactored the server architecture to a Multi-Zone MMO framework! Players can now seamlessly exist, chat, build, and fight in completely isolated dimensions on the exact same server." },
+      { "type": "Design", "text": "Introduced the Zone Manager UI to the Developer Tools, allowing for real-time creation and hot-swapping between different worlds." },
+      { "type": "Design", "text": "The Player Manager now actively tracks and displays which zone each player is currently exploring." },
+      { "type": "Gameplay", "text": "Added the '/joinzone' command to instantly warp to new dimensions, and updated the Help & Commands menu to list all new multi-zone developer tools." },
+      { "type": "Fix", "text": "Fixed a critical crash in the Chunk Mesher where deleted (null) blocks were accidentally being processed as transparent geometry." },
+      { "type": "Fix", "text": "Resolved a desync in the network layer where the full map payload was occasionally parsed before the async deserializer finished wiping the old cache." }
+    ]
+  },
+  {
+    "version": "v2.3.3",
+    "color": "#1dd1a1",
+    "changes": [
+      { "type": "Engine", "text": "Massive client performance overhaul! Moved the Greedy Chunk Mesher to a dedicated Web Worker thread for zero-stutter background terrain generation." },
+      { "type": "Engine", "text": "Implemented a Zero-Copy Memory Pool between threads, completely eliminating Garbage Collection stutter and memory spikes during rapid chunk loading." },
+      { "type": "Engine", "text": "Upgraded terrain generation to use 16x16x16 vertical sub-chunks, unlocking true 3D Frustum Culling to hide underground chunks and save massive GPU resources." },
+      { "type": "Engine", "text": "Added IndexedDB Caching for Chunk Geometry. The game now 'bakes' the world to your browser, allowing previously explored areas to load almost instantly." },
+      { "type": "UI", "text": "Replaced the legacy Canvas 2D UI for combat text and nameplates with a blazing fast WebGL Sprite Batcher. Text now scales smoothly and hides properly behind terrain!" },
+      { "type": "Gameplay", "text": "Water and fluid blocks now intelligently cull their interior faces across chunk borders, resulting in perfectly smooth, seamless transparent surfaces." },
+      { "type": "Fix", "text": "Fixed infinite loading screen hangs and UI bleed issues that occurred during the initial player spawning sequence." }
+    ]
+  },
+  {
+    "version": "v2.3.2",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "UI", "text": "Introduced the Player Manager and Player Modifier UIs for administrators to securely oversee and edit character states, levels, and powers in real-time." },
+      { "type": "Engine", "text": "Implemented a dual-cost energy system. Powers can now simultaneously consume and regenerate both standard Energy and Battery Charge (formerly Synthetic Energy)." },
+      { "type": "Engine", "text": "Day/Night lighting transitions are now buttery smooth, actively blending colors and shadow intensities across the horizon instead of aggressively snapping." },
+      { "type": "UI", "text": "The HUD now accurately displays Active Toggles (Green) and Passive Abilities (Blue) alongside your temporary status effects." },
+      { "type": "Gameplay", "text": "Added the 'solar_recovery' engine script to allow passives to regenerate Battery Charge specifically during daylight hours." },
+      { "type": "Fix", "text": "Fixed an issue where particle effects (like Super Speed steps) were animating globally in sync rather than tracking independent visual lifespans." },
+      { "type": "Fix", "text": "Separated the Power Hotbar layout from Known Powers. Passive abilities will no longer forcibly slot themselves onto your bar upon logging in." },
+      { "type": "Fix", "text": "Resolved a server/client desync that caused severe rubberbanding when using toggles like the Flashlight alongside casted abilities." }
+    ]
+  },
+  {
+    "version": "v2.3.1",
+    "color": "#3498db",
+    "changes": [
+      { "type": "UI", "text": "Fixed synchronization desyncs in the Settings Menu. Pressing hotkeys (like 'N' for Nameplates) now actively updates the visual state of the toggles while the menu is open." },
+      { "type": "Gameplay", "text": "The 'Inherited' powerset no longer enforces a sequential unlock path. You can now train utility powers (like Solar Power Recovery or Jetpack) in any order from the Trainer and Character Creator." }
+    ]
+  },
+  {
+    "version": "v2.3.0",
+    "color": "#e67e22",
+    "changes": [
+      { "type": "Design", "text": "Completely overhauled the Power Customization Engine UI with a new multi-column layout, dynamic scrolling lists, and context-aware disabled states." },
+      { "type": "Engine", "text": "Built a fully isolated 3D WebGL Live Preview canvas inside the Power Customizer, complete with a timeline scrubber to visualize cast, projectile, and impact animations." },
+      { "type": "Gameplay", "text": "Ripped out static combat stats and replaced them with a modular Effects Engine. Powers can now stack multiple Damage, Healing, and DoT procs with customizable trigger chances." },
+      { "type": "Gameplay", "text": "Expanded Base Properties to support Range, AoE/Cone Radii, Crit Chance, Crit Multipliers, Activation Times, and dynamic Energy Sources." },
+      { "type": "Engine", "text": "Introduced a multi-stage Visuals Engine with chronologically chained arrays for Caster, Projectile, and Target sprite events, featuring adjustable height offsets, sorting, and timing delays." },
+      { "type": "Content", "text": "Added the /level command for developers to skip to a specific level and automatically receive the correct number of unspent Power and Powerset picks." },
+      { "type": "Fix", "text": "Unhooked hardcoded logic from standard powers (Brawl, Throw Airplane, Teleport) so they can be fully modified and hot-swapped via the Customizer." }
+    ]
+  },
+  {
+    "version": "v2.2.4",
+    "color": "#f1c40f",
+    "changes": [
+      { "type": "Engine", "text": "Massive performance overhaul: Implemented frustum-based chunk rendering, time-sliced mesh generation, and time-budgeted background chunk loading." },
+      { "type": "Engine", "text": "Added distance-based Garbage Collection to automatically unload distant chunks and prevent memory leaks." },
+      { "type": "Gameplay", "text": "Added the 'Flashlight' power! Illuminates the dark with a directional beam, casts real-time shadows, and uses Synthetic Energy." },
+      { "type": "Gameplay", "text": "Introduced 'Synthetic Energy' as a new stat. It drains when using tech like the Flashlight and recharges passively during the daytime." },
+      { "type": "Gameplay", "text": "Super-speed operators can now run across the surface of water if they build up enough momentum!" },
+      { "type": "Design", "text": "Added dynamic weather! Rain and snow particles now fall globally, complete with splashes and ripples on liquid surfaces." },
+      { "type": "Design", "text": "Added robust Graphics Settings to both the main menu and in-game UI: Tweak your Render Distance, Render Scale (3D Resolution), and Max Dynamic Lights for huge FPS gains." },
+      { "type": "Design", "text": "Added live numeric value indicators to all sliders in the settings menu." },
+      { "type": "Fix", "text": "Fixed an issue where the player's own shadow would block their flashlight beam or spin wildly when rotating the camera by utilizing an invisible shadow proxy." },
+      { "type": "Fix", "text": "Drastically optimized network packet parsing and minimap generation to eliminate micro-stutters when moving." }
+    ]
+  },
+  {
+    "version": "v2.2.3",
+    "color": "#9b59b6",
+    "changes": [
+      { "type": "Engine", "text": "Refactored the renderer drawing logic to significantly improve performance." },
+      { "type": "Fix", "text": "Fixed an issue where lava and acid slabs weren't dealing environmental damage." },
+      { "type": "Gameplay", "text": "Super-speed now allows you to run across the surface of water if you're fast enough!" }
+    ]
+  },
+  {
+    "version": "v2.2.2",
+    "color": "#3498db",
+    "changes": [
+      { "type": "Design", "text": "Fixed the UI scaling so the health and energy bars don't get messed up." },
+      { "type": "Gameplay", "text": "Teleporting aims a lot better now." },
+      { "type": "Fix", "text": "Lava slabs will actually burn you if you step in them." }
+    ]
+  },
+  {
+    "version": "v2.2.1",
+    "color": "#2ecc71",
+    "changes": [
+      { "type": "Design", "text": "You can drag the minimap around now! Made it so you can see your character while the big map is open." },
+      { "type": "Gameplay", "text": "You can now right-click the minimap to put down waypoints." }
+    ]
+  },
+  {
+    "version": "v2.2.0",
+    "color": "#e67e22",
+    "changes": [
+      { "type": "Engine", "text": "Fixed shooting and burning damage so the server handles it (no cheating!)." },
+      { "type": "Content", "text": "Rewrote the contributing guide to be super clear that we don't use generative AI." }
+    ]
+  }
+]

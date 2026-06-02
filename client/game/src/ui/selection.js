@@ -6,10 +6,70 @@ export function initSelection(accountData) {
   const selectionScreen = document.getElementById('selection-screen');
   const creationScreen = document.getElementById('creation-screen');
   const btnDelete = document.getElementById('btn-delete');
-  
-  listContainer.innerHTML = ''; 
+
+  listContainer.innerHTML = '';
   selectionScreen.style.display = 'flex';
   creationScreen.style.display = 'none';
+
+  let presetContainer = document.getElementById('selection-preset-container');
+  if (!presetContainer) {
+    presetContainer = document.createElement('div');
+    presetContainer.id = 'selection-preset-container';
+    presetContainer.style.cssText = 'position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000;';
+
+    const applyPreset = (preset) => {
+        let settings = {};
+        const savedSettingsStr = localStorage.getItem('b_client_settings');
+        if (savedSettingsStr) {
+            try { settings = JSON.parse(savedSettingsStr); } catch (e) {}
+        }
+
+        if (preset === 'potato') {
+            settings.renderDistance = 800;
+            settings.renderScale = 0.5;
+            settings.enableShadows = false;
+            settings.softShadows = false;
+            settings.maxDynamicLights = 0;
+        } else if (preset === 'normal') {
+            settings.renderDistance = 2000;
+            settings.renderScale = 1.0;
+            settings.enableShadows = true;
+            settings.softShadows = true;
+            settings.maxDynamicLights = 48;
+        } else if (preset === 'ultra') {
+            settings.renderDistance = 4000;
+            settings.renderScale = 1.0;
+            settings.enableShadows = true;
+            settings.softShadows = true;
+            settings.maxDynamicLights = 100;
+        }
+        localStorage.setItem('b_client_settings', JSON.stringify(settings));
+
+        ['potato', 'normal', 'ultra'].forEach(p => {
+           const btn = document.getElementById(`btn-sel-preset-${p}`);
+           if (btn) {
+               if (p === preset) {
+                   btn.style.borderColor = '#3498db';
+                   btn.style.color = '#3498db';
+               } else {
+                   btn.style.borderColor = 'var(--text-dim)';
+                   btn.style.color = 'var(--text-primary)';
+               }
+           }
+        });
+    };
+
+    ['potato', 'normal', 'ultra'].forEach(preset => {
+        const btn = document.createElement('button');
+        btn.id = `btn-sel-preset-${preset}`;
+        btn.className = 'btn-secondary';
+        btn.innerText = `Preset: ${preset.charAt(0).toUpperCase() + preset.slice(1)}`;
+        btn.onclick = () => applyPreset(preset);
+        presetContainer.appendChild(btn);
+    });
+
+    selectionScreen.appendChild(presetContainer);
+  }
 
   if (accountData.characters.length === 0) {
     listContainer.innerHTML = `
@@ -18,7 +78,7 @@ export function initSelection(accountData) {
         <button id="btn-init-creator" class="btn-secondary">Create New Character</button>
       </div>
     `;
-    
+
     btnPlay.disabled = true;
     btnPlay.style.opacity = "0.5";
     if (btnDelete) btnDelete.disabled = true;
@@ -50,7 +110,7 @@ export function initSelection(accountData) {
 
       listContainer.appendChild(slot);
     });
-    
+
     // Auto-select the first character slot
     const firstSlot = listContainer.querySelector('.char-slot');
     if (firstSlot) firstSlot.click();
@@ -86,7 +146,7 @@ export function initSelection(accountData) {
     btnDelete.onclick = () => {
       const activeSlot = document.querySelector('.char-slot.active');
       if (!activeSlot) return alert("Please select a character to delete.");
-      
+
       const nameEl = activeSlot.querySelector('.char-name');
       const charName = nameEl ? nameEl.innerText.trim() : '';
 
@@ -129,7 +189,7 @@ export function initSelection(accountData) {
 function openCharacterCreator(uuid) {
   const selectionScreen = document.getElementById('selection-screen');
   const creatorScreen = document.getElementById('character-creator-screen');
-  
+
   selectionScreen.style.display = 'none';
   creatorScreen.style.display = 'flex';
 }

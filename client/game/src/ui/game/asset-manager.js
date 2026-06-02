@@ -37,6 +37,21 @@ export class AssetManager {
       this.assetsPending = 0;
       if (this.engine.mapReceived && this.engine.ui) {
         this.renderer.needsVoxelUpdate = true;
+
+        if (this.engine.mapManager) {
+            this.engine.mapManager.generatedChunks.clear();
+            this.engine.mapManager.mapCacheDirty = true;
+            for (const mesh of this.renderer.chunkMeshes.values()) {
+                this.renderer.scene.remove(mesh);
+                mesh.geometry.dispose();
+            }
+            this.renderer.chunkMeshes.clear();
+            for (const mesh of this.renderer.chunkTransparentMeshes.values()) {
+                this.renderer.scene.remove(mesh);
+                mesh.geometry.dispose();
+            }
+            this.renderer.chunkTransparentMeshes.clear();
+        }
       }
     }
   }
@@ -83,11 +98,26 @@ export class AssetManager {
     this.buildTextureAtlas();
 
     this.renderer.modelMaterial.map = this.atlasTexture;
+    if (this.renderer.chunkMaterial) this.renderer.chunkMaterial.map = this.atlasTexture;
+    if (this.renderer.chunkTransparentMaterial) this.renderer.chunkTransparentMaterial.map = this.atlasTexture;
     if (this.renderer.previewModelMaterial) this.renderer.previewModelMaterial.map = this.atlasTexture;
     if (this.renderer.neonModelMaterial) this.renderer.neonModelMaterial.map = this.atlasTexture;
     if (this.renderer.previewNeonModelMaterial) this.renderer.previewNeonModelMaterial.map = this.atlasTexture;
+    if (this.renderer.chunkDepthMaterial) this.renderer.chunkDepthMaterial.map = this.atlasTexture;
+    if (this.renderer.chunkDistanceMaterial) this.renderer.chunkDistanceMaterial.map = this.atlasTexture;
+    if (this.renderer.modelDepthMaterial) this.renderer.modelDepthMaterial.map = this.atlasTexture;
+    if (this.renderer.modelDistanceMaterial) this.renderer.modelDistanceMaterial.map = this.atlasTexture;
 
-    const gltfLoader = new GLTFLoader();
+    const gltfManager = new THREE.LoadingManager();
+    gltfManager.setURLModifier((url) => {
+      if (url.match(/\.(png|jpg|jpeg|webp|bmp)$/i) && !url.startsWith('data:')) {
+        // Intercept dangling texture paths from Blockbench and return a 1x1 blank pixel.
+        // The engine discards GLTF materials anyway in favor of the master atlas!
+        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      }
+      return url;
+    });
+    const gltfLoader = new GLTFLoader(gltfManager);
     for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
       this.assetsPending++;
       gltfLoader.load(`models/${id}.glb`, (gltf) => {
@@ -109,41 +139,50 @@ export class AssetManager {
           geo.computeVertexNormals();
           if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
           const uvArray = geo.attributes.uv.array;
-          for (let i = 1; i < uvArray.length; i += 2) uvArray[i] = 1.0 - uvArray[i];
+
+          for (let i = 0; i < uvArray.length; i += 2) {
+             uvArray[i + 1] = 1.0 - uvArray[i + 1]; // Align GLTF origin to Canvas origin
+
+             // Apply Epsilon to prevent shader fract(1.0) rolling back to 0.0!
+             if (uvArray[i] >= 1.0) uvArray[i] -= 0.0001;
+             else if (uvArray[i] <= 0.0) uvArray[i] += 0.0001;
+             if (uvArray[i + 1] >= 1.0) uvArray[i + 1] -= 0.0001;
+             else if (uvArray[i + 1] <= 0.0) uvArray[i + 1] += 0.0001;
+          }
           geo.attributes.uv.needsUpdate = true;
           geo.scale(2, 2, 2);
           geo.rotateX(Math.PI / 2);
+          geo.rotateZ(-Math.PI / 2);
           geo.center();
           geo.computeBoundingBox();
           geo.translate(0, 0, -16 - geo.boundingBox.min.z);
           geo.computeBoundingBox();
           geo.computeBoundingSphere();
 
+          const useMeshUVArray = new Float32Array(geo.attributes.position.count).fill(data.useMeshUV ? 1 : 0);
+          geo.setAttribute('useMeshUV', new THREE.BufferAttribute(useMeshUVArray, 1));
+
           const meshGeo = geo.clone();
-          meshGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(10000 * 4), 4));
+          meshGeo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(new Uint32Array(10000 * 3), 3));
+          meshGeo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(new Uint32Array(10000), 1));
 
           const isNeon = id.startsWith('neon-sign');
-          const mesh = new THREE.InstancedMesh(meshGeo, isNeon ? this.renderer.neonModelMaterial : this.renderer.modelMaterial, 10000);
-          mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
-          mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
-          mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-          mesh.frustumCulled = false;
-          mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
-          meshGeo.boundingSphere = mesh.boundingSphere;
-          mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(10000 * 3), 3);
-          this.renderer.scene.add(mesh);
-          this.modelMeshes[id] = mesh;
+          let prevMat = isNeon ? this.renderer.previewNeonModelMaterial : this.renderer.previewModelMaterial;
+
+          this.modelMeshes[id] = { geometry: meshGeo };
           this.renderer.needsVoxelUpdate = true;
 
           const previewGeo = geo.clone();
-          previewGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(4096 * 4), 4));
+          previewGeo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(new Uint32Array(4096 * 3), 3));
+          previewGeo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(new Uint32Array(4096), 1));
 
-          const previewMesh = new THREE.InstancedMesh(previewGeo, isNeon ? this.renderer.previewNeonModelMaterial : this.renderer.previewModelMaterial, 4096);
+          const previewMesh = new THREE.InstancedMesh(previewGeo, prevMat, 4096);
           previewMesh.castShadow = this.engine.clientSettings.enableShadows !== false;
           previewMesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
           previewMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          previewMesh.customDepthMaterial = this.renderer.modelDepthMaterial;
+          previewMesh.customDistanceMaterial = this.renderer.modelDistanceMaterial;
           previewMesh.frustumCulled = false; previewMesh.count = 0; previewMesh.renderOrder = 998;
-          previewMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(4096 * 3), 3);
           this.renderer.scene.add(previewMesh);
           this.previewModelMeshes[id] = previewMesh;
         }
@@ -266,6 +305,23 @@ export class AssetManager {
       });
     });
 
+    const droneSpriteConfigs = [
+        { state: 'drone_idle', file: 'idle' },
+        { state: 'drone_forward', file: 'forward' },
+        { state: 'drone_backward', file: 'backward' },
+        { state: 'drone_death', file: 'death' }
+    ];
+
+    const dronePath = 'assets/sprites/entities/drone';
+    droneSpriteConfigs.forEach(config => {
+        loadTex(`${dronePath}/${config.file}.png${cb}`, (tex) => {
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            this.textures[config.state] = tex;
+        });
+    });
+
     this.loadPowerSprites();
 
     this.assetsInitialized = true;
@@ -276,7 +332,7 @@ export class AssetManager {
     const canvas = document.createElement('canvas');
     canvas.width = 2048;
     canvas.height = 2048;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.imageSmoothingEnabled = false;
 
     this.atlasMap = {
@@ -297,7 +353,31 @@ export class AssetManager {
       'stone-bricks3': { x: 2, y: 4 },
       'stone-bricks4': { x: 3, y: 4 },
       'stone-bricks5': { x: 4, y: 4 },
-      'stone-bricks6': { x: 5, y: 4 }
+      'stone-bricks6': { x: 5, y: 4 },
+      'line-dashed': { x: 0, y: 6 },
+      'line-solid': { x: 1, y: 6 },
+      'line-double-solid': { x: 2, y: 6 },
+      'line-sidewalk-2': { x: 3, y: 6 },
+      'line-sidewalk-4': { x: 4, y: 6 },
+      'line-edge-1-dashed': { x: 5, y: 6 },
+      'line-edge-2-dashed': { x: 6, y: 6 },
+      'line-double-dashed-solid': { x: 7, y: 6 },
+      'line-corner-3-dashed': { x: 8, y: 6 },
+      'line-t-dashed': { x: 9, y: 6 },
+      'line-split-1': { x: 10, y: 6 },
+      'line-split-2': { x: 11, y: 6 },
+      'line-t-1': { x: 12, y: 6 },
+      'line-t-2': { x: 13, y: 6 },
+      'line-x': { x: 14, y: 6 },
+      'line-corner-1': { x: 15, y: 6 },
+      'line-corner-2': { x: 16, y: 6 },
+      'line-corner-3': { x: 17, y: 6 },
+      'line-corner-4': { x: 18, y: 6 },
+      'line-corner-5': { x: 19, y: 6 },
+      'line-edge-1': { x: 20, y: 6 },
+      'line-edge-2': { x: 21, y: 6 },
+      'line-edge-end-1': { x: 22, y: 6 },
+      'line-edge-end-2': { x: 23, y: 6 }
     };
 
     for (const id in BlockRegistry) {
@@ -402,6 +482,19 @@ export class AssetManager {
     loadTile('block-lamp-on-1', 'assets/tiles/base/all-facing/block-lamp-on.png');
     loadTile('block-lamp-on-0', 'assets/tiles/base/all-facing/block-lamp-on.png');
 
+    // Automated Custom Texture Loader (Dynamically from Registry)
+    let nextAtlasX = 0;
+    let nextAtlasY = 8; // Start at row 8 to safely bypass all base block textures!
+
+    for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
+       if (data.customTexture) {
+           this.atlasMap[id] = { x: nextAtlasX, y: nextAtlasY };
+           loadTile(id, data.customTexture);
+           nextAtlasX++;
+           if (nextAtlasX >= 32) { nextAtlasX = 0; nextAtlasY++; }
+       }
+    }
+
     for (let i = 1; i <= 6; i++) {
       loadTile(`stone-bricks${i}`, `assets/tiles/base/all-facing/stone-bricks${i}.png`);
     }
@@ -411,13 +504,64 @@ export class AssetManager {
     loadTile('bark-log', 'assets/tiles/base/all-facing/bark-log.png');
     loadTile('bark-birch', 'assets/tiles/base/all-facing/bark-birch.png');
 
-    loadTile('wood-door-bottom', 'assets/tiles/base/interactable/wood_door-bottom.png');
-    loadTile('wood-door-top', 'assets/tiles/base/interactable/wood_door-top.png');
-
     loadTile('arcade-carpet', 'assets/tiles/base/all-facing/arcade-carpet.png');
+
+    // Dynamically split arcade-carpet into 4 sub-textures for seamless 2x2 placement
+    this.assetsPending++;
+    const acImg = new Image();
+    acImg.src = 'assets/tiles/base/all-facing/arcade-carpet.png?v=' + Date.now();
+    acImg.onload = () => {
+      for (let x = 0; x < 2; x++) {
+        for (let y = 0; y < 2; y++) {
+          const subId = `arcade-carpet-${x}-${y}`;
+          if (!this.atlasMap[subId]) {
+             this.atlasMap[subId] = { x: nextAtlasX, y: nextAtlasY };
+             nextAtlasX++;
+             if (nextAtlasX >= 32) { nextAtlasX = 0; nextAtlasY++; }
+          }
+          const pos = this.atlasMap[subId];
+          if (pos) {
+            this.atlasCtx.drawImage(acImg, x * (acImg.width / 2), y * (acImg.height / 2), acImg.width / 2, acImg.height / 2, pos.x * 64, pos.y * 64, 64, 64);
+          }
+        }
+      }
+      atlasTexture.needsUpdate = true;
+      this.assetsPending--;
+      this.checkComplete();
+    };
+    acImg.onerror = () => {
+      console.warn(`[Texture Atlas] Missing texture: assets/tiles/base/all-facing/arcade-carpet.png`);
+      this.assetsPending--;
+      this.checkComplete();
+    };
+
     loadTile('carpet', 'assets/tiles/base/all-facing/carpet.png');
     loadTile('concrete', 'assets/tiles/base/all-facing/concrete.png');
     loadTile('paint', 'assets/tiles/base/side/rough-paint.png');
+    loadTile('line-dashed', 'assets/tiles/base/all-facing/line-dashed.png');
+    loadTile('line-solid', 'assets/tiles/base/all-facing/line-solid.png');
+    loadTile('line-double-solid', 'assets/tiles/base/all-facing/line-double-solid.png');
+    loadTile('line-sidewalk-2', 'assets/tiles/base/all-facing/line-sidewalk-2.png');
+    loadTile('line-sidewalk-4', 'assets/tiles/base/all-facing/line-sidewalk-4.png');
+    loadTile('line-edge-1-dashed', 'assets/tiles/base/all-facing/line-edge-1-dashed.png');
+    loadTile('line-edge-2-dashed', 'assets/tiles/base/all-facing/line-edge-2-dashed.png');
+    loadTile('line-double-dashed-solid', 'assets/tiles/base/all-facing/line-double-dashed-solid.png');
+    loadTile('line-corner-3-dashed', 'assets/tiles/base/all-facing/line-corner-3-dashed.png');
+    loadTile('line-t-dashed', 'assets/tiles/base/all-facing/line-t-dashed.png');
+    loadTile('line-split-1', 'assets/tiles/base/all-facing/line-split-1.png');
+    loadTile('line-split-2', 'assets/tiles/base/all-facing/line-split-2.png');
+    loadTile('line-t-1', 'assets/tiles/base/all-facing/line-t-1.png');
+    loadTile('line-t-2', 'assets/tiles/base/all-facing/line-t-2.png');
+    loadTile('line-x', 'assets/tiles/base/all-facing/line-x.png');
+    loadTile('line-corner-1', 'assets/tiles/base/all-facing/line-corner-1.png');
+    loadTile('line-corner-2', 'assets/tiles/base/all-facing/line-corner-2.png');
+    loadTile('line-corner-3', 'assets/tiles/base/all-facing/line-corner-3.png');
+    loadTile('line-corner-4', 'assets/tiles/base/all-facing/line-corner-4.png');
+    loadTile('line-corner-5', 'assets/tiles/base/all-facing/line-corner-5.png');
+    loadTile('line-edge-1', 'assets/tiles/base/all-facing/line-edge-1.png');
+    loadTile('line-edge-2', 'assets/tiles/base/all-facing/line-edge-2.png');
+    loadTile('line-edge-end-1', 'assets/tiles/base/all-facing/line-edge-end-1.png');
+    loadTile('line-edge-end-2', 'assets/tiles/base/all-facing/line-edge-end-2.png');
 
     this.atlasCtx.fillStyle = '#ffffff';
     this.atlasCtx.fillRect(0, 64, 64, 64);

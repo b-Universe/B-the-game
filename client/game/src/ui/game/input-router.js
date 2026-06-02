@@ -5,9 +5,14 @@ export class InputRouter {
   }
 
   handleKeyDown(e) {
-    if (e.repeat) return;
-
     const eng = this.engine;
+    const key = e.key.toLowerCase();
+    const powerKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+
+    if (e.repeat) {
+      if (!powerKeys.includes(key) || eng.editMode) return;
+    }
+
     const chatInput = document.getElementById('chat-input');
 
     const activeEl = document.activeElement;
@@ -33,9 +38,32 @@ export class InputRouter {
         e.preventDefault();
       }
     }
-    if (chatInput && activeEl === chatInput) return;
 
-    const key = e.key.toLowerCase();
+    if (key === 'escape') {
+        if (eng.ui && eng.ui.panelStack && eng.ui.panelStack.length > 0) {
+            const el = eng.ui.panelStack.pop();
+
+            // Specific handling so we actually exit edit mode cleanly when it closes!
+            if (el.id === 'builder-panel' || el.id === 'builder-hotbar' || el.id === 'object-library-panel') {
+                if (eng.editMode) {
+                    eng.chat.commandHandler.processCommand('/editmode');
+                }
+            } else {
+                el.style.display = 'none';
+            }
+            e.preventDefault();
+            return;
+        }
+
+        if (eng.targetingPower) {
+            eng.targetingPower = null;
+            document.body.style.cursor = '';
+            if (eng.canvas) eng.canvas.style.cursor = '';
+            e.preventDefault();
+            return;
+        }
+    }
+    if (chatInput && activeEl === chatInput) return;
 
     const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' };
 
@@ -63,7 +91,6 @@ export class InputRouter {
 
     this.input.keys[key] = true;
 
-    const powerKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
     if (powerKeys.includes(key)) {
       e.preventDefault();
       if (eng.editMode) {
@@ -74,10 +101,10 @@ export class InputRouter {
         }
       } else {
         const slotIndex = powerKeys.indexOf(key);
-        const powers = eng.playerData.powers || [];
-        const powerName = powers[slotIndex];
+        const tray = eng.playerData.powerTray || [];
+        const powerName = tray[slotIndex];
         if (powerName) {
-           eng.combat?.usePower(powerName);
+           eng.combat?.usePower(powerName, e.repeat);
         }
       }
     }

@@ -13,6 +13,8 @@ import { getBlockProps } from './blocks.js?v=new-engine-330';
 import { FURNITURE_REGISTRY, POWERSET_REGISTRY, POWER_REGISTRY, EFFECT_REGISTRY } from './registry.js?v=new-engine-330';
 import { PhysicsManager } from './physics-manager.js?v=new-engine-330';
 import { BuilderManager } from './builder-manager.js?v=new-engine-330';
+import { WorldSerializer } from './world-serializer.js?v=new-engine-330';
+import { ArcadeSystem } from './arcade-system.js?v=new-engine-332';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -36,20 +38,11 @@ export class GameEngine {
     const taIdx = this.playerData.powers.indexOf('Throw Airplane');
     if (taIdx !== -1) this.playerData.powers[taIdx] = 'throw-airplane';
 
-    if (!this.playerData.powers.includes('brawl')) {
-      this.playerData.powers.push('brawl');
-    }
-    if (!this.playerData.powers.includes('throw-airplane')) {
-      this.playerData.powers.push('throw-airplane');
-    }
-    if (!this.playerData.powers.includes('flashlight')) {
-      this.playerData.powers.push('flashlight');
-    }
-    if (!this.playerData.powers.includes('teleport')) {
-      this.playerData.powers.push('teleport');
+    if (!this.playerData.powerTray && this.playerData.powers) {
+      this.playerData.powerTray = this.playerData.powers.filter(p => window.POWER_REGISTRY && window.POWER_REGISTRY[p] && window.POWER_REGISTRY[p].type?.toLowerCase() !== 'passive');
     }
 
-    const defaultSettings = { combatStyle: 'hybrid', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, timezoneOffset: 0, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
+    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
     this.tilt = 0.5;
@@ -116,11 +109,11 @@ export class GameEngine {
       hurtTimer: 0,
       respawnTimer: 0,
       hp: (this.playerData.stats && this.playerData.stats.hp > 10) ? this.playerData.stats.hp : 1000,
-      maxHp: 1000,
+      maxHp: (this.playerData.stats && this.playerData.stats.maxHp !== undefined) ? this.playerData.stats.maxHp : 1000,
       energy: (this.playerData.stats && (this.playerData.stats.energy > 10 || this.playerData.stats.mp > 10)) ? (this.playerData.stats.energy || this.playerData.stats.mp) : 1000,
-      maxEnergy: 1000,
+      maxEnergy: (this.playerData.stats && this.playerData.stats.maxEnergy !== undefined) ? this.playerData.stats.maxEnergy : 1000,
       synthEnergy: (this.playerData.stats && this.playerData.stats.synthEnergy !== undefined) ? this.playerData.stats.synthEnergy : 1000,
-      maxSynthEnergy: 1000,
+      maxSynthEnergy: (this.playerData.stats && this.playerData.stats.maxSynthEnergy !== undefined) ? this.playerData.stats.maxSynthEnergy : 1000,
       activePowers: this.playerData.activePowers ? [...this.playerData.activePowers] : [],
       isAFK: false,
       lastActionTime: Date.now()
@@ -138,6 +131,7 @@ export class GameEngine {
     this.npcs = [];
     this.projectiles = [];
     this.debris = [];
+    this.drones = {};
 
         this.input = new InputManager(this);
     this.keys = this.input.keys;
@@ -149,6 +143,19 @@ export class GameEngine {
 
     window.addEventListener('keydown', (e) => {
       const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+
+      if (!isInput && this.arcadeSystem && this.arcadeSystem.handleInput(e, true)) {
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (!isInput && e.key.toLowerCase() === 't') {
+        const target = this.arcadeSystem.findNearestCabinet();
+        if (target) {
+            this.arcadeSystem.interact(target.x, target.y, target.z, target.dir, target.gameId);
+        }
+        return;
+      }
+
       if (e.key.toLowerCase() === 'n' && !isInput) {
         const newState = !this.clientSettings.showPlayerNames;
         this.clientSettings.showPlayerNames = newState;
@@ -157,6 +164,21 @@ export class GameEngine {
         this.clientSettings.showEntityHealth = newState;
         localStorage.setItem('b_client_settings', JSON.stringify(this.clientSettings));
         this.chat.addMessage('system', 'System', `Nameplates are now ${newState ? 'ON' : 'OFF'}.`);
+
+        // Live-update the UI buttons if the settings menu happens to be open
+        ['btn-toggle-player-names', 'btn-toggle-player-health', 'btn-toggle-entity-names', 'btn-toggle-entity-health'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.innerText = newState ? 'Enabled' : 'Disabled';
+                btn.className = newState ? 'btn-primary' : 'btn-secondary';
+            }
+        });
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (this.arcadeSystem) {
+        this.arcadeSystem.handleInput(e, false);
       }
     });
 
@@ -184,6 +206,18 @@ export class GameEngine {
     this.mapManager = new MapManager(this);
     this.physics = new PhysicsManager(this);
     this.builder = new BuilderManager(this);
+    this.worldSerializer = new WorldSerializer(this);
+    this.arcadeSystem = new ArcadeSystem(this);
+    this.currentZone = this.playerData.zone || 'untitled';
+    this.arcadeScores = {};
+
+    this.worldDirty = false;
+    this.autoSaveTimer = setInterval(() => {
+      if (this.worldDirty && this.worldSerializer) {
+        this.worldSerializer.save(this.currentZone);
+        this.worldDirty = false;
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
 
     this.spawnParticle = (opts) => { if (this.renderer && this.renderer.particleManager) this.renderer.particleManager.spawn(opts); };
     this.loadPowersets();
@@ -191,8 +225,6 @@ export class GameEngine {
     console.log("Game Engine successfully booted!", this.playerData);
     this.ui.update();
     this.ui.updateUIScale();
-
-    this.mapManager.loadFullMap();
 
     this.network.sendRequestPatchNotes();
 
@@ -222,6 +254,19 @@ export class GameEngine {
         document.body.appendChild(hint);
       }
     }, 8000);
+  }
+
+  showFloatingText(text, color) {
+    this.floatingTexts.push({
+      x: this.player.x,
+      y: this.player.y,
+      offsetY: 130,
+      rndX: (Math.random() - 0.5) * 40,
+      rndY: (Math.random() - 0.5) * 40,
+      text: text,
+      life: 1.5,
+      color: color
+    });
   }
 
   getMinimapBox() {
@@ -303,11 +348,13 @@ export class GameEngine {
         for (const [catKey, powersetsList] of Object.entries(json)) {
           powersetsList.forEach(ps => {
                         const id = ps.Id || ps.id;
-                        if (id && !this.powersetsData[id]) {
+                        if (id) {
                             this.powersetsData[id] = {
                                 id: id,
-                                name: ps.Name || ps.name,
-                category: catKey,
+                                name: ps.Name || ps.name || id,
+                                category: catKey,
+                                minIntegrity: ps.minIntegrity,
+                                maxIntegrity: ps.maxIntegrity,
                                 powers: (ps.Powers || ps.powers || []).map((p, i) => ({ id: p.Id || p.id || `${id}-p${i+1}`, name: p.Name || p.name || `Power ${i+1}`, desc: p.Description || p.desc || p.Focus || '' }))
                             };
                         }
@@ -315,7 +362,6 @@ export class GameEngine {
         }
 
         for (const [id, ps] of Object.entries(POWERSET_REGISTRY)) {
-          if (!this.powersetsData[id]) {
             this.powersetsData[id] = {
               id: id,
               name: ps.name,
@@ -325,7 +371,6 @@ export class GameEngine {
                 return { id: pId, name: pDef ? pDef.name : pId, desc: pDef ? pDef.description : '' };
               })
             };
-          }
         }
             }
         } catch (e) {
@@ -398,15 +443,16 @@ export class GameEngine {
   undo() { this.builder.undo(); }
   redo() { this.builder.redo(); }
   updateSelectionArea() { this.builder.updateSelectionArea(); }
-  getVoxelTop(voxel, zIndex, x, y) { return this.physics.getVoxelTop(voxel, zIndex, x, y); }
-  getTerrainZ(x, y, currentZ, exactOnly = false) { return this.physics.getTerrainZ(x, y, currentZ, exactOnly); }
-  findSafeSpawn() { this.physics.findSafeSpawn(); }
-  checkCollision(nextX, nextY, overrideZ) { return this.physics.checkCollision(nextX, nextY, overrideZ); }
-  applyGravity(entity, dt) { this.physics.applyGravity(entity, dt); }
+  getVoxelTop(voxel, zIndex, x, y) { return this.physics ? this.physics.getVoxelTop(voxel, zIndex, x, y) : 0; }
+  getTerrainZ(x, y, currentZ, exactOnly = false) { return this.physics ? this.physics.getTerrainZ(x, y, currentZ, exactOnly) : -96; }
+  findSafeSpawn() { if (this.physics) this.physics.findSafeSpawn(); }
+  checkCollision(nextX, nextY, overrideZ) { return this.physics ? this.physics.checkCollision(nextX, nextY, overrideZ) : false; }
+  applyGravity(entity, dt) { if (this.physics) this.physics.applyGravity(entity, dt); }
 
   stop() {
     if (this.reqId) cancelAnimationFrame(this.reqId);
     if (this.syncTimer) clearInterval(this.syncTimer);
+    if (this.autoSaveTimer) clearInterval(this.autoSaveTimer);
     if (this.network) this.network.disconnect();
     if (this.input) this.input.disconnect();
     if (this.mapOverlay) this.mapOverlay.disconnect();
@@ -431,6 +477,8 @@ export class GameEngine {
 
 
   update(dt) {
+    if (!this.mapReceived) return;
+
     const now = Date.now();
     const isNowAFK = (now - this.player.lastActionTime) > 120000; // 2 minutes
     if (this.player.isAFK !== isNowAFK) {
@@ -760,6 +808,12 @@ export class GameEngine {
         for (const [key, data] of this.autoOpenedDoors.entries()) {
             const dist = Math.hypot(this.player.x - data.x, this.player.y - data.y);
             if (dist > 80) {
+                data.timer -= dt;
+            } else {
+                data.timer = 3000;
+            }
+
+            if (dist > 80 && data.timer <= 0) {
                 const currentVoxel = this.mapManager.getVoxelAt(data.x, data.y, data.z);
                 if (currentVoxel && currentVoxel.shape && currentVoxel.shape.includes('_open')) {
                     currentVoxel.shape = currentVoxel.shape.replace('_open', '');
@@ -930,6 +984,10 @@ export class GameEngine {
     }
 
     this.renderer.draw();
+
+    if (this.arcadeSystem) {
+      this.arcadeSystem.update(dt);
+    }
 
     if (this.renderer.debugCtx) {
       if (this.clientSettings.showMinimap && (!this.mapOverlay || !this.mapOverlay.active)) {

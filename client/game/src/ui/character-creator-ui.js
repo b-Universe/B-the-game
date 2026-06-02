@@ -532,14 +532,17 @@ export class CharacterCreatorUIManager {
               }
             }
 
-              let powers = [];
-              if (ps.Powers && Array.isArray(ps.Powers)) {
-                powers = ps.Powers.map((p, i) => ({ id: p.Id || p.id || `${ps.Id || ps.id}-p${i+1}`, name: p.Name || p.name || `Power ${i+1}`, desc: p.Description || p.desc || p.Focus || '' }));
-              } else if (ps.powers && Array.isArray(ps.powers)) {
-                powers = ps.powers.map((p, i) => ({ id: p.id || p.Id || `${ps.id || ps.Id}-p${i+1}`, name: p.name || p.Name || `Power ${i+1}`, desc: p.desc || p.description || p.Description || p.Focus || '' }));
-              } else {
-                powers = Array.from({ length: 6 }, (_, i) => ({ id: `${ps.Id || ps.id}-p${i+1}`, name: `${ps.Name || ps.name} Rank ${i+1}`, desc: `Unlocks Rank ${i+1} capabilities of the ${ps.Name || ps.name} skillset.` }));
-              }
+            let powers = [];
+            if (ps.Powers && Array.isArray(ps.Powers)) {
+              powers = ps.Powers.map((p, i) => ({ id: p.Id || p.id || `${ps.Id || ps.id}-p${i+1}`, name: p.Name || p.name || `Power ${i+1}`, desc: p.Description || p.desc || p.Focus || '', tier: p.UnlockTier || p.tier || i + 1 }));
+            } else if (ps.powers && Array.isArray(ps.powers)) {
+              powers = ps.powers.map((p, i) => ({ id: p.id || p.Id || `${ps.id || ps.Id}-p${i+1}`, name: p.name || p.Name || `Power ${i+1}`, desc: p.desc || p.description || p.Description || p.Focus || '', tier: p.UnlockTier || p.tier || i + 1 }));
+            } else {
+              powers = Array.from({ length: 6 }, (_, i) => ({ id: `${ps.Id || ps.id}-p${i+1}`, name: `${ps.Name || ps.name} Rank ${i+1}`, desc: `Unlocks Rank ${i+1} capabilities of the ${ps.Name || ps.name} skillset.`, tier: i + 1 }));
+            }
+
+            // Sort powers by their unlock tier to ensure correct order in selection lists
+            powers.sort((a, b) => (a.tier || 99) - (b.tier || 99));
 
             rawPowersetsData[catKey].push({
               id: ps.Id || ps.id,
@@ -647,7 +650,7 @@ export class CharacterCreatorUIManager {
           const powerItems = [];
 
           set.powers.forEach((p, i) => {
-            const isLocked = i >= 2;
+            const isLocked = i >= 2 && set.id !== 'inherited';
             const item = document.createElement('div');
             item.className = `list-item power-item ${isLocked ? 'locked' : ''}`;
             item.dataset.id = p.id;
@@ -682,7 +685,7 @@ export class CharacterCreatorUIManager {
 
               powerItems.forEach((pItem, idx) => {
                 let isUnlocked = false;
-                if (idx <= 1) {
+                if (idx <= 1 || set.id === 'inherited') {
                   isUnlocked = true;
                 } else {
                   const prev1Active = powerItems[idx - 1].classList.contains('active');
@@ -711,10 +714,12 @@ export class CharacterCreatorUIManager {
 
           if (preservedPicks.length > 0) {
             powerItems.forEach((pItem, idx) => {
-              if (idx > 1) {
+              if (idx > 1 && set.id !== 'inherited') {
                 const prev1Active = powerItems[idx - 1].classList.contains('active');
                 const prev2Active = powerItems[idx - 2].classList.contains('active');
                 if (prev1Active || prev2Active) pItem.classList.remove('locked');
+              } else if (set.id === 'inherited') {
+                pItem.classList.remove('locked');
               }
             });
           }
@@ -898,11 +903,23 @@ export class CharacterCreatorUIManager {
 
           const newChar = this.app.currentAccount.characters.find(c => c.name === pendingCharData.name);
 
-          document.getElementById('character-creator-screen').style.display = 'none';
-          document.getElementById('game-screen').style.display = 'block';
+          let loader = document.getElementById('loading-screen');
+          if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'loading-screen';
+            loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: monospace; pointer-events: auto;';
+            loader.innerHTML = '<h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1><p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Loading Engine...</p>';
+            const gameScreen = document.getElementById('game-screen');
+            if (gameScreen) gameScreen.appendChild(loader);
+            else document.body.appendChild(loader);
+          } else {
+            loader.style.display = 'flex';
+          }
 
           import(`./game/engine.js?v=${Date.now()}`).then(module => {
             if (window.currentGameEngine) window.currentGameEngine.stop();
+            document.getElementById('character-creator-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
             window.currentGameEngine = new module.GameEngine('game-canvas', newChar, this.app.currentAccount.uuid);
           }).catch(err => {
             console.error("Engine Import Error:", err);

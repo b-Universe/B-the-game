@@ -7,7 +7,7 @@ export class CommandHandler {
   handleTabComplete(val) {
     let matches = [];
     if (val.startsWith('/') && !val.includes(' ')) {
-      const cmds = ['/teleport', '/tp', '/tpo', '/teleport-other', '/speed', '/stuck', '/editmode', '/reload', '/dev', '/npc', '/players', '/pm', '/time', '/patchnotes', '/news', '/announce', '/weather', '/afk', '/givemoney', '/level'];
+      const cmds = ['/teleport', '/tp', '/tpo', '/teleport-other', '/teleport_zone', '/tpz', '/speed', '/stuck', '/editmode', '/reload', '/dev', '/npc', '/players', '/pm', '/time', '/patchnotes', '/news', '/announce', '/weather', '/afk', '/givemoney', '/level', '/integrity', '/save', '/load', '/applymap'];
       matches = cmds.filter(c => c.startsWith(val.toLowerCase()));
     } else if (val.toLowerCase().startsWith('/tp ') || val.toLowerCase().startsWith('/teleport ')) {
     } else if (val.toLowerCase().startsWith('/tpo ') || val.toLowerCase().startsWith('/teleport-other ') || val.toLowerCase().startsWith('/pm ') || val.toLowerCase().startsWith('/w ') || val.toLowerCase().startsWith('/whisper ')) {
@@ -37,33 +37,33 @@ export class CommandHandler {
     };
 
     if (cmd === '/tp' || cmd === '/teleport') {
-      if (!checkPerm('tp')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /tp.');
+      if (!checkPerm('tp')) return eng.ui.showSystemMessage('You do not have permission to use /tp.');
       if (args.length >= 3) {
         const x = parseFloat(args[1]);
         const y = parseFloat(args[2]);
         const z = args.length >= 4 ? parseFloat(args[3]) : undefined;
         eng.network.sendAdminTeleport({ targetName: eng.playerData.name, x, y, z });
-        this.chat.addMessage('system', 'System', `Teleport request sent to server.`);
+        eng.ui.showSystemMessage(`Teleport request sent to server.`);
       } else {
-        this.chat.addMessage('system', 'System', 'Usage: /tp <x> <y> [z]');
+        eng.ui.showSystemMessage('Usage: /tp <x> <y> [z]');
       }
     } else if (cmd === '/tpo' || cmd === '/teleport-other') {
-      if (!checkPerm('tp')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /tpo.');
+      if (!checkPerm('tp')) return eng.ui.showSystemMessage('You do not have permission to use /tpo.');
       if (args.length >= 4) {
         const targetName = args[1];
         const x = parseFloat(args[2]);
         const y = parseFloat(args[3]);
         const z = args.length >= 5 ? parseFloat(args[4]) : undefined;
         eng.network.sendAdminTeleport({ targetName, x, y, z });
-        this.chat.addMessage('system', 'System', `Requested teleport for ${targetName}.`);
+        eng.ui.showSystemMessage(`Requested teleport for ${targetName}.`);
       } else {
-        this.chat.addMessage('system', 'System', 'Usage: /tpo <player> <x> <y> [z]');
+        eng.ui.showSystemMessage('Usage: /tpo <player> <x> <y> [z]');
       }
     } else if (cmd === '/speed') {
-      if (!checkPerm('speed')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /speed.');
+      if (!checkPerm('speed')) return eng.ui.showSystemMessage('You do not have permission to use /speed.');
       eng.player.speed = parseFloat(args[1]) || eng.player.speed;
       eng.player.runSpeed = eng.player.speed * 2.25;
-      this.chat.addMessage('system', 'System', `Speed set to ${eng.player.speed}`);
+      eng.ui.showSystemMessage(`Speed set to ${eng.player.speed}`);
     } else if (cmd === '/stuck') {
       let found = false;
       const maxMapSize = 511 * 32;
@@ -97,9 +97,9 @@ export class CommandHandler {
         eng.camera.x = startX; eng.camera.y = startY;
       }
 
-      this.chat.addMessage('system', 'System', 'Nudged out of stuck position.');
+      eng.ui.showSystemMessage('Nudged out of stuck position.');
     } else if (cmd === '/editmode') {
-      if (!checkPerm('editmode')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /editmode.');
+      if (!checkPerm('editmode')) return eng.ui.showSystemMessage('You do not have permission to use /editmode.');
       eng.editMode = !eng.editMode;
       if (eng.renderer) eng.renderer.needsVoxelUpdate = true;
       const bPanel = document.getElementById('builder-panel');
@@ -163,15 +163,20 @@ export class CommandHandler {
       if (!eng.editMode) {
         eng.selectedTiles = [];
         eng.isDraggingSelection = false;
+        if (eng.worldDirty) {
+          if (eng.worldSerializer) eng.worldSerializer.save(eng.currentZone);
+          eng.worldDirty = false;
+          eng.ui.showSystemMessage('Auto-saved world changes on exiting edit mode.');
+        }
       }
     } else if (cmd === '/reload' || cmd === '/forceupdate') {
       // Handled by the 'force_refresh' network event
     } else if (cmd === '/dev') {
-      if (!checkPerm('dev')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /dev.');
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /dev.');
       const devPanel = document.getElementById('dev-panel');
       if (devPanel) devPanel.style.display = devPanel.style.display === 'none' ? 'flex' : 'none';
     } else if (cmd === '/npc') {
-      if (!checkPerm('npc')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /npc commands.');
+      if (!checkPerm('npc')) return eng.ui.showSystemMessage('You do not have permission to use /npc commands.');
       if (args.length >= 4 && args[1] === 'create') {
         const npcName = args.slice(2, args.length - 1).join(' ');
         const health = parseInt(args[args.length - 1], 10);
@@ -181,22 +186,24 @@ export class CommandHandler {
         const B = (sy / eng.tilt) + eng.camera.x + eng.camera.y;
         eng.network.sendCreateNpc({ name: npcName, maxHp: health, x: (A + B) / 2, y: (B - A) / 2 });
       } else {
-        this.chat.addMessage('system', 'System', `Usage: /npc create <Name> <Health>`);
+        eng.ui.showSystemMessage(`Usage: /npc create <Name> <Health>`);
       }
     } else if (cmd === '/players') {
-      if (!checkPerm('playermanager')) return this.chat.addMessage('system', 'System', 'You do not have permission to use this command.');
+      if (!checkPerm('playermanager') && !checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use this command.');
       const pnl = document.getElementById('player-manager-panel');
-      if (pnl) pnl.style.display = pnl.style.display === 'none' ? 'flex' : 'none';
-      if (pnl.style.display === 'flex') eng.ui.devTools.renderPlayerManager();
+      if (pnl) {
+        pnl.style.display = pnl.style.display === 'none' ? 'flex' : 'none';
+        if (pnl.style.display === 'flex') eng.network.sendRequestAllPlayers();
+      }
     } else if (cmd === '/time') {
-      if (!checkPerm('dev')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /time.');
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /time.');
       if (args.length < 2) {
         eng.timeOverride = undefined;
-        return this.chat.addMessage('system', 'System', 'Time resumed to normal cycle. Usage: /time <0-24>');
+        return eng.ui.showSystemMessage('Time resumed to normal cycle. Usage: /time <0-24>');
       }
       const hour = parseFloat(args[1]);
       if (isNaN(hour) || hour < 0 || hour > 24) {
-        return this.chat.addMessage('system', 'System', 'Please specify an hour between 0 and 24.');
+        return eng.ui.showSystemMessage('Please specify an hour between 0 and 24.');
       }
       let angle = ((hour - 6 + 24) % 24) / 24 * Math.PI * 2;
       let t;
@@ -206,32 +213,84 @@ export class CommandHandler {
         t = (2/3) + ((angle - Math.PI) / Math.PI) * (1/3);
       }
       eng.timeOverride = t;
-      this.chat.addMessage('system', 'System', `Time frozen to ${hour}:00.`);
+      eng.ui.showSystemMessage(`Time frozen to ${hour}:00.`);
     } else if (cmd === '/givemoney') {
-      if (!checkPerm('dev')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /givemoney.');
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /givemoney.');
       const amount = parseInt(args[1], 10);
-      if (isNaN(amount)) return this.chat.addMessage('system', 'System', 'Usage: /givemoney <amount>');
+      if (isNaN(amount)) return eng.ui.showSystemMessage('Usage: /givemoney <amount>');
       eng.network.socket.emit('dev_give_money', { amount });
     } else if (cmd === '/level') {
-      if (!checkPerm('dev')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /level.');
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /level.');
       const targetLevel = parseInt(args[1], 10);
-      if (isNaN(targetLevel) || targetLevel < 1) return this.chat.addMessage('system', 'System', 'Usage: /level <number>');
+      if (isNaN(targetLevel) || targetLevel < 1) return eng.ui.showSystemMessage('Usage: /level <number>');
       eng.network.socket.emit('dev_set_level', { level: targetLevel });
-      this.chat.addMessage('system', 'System', `Granting level ${targetLevel}...`);
+      eng.ui.showSystemMessage(`Granting level ${targetLevel}...`);
+    } else if (cmd === '/integrity') {
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /integrity.');
+      const targetIntegrity = parseInt(args[1], 10);
+      if (isNaN(targetIntegrity) || targetIntegrity < -100 || targetIntegrity > 100) return eng.ui.showSystemMessage('Usage: /integrity <number between -100 and 100>');
+      eng.network.socket.emit('dev_set_integrity', { integrity: targetIntegrity });
+      eng.ui.showSystemMessage(`Setting Integrity to ${targetIntegrity}%...`);
+    } else if (cmd === '/save') {
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /save.');
+      const filename = args[1] || eng.currentZone || 'untitled';
+      if (eng.worldSerializer) eng.worldSerializer.save(filename);
+    } else if (cmd === '/load') {
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /load.');
+      const filename = args[1] || eng.currentZone || 'untitled';
+      eng.currentZone = filename;
+      if (eng.worldSerializer) eng.worldSerializer.load(filename);
+    } else if (cmd === '/applymap') {
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /applymap.');
+      const targetZone = args[1] ? args[1].toLowerCase() : null;
+      if (!targetZone) return eng.ui.showSystemMessage('Usage: /applymap <zoneName> [spawnX] [spawnY] [spawnZ]');
+
+      const mapCenter = (512 * 32) / 2;
+      const spawnX = args[2] !== undefined ? parseFloat(args[2]) : mapCenter;
+      const spawnY = args[3] !== undefined ? parseFloat(args[3]) : mapCenter;
+      const spawnZ = args[4] !== undefined ? parseFloat(args[4]) : undefined;
+
+      if (eng.worldSerializer) {
+         eng.ui.setupLoadingScreen();
+         eng.worldSerializer.save(eng.currentZone || 'untitled').then(() => {
+             eng.currentZone = targetZone;
+             eng.worldSerializer.load(targetZone).then(() => {
+                 eng.network.sendPlayerTeleported();
+                 eng.player.x = spawnX;
+                 eng.player.y = spawnY;
+                 eng.mapManager.update(16);
+                 if (spawnZ !== undefined) eng.player.z = spawnZ;
+                 else eng.findSafeSpawn();
+                 eng.camera.x = eng.player.x;
+                 eng.camera.y = eng.player.y;
+
+                       eng.mapReceived = true;
+                       if (eng.renderer) {
+                           eng.renderer.checkInitialLoad();
+                       }
+             });
+         });
+      }
+    } else if (cmd === '/teleport_zone' || cmd === '/tpz') {
+      const targetZone = args[1] ? args[1].toLowerCase() : null;
+      if (!targetZone) return eng.ui.showSystemMessage('Usage: /tpz <zoneName>');
+      eng.ui.setupLoadingScreen();
+      eng.network.socket.emit('join_zone', { zone: targetZone });
+      eng.ui.showSystemMessage(`Joining zone: ${targetZone}...`);
     } else if (cmd === '/patchnotes' || cmd === '/news') {
       eng.network.sendRequestPatchNotes(true);
     } else if (cmd === '/announce') {
-      if (!checkPerm('dev')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /announce.');
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /announce.');
       const msgBody = args.slice(1).join(' ');
-      if (!msgBody) return this.chat.addMessage('system', 'System', 'Usage: /announce <message>');
+      if (!msgBody) return eng.ui.showSystemMessage('Usage: /announce <message>');
     } else if (cmd === '/weather') {
-      if (!checkPerm('dev')) return this.chat.addMessage('system', 'System', 'You do not have permission to use /weather.');
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /weather.');
       const wType = args[1]?.toLowerCase();
-      if (!['clear', 'rain', 'snow'].includes(wType)) return this.chat.addMessage('system', 'System', 'Usage: /weather <clear|rain|snow>');
+      if (!['clear', 'rain', 'snow'].includes(wType)) return eng.ui.showSystemMessage('Usage: /weather <clear|rain|snow>');
     } else if (cmd === '/pm' || cmd === '/whisper' || cmd === '/w') {
       const targetName = args[1];
       const pmMsg = args.slice(2).join(' ');
-      if (!targetName || !pmMsg) return this.chat.addMessage('system', 'System', 'Usage: /pm <name> <message>');
+      if (!targetName || !pmMsg) return eng.ui.showSystemMessage('Usage: /pm <name> <message>');
 
       this.chat.addMessage('pm', `To [${targetName}]`, pmMsg);
       eng.network.sendChatMessage({ type: 'pm', target: targetName, text: pmMsg });
@@ -241,7 +300,7 @@ export class CommandHandler {
       eng.player.afkMessage = msgBody || 'Away from keyboard.';
       eng.player.lastActionTime = 0; // Force AFK state locally to prevent immediate overwrite
       eng.network.sendLogCommand(msg); // Send to server to store the custom afkMessage
-      this.chat.addMessage('system', 'System', `You are now AFK${msgBody ? ': ' + msgBody : '.'}`);
+      eng.ui.showSystemMessage(`You are now AFK${msgBody ? ': ' + msgBody : '.'}`);
     } else if (cmd.startsWith('/')) {
       const emoteText = `*${msg.substring(1)}*`;
       this.chat.addMessage('local', eng.playerData.name, emoteText);

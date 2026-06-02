@@ -15,9 +15,10 @@ export class MapManager {
 
     // Offscreen Minimap Cache
     this.mapCacheCanvas = document.createElement('canvas');
+    this.mapCacheCanvas.width = this.mapWidth;
+    this.mapCacheCanvas.height = this.mapHeight;
     this.mapCacheCtx = this.mapCacheCanvas.getContext('2d');
-    this.mapCacheDirty = true;
-    this.cacheBounds = null;
+    this.cacheBounds = { minX: 0, maxX: this.mapWidth - 1, minY: 0, maxY: this.mapHeight - 1 };
     this._lastCx = null;
     this._lastCy = null;
     this._lastChunk = null;
@@ -39,11 +40,20 @@ export class MapManager {
 
     const pxChunk = Math.floor(playerX / 512);
     const pyChunk = Math.floor(playerY / 512);
-    for (let cy = pyChunk - 1; cy <= pyChunk + 1; cy++) {
-      for (let cx = pxChunk - 1; cx <= pxChunk + 1; cx++) {
-        this.forceGenerateChunk(cx, cy);
+
+    const renderRadius = this.engine.clientSettings.renderDistance || 2000;
+    const loadRadius = Math.ceil(renderRadius / 512);
+
+    for (let cy = pyChunk - loadRadius; cy <= pyChunk + loadRadius; cy++) {
+      for (let cx = pxChunk - loadRadius; cx <= pxChunk + loadRadius; cx++) {
+        if (Math.abs(cx - pxChunk) <= 1 && Math.abs(cy - pyChunk) <= 1) {
+          this.forceGenerateChunk(cx, cy);
+        } else {
+          this.ensureChunkExists(cx, cy);
+        }
       }
     }
+    this.unloadDistantChunks(playerX, playerY);
 
     const startTime = performance.now();
     const timeBudgetMs = 16; // Spend up to 16ms per frame generating chunks
@@ -51,68 +61,32 @@ export class MapManager {
     while (this.chunkQueue.size > 0 && (performance.now() - startTime) < timeBudgetMs) {
       this.processChunkQueue(playerX, playerY);
     }
-
-    if (this.mapCacheDirty && this.chunkQueue.size === 0) {
-      this.updateTopDownCache();
-    }
   }
 
-  updateTopDownCache() {
-    if (this.chunks.size === 0) return;
-
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-
-    // 1. Calculate map bounds instantly using Chunk Keys instead of checking millions of voxels
-    for (const chunkKey of this.chunks.keys()) {
-      const firstScore = chunkKey.indexOf('_');
-      const cx = parseInt(chunkKey.substring(0, firstScore), 10);
-      const cy = parseInt(chunkKey.substring(firstScore + 1), 10);
-
-      const chunkMinX = cx * 16;
-      const chunkMaxX = chunkMinX + 15;
-      const chunkMinY = cy * 16;
-      const chunkMaxY = chunkMinY + 15;
-
-      if (chunkMinX < minX) minX = chunkMinX;
-      if (chunkMaxX > maxX) maxX = chunkMaxX;
-      if (chunkMinY < minY) minY = chunkMinY;
-      if (chunkMaxY > maxY) maxY = chunkMaxY;
-    }
-
-    if (minX === Infinity) return;
+  updateChunkMinimap(cx, cy, chunk) {
+    if (!chunk) return;
+    const minX = cx * 16;
+    const maxX = minX + 15;
+    const minY = cy * 16;
+    const maxY = minY + 15;
 
     const topVoxels = new Map();
-
-    // 2. Find the highest Z block for every X/Y coordinate
-    for (const chunk of this.chunks.values()) {
-      for (const [key, v] of chunk.entries()) {
-        if (v.tex === 'light_block') continue;
-
-        // Skip integer parsing and bounds checking for X and Y entirely!
-        const lastScore = key.lastIndexOf('_');
-        const z = parseInt(key.substring(lastScore + 1), 10);
-        const xyKey = key.substring(0, lastScore);
-
-        const existing = topVoxels.get(xyKey);
-        if (!existing || z > existing.z) {
-          topVoxels.set(xyKey, { z, color: v.color, tex: v.tex });
-        }
+    for (const [key, v] of chunk.entries()) {
+      if (!v || v.tex === 'light_block') continue;
+      const lastScore = key.lastIndexOf('_');
+      const z = parseInt(key.substring(lastScore + 1), 10);
+      const xyKey = key.substring(0, lastScore);
+      const existing = topVoxels.get(xyKey);
+      if (!existing || z > existing.z) {
+        topVoxels.set(xyKey, { z, color: v.color, tex: v.tex });
       }
     }
 
-    this.cacheBounds = { minX, maxX, minY, maxY };
-    const width = maxX - minX + 1;
-    const height = maxY - minY + 1;
-
-    this.mapCacheCanvas.width = width;
-    this.mapCacheCanvas.height = height;
     const ctx = this.mapCacheCtx;
-
-    ctx.clearRect(0, 0, width, height); // Keep background transparent
-
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const v = topVoxels.get(`${x}_${y}`);
+        ctx.clearRect(x, y, 1, 1);
         if (v) {
           let color = v.color;
           if (!color || color === '#ffffff' || color.toLowerCase() === '#fff') {
@@ -131,29 +105,21 @@ export class MapManager {
           }
 
           ctx.fillStyle = color;
-          ctx.fillRect(x - minX, y - minY, 1, 1);
+          ctx.fillRect(x, y, 1, 1);
 
           // Apply elevation shading
           if (v.z !== 0) {
             ctx.fillStyle = v.z > 0 ? '#ffffff' : '#000000';
             ctx.globalAlpha = Math.min(0.25, Math.abs(v.z) * 0.025);
-            ctx.fillRect(x - minX, y - minY, 1, 1);
+            ctx.fillRect(x, y, 1, 1);
             ctx.globalAlpha = 1.0;
           }
         }
       }
     }
-    this.mapCacheDirty = false;
   }
 
   updatePixel(x, y) {
-    if (!this.cacheBounds) return;
-
-    if (x < this.cacheBounds.minX || x > this.cacheBounds.maxX || y < this.cacheBounds.minY || y > this.cacheBounds.maxY) {
-      this.mapCacheDirty = true;
-      return;
-    }
-
     let topV = null;
     let topZ = -Infinity;
     const cx = Math.floor(x / 16);
@@ -171,10 +137,7 @@ export class MapManager {
     }
 
     const ctx = this.mapCacheCtx;
-    const drawX = x - this.cacheBounds.minX;
-    const drawY = y - this.cacheBounds.minY;
-
-    ctx.clearRect(drawX, drawY, 1, 1);
+    ctx.clearRect(x, y, 1, 1);
 
     if (topV) {
       let color = topV.color;
@@ -186,11 +149,11 @@ export class MapManager {
         color = texColors[baseTex] || '#bdc3c7';
       }
       ctx.fillStyle = color;
-      ctx.fillRect(drawX, drawY, 1, 1);
+      ctx.fillRect(x, y, 1, 1);
       if (topZ !== 0) {
         ctx.fillStyle = topZ > 0 ? '#ffffff' : '#000000';
         ctx.globalAlpha = Math.min(0.25, Math.abs(topZ) * 0.025);
-        ctx.fillRect(drawX, drawY, 1, 1);
+        ctx.fillRect(x, y, 1, 1);
         ctx.globalAlpha = 1.0;
       }
     }
@@ -201,11 +164,6 @@ export class MapManager {
       for (let cx = 0; cx <= this.maxChunkX; cx++) {
         this.ensureChunkExists(cx, cy);
       }
-    }
-    this.mapCacheDirty = true;
-
-    if (this.engine.socket) {
-      this.engine.network.sendRequestFullMap();
     }
   }
 
@@ -232,7 +190,23 @@ export class MapManager {
     const chunk = this.chunks.get(chunkKey);
 
     this.generator.generateChunk(chunkX, chunkY, 16, chunk);
-    this.mapCacheDirty = true;
+    this.updateChunkMinimap(chunkX, chunkY, chunk);
+    if (this.engine.renderer) {
+      this.engine.renderer.updateChunkColumn(chunkX, chunkY, chunk);
+
+      // Force adjacent chunks to rebuild so border faces (like water blocks) cull correctly
+      const neighbors = [
+        { cx: chunkX - 1, cy: chunkY },
+        { cx: chunkX + 1, cy: chunkY },
+        { cx: chunkX, cy: chunkY - 1 },
+        { cx: chunkX, cy: chunkY + 1 }
+      ];
+      neighbors.forEach(n => {
+        if (this.chunks.has(`${n.cx}_${n.cy}`)) {
+          this.engine.renderer.updateChunkColumn(n.cx, n.cy, this.chunks.get(`${n.cx}_${n.cy}`), true);
+        }
+      });
+    }
   }
 
   processChunkQueue(playerX, playerY) {
@@ -277,18 +251,19 @@ export class MapManager {
   unloadDistantChunks(playerX, playerY) {
     const px = Math.floor(playerX / 512);
     const py = Math.floor(playerY / 512);
-    const unloadRadius = 8; // Unload chunks further than 8 grid units away (~4096 units)
+    const renderRadius = this.engine.clientSettings.renderDistance || 2000;
+    const unloadRadius = Math.ceil(renderRadius / 512) + 2;
     let unloaded = false;
 
-    for (const chunkKey of this.chunks.keys()) {
+    for (const chunkKey of this.generatedChunks) {
       const parts = chunkKey.split('_');
       const cx = parseInt(parts[0], 10);
       const cy = parseInt(parts[1], 10);
 
       // If the chunk is outside our safe radius
       if (Math.abs(cx - px) > unloadRadius || Math.abs(cy - py) > unloadRadius) {
-        this.chunks.delete(chunkKey);
         this.generatedChunks.delete(chunkKey);
+        if (this.engine.renderer) this.engine.renderer.removeChunkColumn(cx, cy);
         unloaded = true;
 
         if (this._lastCx === cx && this._lastCy === cy) {
@@ -297,10 +272,6 @@ export class MapManager {
           this._lastChunk = null;
         }
       }
-    }
-
-    if (unloaded) {
-      this.mapCacheDirty = true;
     }
   }
 
@@ -318,62 +289,6 @@ export class MapManager {
     }
 
     return this._lastChunk ? this._lastChunk.get(`${localX}_${localY}_${localZ}`) : undefined;
-  }
-
-  getVoxelsInView(playerX, playerY, viewRadius) {
-    const visible = new Map();
-    const localRadius = Math.ceil(viewRadius / 32);
-    const px = Math.round(playerX / 32);
-    const py = Math.round(playerY / 32);
-    const minX = px - localRadius;
-    const maxX = px + localRadius;
-    const minY = py - localRadius;
-    const maxY = py + localRadius;
-
-    const minChunkX = Math.floor(minX / 16);
-    const maxChunkX = Math.floor(maxX / 16);
-    const minChunkY = Math.floor(minY / 16);
-    const maxChunkY = Math.floor(maxY / 16);
-
-    const pxChunk = Math.floor(playerX / 512);
-    const pyChunk = Math.floor(playerY / 512);
-
-    // Expand the generation queue bounds to preload chunks before they are visible
-    for (let cy = minChunkY - 2; cy <= maxChunkY + 2; cy++) {
-      for (let cx = minChunkX - 2; cx <= maxChunkX + 2; cx++) {
-        if (Math.abs(cx - pxChunk) <= 1 && Math.abs(cy - pyChunk) <= 1) {
-          this.forceGenerateChunk(cx, cy);
-        } else {
-          this.ensureChunkExists(cx, cy);
-        }
-
-        if (cx < minChunkX || cx > maxChunkX || cy < minChunkY || cy > maxChunkY) {
-          continue; // Preloaded chunk, do not add to visible render list
-        }
-
-        const chunk = this.chunks.get(`${cx}_${cy}`);
-        if (chunk) {
-          const isEdgeChunk = cx === minChunkX || cx === maxChunkX || cy === minChunkY || cy === maxChunkY;
-          if (!isEdgeChunk) {
-            for (const [key, voxel] of chunk.entries()) {
-              visible.set(key, voxel);
-            }
-          } else {
-            for (const [key, voxel] of chunk.entries()) {
-              const firstScore = key.indexOf('_');
-              const secondScore = key.indexOf('_', firstScore + 1);
-              const x = parseInt(key.substring(0, firstScore), 10);
-              const y = parseInt(key.substring(firstScore + 1, secondScore), 10);
-
-              if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-                visible.set(key, voxel);
-              }
-            }
-          }
-        }
-      }
-    }
-    return visible;
   }
 
   setVoxelAt(worldX, worldY, worldZ, voxelData, broadcast = true) {
@@ -397,6 +312,8 @@ export class MapManager {
       this.chunks.set(`${cx}_${cy}`, this._lastChunk);
     }
     const chunk = this._lastChunk;
+    chunk.isModified = true;
+    this.engine.worldDirty = true;
 
     const key = `${localX}_${localY}_${localZ}`;
     // Treat 0, null, or undefined as air/deletion
@@ -409,6 +326,24 @@ export class MapManager {
     if (this.engine.renderer) {
       this.engine.renderer.updateBlockOcclusion(localX, localY, localZ);
       this.engine.renderer.needsVoxelUpdate = true;
+
+      // Sub-chunk border checking: If a block touches the edge of a 16x16x16 sub-chunk, update the neighbors!
+      const activeUpdates = new Set();
+      for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+              for (let dz = -1; dz <= 1; dz++) {
+                  const ncx = Math.floor((localX + dx) / 16);
+                  const ncy = Math.floor((localY + dy) / 16);
+                  const ncz = Math.floor((localZ + dz) / 16);
+                  activeUpdates.add(`${ncx}_${ncy}_${ncz}`);
+              }
+          }
+      }
+      for (const key of activeUpdates) {
+          const [ncx, ncy, ncz] = key.split('_').map(Number);
+          const nChunk = this.chunks.get(`${ncx}_${ncy}`);
+          this.engine.renderer.updateChunkMesh(ncx, ncy, ncz, nChunk, true);
+      }
     }
     this.updatePixel(localX, localY);
 
