@@ -1,0 +1,35 @@
+:root {
+  /* Color Palette - Dark backgrounds, Neon accents */
+  --bg-dark: #05070a;
+  --bg-panel: rgba(5, 7, 10, 0.95);
+  --bg-input: rgba(0, 0, 0, 0.5);
+
+  --accent-neon: #00d2ff;
+  --accent: #3498db;
+  --text-primary: #ffffff;
+  --text-dim: #cccccc;
+
+  /* Rainbow Palette */
+  --rainbow-red: #ff4757;
+  --rainbow-orange: #e67e22;
+  --rainbow-yellow: #f1c40f;
+  --rainbow-green: #2ecc71;
+  --rainbow-blue: #3498db;
+  --rainbow-purple: #9b59b6;
+  --rainbow-pink: #e056fd;
+
+  /* Typography */
+  --font-mono: monospace;
+  --font-header: 'Impact', sans-serif;
+
+  /* 8px Grid Spacing System */
+  --spacing-1: 8px;
+  --spacing-2: 16px;
+  --spacing-3: 24px;
+  --spacing-4: 32px;
+
+  /* Geometry & Shadows */
+  --border-radius: 6px;
+  --shadow-window: 0 4px 15px rgba(0, 0, 0, 0.8);
+  --shadow-text: 1px 1px 0 #000;
+}

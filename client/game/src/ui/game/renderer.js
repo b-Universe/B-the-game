@@ -1,13 +1,13 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { mergeGeometries } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
-import { AssetManager } from './asset-manager.js?v=new-engine-330';
-import { DebugRenderer } from './debug-renderer.js?v=new-engine-330';
-import { VoxelManager } from './voxel-manager.js?v=new-engine-330';
-import { ParticleManager } from './particle-manager.js?v=new-engine-330';
-import { ChunkMesher } from './chunk-mesher.js?v=new-engine-330';
-import { LightingManager } from './lighting-manager.js?v=new-engine-330';
-import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
-import { SpriteBatcher } from './sprite-batcher.js?v=new-engine-330';
+import { AssetManager } from './asset-manager.js?v=cache-bust-005';
+import { DebugRenderer } from './debug-renderer.js?v=cache-bust-005';
+import { VoxelManager } from './voxel-manager.js?v=cache-bust-005';
+import { ParticleManager } from './particle-manager.js?v=cache-bust-005';
+import { ChunkMesher } from './chunk-mesher.js?v=cache-bust-005';
+import { LightingManager } from './lighting-manager.js?v=cache-bust-005';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
+import { SpriteBatcher } from './sprite-batcher.js?v=cache-bust-005';
 
 export class Renderer {
   constructor(engine) {
@@ -770,6 +770,39 @@ export class Renderer {
     slabGeo.computeBoundingBox();
     slabGeo.computeBoundingSphere();
 
+    const topSlabGeo = new THREE.BoxGeometry(32, 32, 16);
+    topSlabGeo.translate(0, 0, 8);
+    topSlabGeo.computeBoundingBox();
+    topSlabGeo.computeBoundingSphere();
+
+    const halfRampGeo = new THREE.BoxGeometry(32, 32, 16);
+    halfRampGeo.translate(0, 0, -8);
+    let hrPos = halfRampGeo.attributes.position;
+    for (let i = 0; i < hrPos.count; i++) {
+      if (hrPos.getY(i) < 0 && hrPos.getZ(i) === 0) hrPos.setZ(i, -16);
+    }
+    let hrUv = halfRampGeo.attributes.uv;
+    for (let i = 0; i < hrUv.count; i++) {
+      if (i < 12) hrUv.setY(i, 1.0 - hrUv.getY(i));
+    }
+    halfRampGeo.computeVertexNormals();
+    halfRampGeo.computeBoundingBox();
+    halfRampGeo.computeBoundingSphere();
+
+    const topHalfRampGeo = new THREE.BoxGeometry(32, 32, 16);
+    topHalfRampGeo.translate(0, 0, 8);
+    let thrPos = topHalfRampGeo.attributes.position;
+    for (let i = 0; i < thrPos.count; i++) {
+      if (thrPos.getY(i) < 0 && thrPos.getZ(i) === 16) thrPos.setZ(i, 0);
+    }
+    let thrUv = topHalfRampGeo.attributes.uv;
+    for (let i = 0; i < thrUv.count; i++) {
+      if (i < 12) thrUv.setY(i, 1.0 - thrUv.getY(i));
+    }
+    topHalfRampGeo.computeVertexNormals();
+    topHalfRampGeo.computeBoundingBox();
+    topHalfRampGeo.computeBoundingSphere();
+
     const rampGeo = new THREE.BoxGeometry(32, 32, 32);
     let pos = rampGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -905,7 +938,10 @@ export class Renderer {
 
     this.previewCubeMesh = createPreviewMesh(cubeGeo.clone());
     this.previewSlabMesh = createPreviewMesh(slabGeo.clone());
+    this.previewTopSlabMesh = createPreviewMesh(topSlabGeo.clone());
     this.previewRampMesh = createPreviewMesh(rampGeo.clone());
+    this.previewHalfRampMesh = createPreviewMesh(halfRampGeo.clone());
+    this.previewTopHalfRampMesh = createPreviewMesh(topHalfRampGeo.clone());
     this.previewStairMesh = createPreviewMesh(stairGeo.clone());
     this.previewDecalMesh = createPreviewMesh(decalGeo.clone());
     this.previewDoorMesh = createPreviewMesh(doorGeo.clone());
@@ -985,7 +1021,10 @@ export class Renderer {
     Object.assign(this.blockGeometries, {
         cube: cubeGeo,
         slab: slabGeo,
+        top_slab: topSlabGeo,
         ramp: rampGeo,
+        half_ramp: halfRampGeo,
+        top_half_ramp: topHalfRampGeo,
         stair: stairGeo,
         door: doorGeo,
         decor: decorGeo,
@@ -1310,6 +1349,57 @@ export class Renderer {
     }
   }
 
+  // Instantiates a physical 3D screen overlay for an Arcade Cabinet using exact Blockbench coordinates
+  createArcadeScreen(cabinetX, cabinetY, cabinetZ, dir, canvas) {
+    const screenGroup = new THREE.Group();
+    screenGroup.position.set(cabinetX, cabinetY, cabinetZ);
+
+    // Orient the screen group to match the cabinet's facing direction
+    if (dir === 'e') screenGroup.rotation.z = -Math.PI / 2;
+    else if (dir === 'n') screenGroup.rotation.z = Math.PI;
+    else if (dir === 'w') screenGroup.rotation.z = Math.PI / 2;
+
+    // Pivot Point: -14.0168, 16.0338, -0.0104
+    const pivot = new THREE.Group();
+    // Map Blockbench (X,Y,Z) to Engine (X,-Y,Z) relative to the 32x32 voxel center
+    pivot.position.set(-14.0168, 0.0104, 16.0338);
+
+    // Rotation: 0.033, 0, -67.5 (Blockbench uses X for pitch)
+    pivot.rotation.x = -67.5 * (Math.PI / 180);
+    pivot.rotation.y = 0;
+    pivot.rotation.z = 0.033 * (Math.PI / 180);
+
+    // Size: 10.5, 5, 15.8
+    // (We only need width/height for a PlaneGeometry)
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+
+    const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
+    const geo = new THREE.PlaneGeometry(10.5, 15.8);
+    const screenMesh = new THREE.Mesh(geo, mat);
+
+    // Position: -23.5168, 29.0338, -7.9104
+    // Offset mesh back from pivot
+    screenMesh.position.set(-9.5, -7.9, 13.0);
+
+    pivot.add(screenMesh);
+    screenGroup.add(pivot);
+
+    // Add screen glow lighting!
+    const screenLight = new THREE.PointLight(0x00d2ff, 1.5, 150, 1.5);
+    screenLight.position.set(-14, -10, 16);
+    screenGroup.add(screenLight);
+
+    this.scene.add(screenGroup);
+
+    return {
+        group: screenGroup,
+        light: screenLight,
+        texture: tex
+    };
+  }
+
   handleResize() {
     this.webgl.setSize(window.innerWidth, window.innerHeight);
     const aspect = window.innerWidth / window.innerHeight;
@@ -1345,7 +1435,9 @@ export class Renderer {
     }
 
     const meshes = [
-      this.previewCubeMesh, this.previewSlabMesh, this.previewRampMesh, this.previewStairMesh, this.previewDecalMesh, this.previewFenceMesh, this.previewDoorMesh
+      this.previewCubeMesh, this.previewSlabMesh, this.previewTopSlabMesh,
+      this.previewRampMesh, this.previewHalfRampMesh, this.previewTopHalfRampMesh,
+      this.previewStairMesh, this.previewDecalMesh, this.previewFenceMesh, this.previewDoorMesh
     ].filter(Boolean);
 
     meshes.forEach(mesh => {

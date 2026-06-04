@@ -26,6 +26,7 @@ export class PixelVM {
         this.wasSpacePressed = false;
         this.inputLockTimer = 0;
         this.scoreSubmitted = false;
+        this.floatingScores = [];
 
         this.level = this.buildLevel();
         this.clouds = this.buildClouds();
@@ -156,6 +157,7 @@ export class PixelVM {
         this.enemies = this.buildEnemies();
         this.mushrooms = [];
         this.coins = [];
+        this.floatingScores = [];
     }
 
     start() {
@@ -195,6 +197,13 @@ export class PixelVM {
 
         if (this.inputLockTimer > 0) {
             this.inputLockTimer -= dt;
+        }
+
+        for (let i = this.floatingScores.length - 1; i >= 0; i--) {
+            const fs = this.floatingScores[i];
+            fs.y -= 15 * dt; // Move up
+            fs.life -= dt;
+            if (fs.life <= 0) this.floatingScores.splice(i, 1);
         }
 
         for (let c of this.clouds) {
@@ -320,6 +329,7 @@ export class PixelVM {
                             this.score += 100;
                             this.coins.push({ x: b.x + 4, y: b.y, vy: -350, life: 0.4 });
                             this.audio.coin();
+                            this.floatingScores.push({ x: b.x, y: b.y - 10, text: '+100', life: 1.0 });
                         }
                     }
                 }
@@ -353,6 +363,7 @@ export class PixelVM {
                     this.score += 1000;
                     this.entity.starTimer = 10.0; // 10 seconds of invulnerability
                     this.audio.playTone('square', 600, 1200, 0.5, 0.05); // Star powerup sound
+                    this.floatingScores.push({ x: m.x, y: m.y - 10, text: '+1000', life: 1.0 });
                 } else {
                     this.score += 1000;
                     if (!this.entity.isBig) {
@@ -361,6 +372,7 @@ export class PixelVM {
                         this.entity.y -= 8; // Adjust position so it doesn't clip into ground
                     }
                     this.audio.playTone('square', 400, 800, 0.3, 0.05); // Powerup sound
+                    this.floatingScores.push({ x: m.x, y: m.y - 10, text: '+1000', life: 1.0 });
                 }
                 this.mushrooms.splice(i, 1);
                 continue;
@@ -405,6 +417,7 @@ export class PixelVM {
                     e.isDead = true;
                     this.score += 500;
                     this.audio.stomp();
+                    this.floatingScores.push({ x: e.x, y: e.y - 10, text: '+500', life: 1.0 });
                 } else if (this.entity.invulnTimer > 0) {
                     continue; // Ignore if invulnerable
                 } else if (this.entity.vy > 0 && this.entity.y + this.entity.size - (this.entity.vy * dt) <= e.y + 14) {
@@ -412,6 +425,7 @@ export class PixelVM {
                     this.entity.vy = -350;
                     this.score += 200;
                     this.audio.stomp();
+                    this.floatingScores.push({ x: e.x, y: e.y - 10, text: '+200', life: 1.0 });
                 } else {
                     if (this.entity.isBig) {
                         this.entity.isBig = false;
@@ -545,6 +559,16 @@ export class PixelVM {
             this.ctx.fillStyle = this.entity.color || '#e74c3c';
             this.ctx.fillRect(Math.round(this.entity.x), Math.round(this.entity.y), this.entity.size, this.entity.size);
         }
+
+        this.ctx.font = 'bold 10px monospace';
+        this.ctx.textAlign = 'center';
+        for (const fs of this.floatingScores) {
+            this.ctx.globalAlpha = Math.max(0, fs.life);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillText(fs.text, Math.round(fs.x) + 8, Math.round(fs.y));
+        }
+        this.ctx.globalAlpha = 1.0;
+
         this.ctx.restore();
 
         if (this.gameState === 'win') {

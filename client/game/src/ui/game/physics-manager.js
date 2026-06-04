@@ -1,5 +1,5 @@
-import { getBlockProps } from './blocks.js?v=new-engine-330';
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
+import { getBlockProps } from './blocks.js?v=cache-bust-005';
+import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 
 export class PhysicsManager {
   constructor(engine) {
@@ -9,11 +9,12 @@ export class PhysicsManager {
   getVoxelTop(voxel, zIndex, x, y) {
     if (!voxel) return -1000;
     if (voxel.shape === 'slab') return (zIndex * 32) + 0;
+    if (voxel.shape === 'top_slab') return (zIndex * 32) + 16;
     if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[voxel.shape]) {
         const customHeight = FURNITURE_REGISTRY[voxel.shape].collisionHeight;
         return customHeight !== undefined ? (zIndex * 32) - 16 + (customHeight * 32) : (zIndex * 32) + 0;
     }
-    if (voxel.shape && (voxel.shape.startsWith('ramp') || voxel.shape.startsWith('stair'))) {
+    if (voxel.shape && (voxel.shape.startsWith('ramp') || voxel.shape.startsWith('half_ramp') || voxel.shape.startsWith('top_half_ramp') || voxel.shape.startsWith('stair'))) {
       const vx = Math.round(x / 32) * 32;
       const vy = Math.round(y / 32) * 32;
       const localX = x - vx;
@@ -23,9 +24,115 @@ export class PhysicsManager {
       else if (voxel.shape.endsWith('_n')) factor = (16 - localY) / 32;
       else if (voxel.shape.endsWith('_e')) factor = (localX + 16) / 32;
       else if (voxel.shape.endsWith('_w')) factor = (16 - localX) / 32;
+
+      if (voxel.shape.startsWith('half_ramp')) {
+          return (zIndex * 32) - 16 + (16 * factor);
+      } else if (voxel.shape.startsWith('top_half_ramp')) {
+          return (zIndex * 32) + 0 + (16 * factor);
+      }
       return (zIndex * 32) - 16 + (32 * factor);
     }
     return (zIndex * 32) + 16;
+  }
+
+  findPath(startX, startY, startZ, endX, endY) {
+    const sx = Math.round(startX / 32) * 32;
+    const sy = Math.round(startY / 32) * 32;
+    const ex = Math.round(endX / 32) * 32;
+    const ey = Math.round(endY / 32) * 32;
+
+    const fallbackPath = [{ x: endX, y: endY }];
+    fallbackPath.hasHazard = false;
+
+    if (sx === ex && sy === ey) return fallbackPath;
+    if (Math.hypot(ex - sx, ey - sy) > 2000) return fallbackPath; // Limit search range to prevent lag
+
+    const openSet = [];
+    const closedSet = new Set();
+    const cameFrom = new Map();
+    const gScore = new Map();
+    const fScore = new Map();
+    const zMap = new Map();
+    const hazardMap = new Map();
+
+    const startNode = `${sx}_${sy}`;
+    const endNode = `${ex}_${ey}`;
+
+    openSet.push(startNode);
+    gScore.set(startNode, 0);
+    fScore.set(startNode, Math.hypot(ex - sx, ey - sy));
+    zMap.set(startNode, startZ);
+    hazardMap.set(startNode, false);
+
+    let iterations = 0;
+    while (openSet.length > 0 && iterations < 800) {
+      iterations++;
+      openSet.sort((a, b) => fScore.get(a) - fScore.get(b));
+      const current = openSet.shift();
+
+      if (current === endNode) {
+        const path = [];
+        let curr = current;
+        let hasAnyHazard = false;
+        while (cameFrom.has(curr)) {
+          const [cx, cy] = curr.split('_').map(Number);
+          if (hazardMap.get(curr)) hasAnyHazard = true;
+          path.unshift({ x: cx, y: cy, z: zMap.get(curr) });
+          curr = cameFrom.get(curr);
+        }
+        if (path.length > 0) {
+            path[path.length - 1].x = endX;
+            path[path.length - 1].y = endY;
+            path[path.length - 1].z = this.getTerrainZ(endX, endY, zMap.get(endNode));
+        }
+        path.hasHazard = hasAnyHazard;
+        return path;
+      }
+
+      closedSet.add(current);
+      const [cx, cy] = current.split('_').map(Number);
+      const cz = zMap.get(current);
+
+      const neighbors = [ [0, -32], [0, 32], [-32, 0], [32, 0], [-32, -32], [32, -32], [-32, 32], [32, 32] ];
+
+      for (const [dx, dy] of neighbors) {
+        const nx = cx + dx; const ny = cy + dy;
+        const nNode = `${nx}_${ny}`;
+        if (closedSet.has(nNode)) continue;
+
+        const nz = this.getTerrainZ(nx, ny, cz, true);
+        if (Math.abs(nz - cz) > 18) continue; // Unwalkable height difference
+        if (this.checkCollision(nx, ny, nz)) continue;
+
+        let hazardPenalty = 0;
+        let hasHazard = false;
+        if (this.engine.mapManager) {
+            const gridZ = Math.round(nz / 32);
+            for (let offset = -1; offset <= 0; offset++) {
+                const v = this.engine.mapManager.getVoxelAt(nx, ny, (gridZ + offset) * 32);
+                if (v && (v.tex === 'lava' || v.tex === 'lava_flow' || v.tex === 'acid')) {
+                    hazardPenalty = 10000;
+                    hasHazard = true;
+                    break;
+                } else if (v && (v.tex === 'water' || v.tex === 'water_flow')) {
+                    hazardPenalty = Math.max(hazardPenalty, 150);
+                    hasHazard = true;
+                }
+            }
+        }
+
+        const tentativeG = gScore.get(current) + ((dx !== 0 && dy !== 0) ? 45.2 : 32) + hazardPenalty;
+        if (!openSet.includes(nNode)) openSet.push(nNode);
+        else if (tentativeG >= gScore.get(nNode)) continue;
+
+        cameFrom.set(nNode, current);
+        gScore.set(nNode, tentativeG);
+        fScore.set(nNode, tentativeG + Math.hypot(ex - nx, ey - ny));
+        zMap.set(nNode, nz);
+        hazardMap.set(nNode, hasHazard);
+      }
+    }
+    return fallbackPath; // Fallback if no path is found
   }
 
   getTerrainZ(x, y, currentZ, exactOnly = false) {

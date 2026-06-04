@@ -1,0 +1,429 @@
+/* ==========================================================================
+   In-Game Menu
+   ========================================================================== */
+.game-top-bar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.game-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  background: rgba(5, 7, 10, 0.95);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  min-width: 200px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: 15px 20px;
+  font-family: var(--font-header);
+  color: var(--accent-neon);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(116, 185, 255, 0.1);
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: rgba(116, 185, 255, 0.2);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* ==========================================================================
+   In-Game HUD (Health / Energy)
+   ========================================================================== */
+.game-bottom-hud {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  background: rgba(5, 7, 10, 0.9);
+  border-top: 2px solid var(--accent);
+}
+
+.stat-bar-container {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-bar-fill {
+  height: 100%;
+  width: 100%; /* Default 100%, controlled by JS */
+  transition: width 0.1s linear;
+}
+
+.health-fill {
+  background: linear-gradient(90deg, #8b0000, #ff4757);
+}
+
+.energy-fill {
+  background: linear-gradient(90deg, #0984e3, #00d2ff);
+}
+
+.stat-bar-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(90deg, transparent, transparent calc(10% - 2px), rgba(0, 0, 0, 0.75) calc(10% - 2px), rgba(0, 0, 0, 0.75) 10%);
+  pointer-events: none;
+}
+
+.stat-bar-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 0 5px #000;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   In-Game Chat Overlay
+   ========================================================================== */
+#game-chat-container {
+  position: absolute;
+  bottom: 70px; /* Sits right above the health/energy HUD */
+  left: 20px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  z-index: 90;
+}
+
+#chat-messages {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+
+.chat-message {
+  color: #e1e1e1;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  word-wrap: break-word;
+}
+
+.chat-name {
+  color: var(--accent-neon);
+  font-weight: bold;
+}
+
+.chat-name.dev-tim {
+  color: #00d2ff; /* Specific blue for Dev Tim */
+}
+
+.chat-input-wrapper {
+  position: relative;
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.chat-input-wrapper:focus-within {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--accent-neon);
+}
+
+#chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: var(--font-mono);
+  padding: 8px;
+  outline: none;
+}
+
+.chat-channel-selector {
+  position: relative;
+  display: flex;
+}
+
+#btn-chat-channel {
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f39c12; /* Default general color */
+  font-family: var(--font-header);
+  padding: 0 10px;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.2s;
+}
+
+#btn-chat-channel:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Combat Chat Toggle Filter */
+#game-chat-container.hide-combat .chat-message[data-type="combat"] {
+  display: none;
+}
+
+/* ==========================================================================
+   Target Window HUD
+   ========================================================================== */
+.target-window {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 250px;
+  background: rgba(5, 7, 10, 0.9);
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+}
+
+.target-header {
+  background: rgba(116, 185, 255, 0.1);
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--accent);
+  text-align: center;
+  font-family: var(--font-header);
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.target-stats {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stat-bar-container.small {
+  height: 12px;
+  border-bottom: none;
+}
+
+.stat-bar-text.small {
+  font-size: 0.6rem;
+  letter-spacing: 0;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+
+/* ==========================================================================
+   Builder Tools
+   ========================================================================== */
+.builder-hotbar {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background: rgba(5, 7, 10, 0.9);
+  padding: 10px;
+  border: 2px solid #3498db;
+  border-radius: 8px;
+  z-index: 100;
+  box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+}
+
+.hotbar-slot {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border: 1px solid var(--text-dim);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.hotbar-slot::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(5, 7, 10, 0.5);
+  transition: background 0.2s;
+}
+
+.hotbar-slot span {
+  position: relative;
+  z-index: 1;
+}
+
+.hotbar-slot:hover::before {
+  background: rgba(5, 7, 10, 0.2);
+}
+
+.hotbar-slot:hover {
+  border-color: #3498db;
+}
+
+.hotbar-slot.active {
+  border-color: #00d2ff;
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+}
+
+.hotbar-slot.active::before {
+  background: rgba(0, 210, 255, 0.2);
+}
+
+/* ==========================================================================
+   Inventory & Context Menus
+   ========================================================================== */
+.inv-slot {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--text-dim);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  position: relative;
+  cursor: pointer;
+}
+
+.inv-slot:hover { border-color: #f1c40f; background: rgba(241, 196, 15, 0.2); }
+
+.inv-qty {
+  position: absolute; bottom: 2px; right: 4px;
+  font-size: 0.7rem; font-family: var(--font-mono); font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.chat-action-link {
+  color: var(--accent-neon);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: bold;
+}
+.chat-action-link:hover { color: #fff; }
+
+/* Custom Item Tooltips */
+.item-tooltip {
+  position: fixed;
+  background: rgba(5, 7, 10, 0.95);
+  border: 1px solid var(--accent-neon);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 10px rgba(0,0,0,0.8);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Builder Help Menu
+   ========================================================================== */
+.palette-help-container {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+}
+
+.help-btn {
+  background-color: rgba(5, 7, 10, 0.8);
+  border: 1px solid #3498db;
+  border-radius: 4px;
+  color: #fff;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  text-shadow: 1px 1px 0 #000;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.help-btn:hover {
+  border-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.help-content {
+  position: absolute;
+  bottom: 110%; /* Pops up directly above the hotbar */
+  left: 0;
+  width: 320px;
+  background-color: rgba(5, 7, 10, 0.95);
+  border: 2px solid #f1c40f;
+  border-radius: 6px;
+  padding: 15px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+  z-index: 100;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+}
+
+.help-content.hidden {
+  display: none;
+}
+
+.help-content h4 {
+  margin: 0 0 12px 0;
+  color: #2ecc71;
+  text-transform: uppercase;
+  border-bottom: 1px solid #3498db;
+  padding-bottom: 6px;
+  font-family: var(--font-header);
+  letter-spacing: 1px;
+}
+
+.help-content ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: left;
+}
+
+.help-content .highlight {
+  color: #f1c40f;
+  font-weight: bold;
+}

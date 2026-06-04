@@ -1,5 +1,5 @@
-import { POWER_REGISTRY } from './registry.js?v=new-engine-330';
-import { TravelPowerScripts, TravelPowerExecutors } from './powers/travel.js?v=new-engine-330';
+import { POWER_REGISTRY } from './registry.js?v=cache-bust-005';
+import { TravelPowerScripts, TravelPowerExecutors } from './powers/travel.js?v=cache-bust-005';
 
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
 

@@ -5,13 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>B - The Arrival</title>
   <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/ui-theme.css">
+  <link rel="stylesheet" href="css/ui-components.css">
+  <link rel="stylesheet" href="css/ui-launcher.css">
+  <link rel="stylesheet" href="css/ui-creator.css">
+  <link rel="stylesheet" href="css/ui-hud.css">
+  <link rel="stylesheet" href="css/ui-dev.css">
+  <link rel="stylesheet" href="css/ui-settings.css">
   <link rel="stylesheet" href="css/ui.css">
   <script type="importmap">
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
         "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "engine": "./src/ui/game/engine.js?v=new-engine-330"
+        "engine": "./src/ui/game/engine.js?v=cache-bust-005"
       }
     }
   </script>
@@ -491,358 +498,24 @@
         </div>
       </div>
 
-      <!-- NPC Manager Panel -->
-      <div id="npc-manager-panel" class="dev-panel" style="display: none; top: 100px; left: 50%; transform: translateX(-50%); width: 850px; border-color: #9b59b6; box-shadow: 0 0 15px rgba(155, 89, 182, 0.2); z-index: 250;">
-        <div class="dev-panel-header" style="background: rgba(155, 89, 182, 0.8);">
-          <span>NPC Manager</span>
-          <button id="btn-close-npc-manager">X</button>
-        </div>
-        <div class="dev-panel-body" id="npc-manager-list" style="max-height: 60vh; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: rgba(5, 7, 10, 0.95);">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-
-      <!-- Player Manager Panel -->
-      <div id="player-manager-panel" class="dev-panel" style="display: none; top: 100px; left: 50%; transform: translateX(-50%); width: 850px; border-color: #f39c12; box-shadow: 0 0 15px rgba(243, 156, 18, 0.2); z-index: 250;">
-        <div class="dev-panel-header" style="background: rgba(243, 156, 18, 0.8);">
-          <span>Player Manager</span>
-          <button id="btn-close-player-manager">X</button>
-        </div>
-        <div class="dev-panel-body" id="player-manager-list" style="max-height: 60vh; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: rgba(5, 7, 10, 0.95);">
-          <!--
-            JS will populate this list. Example row:
-            <div class="manager-item" data-uuid="ACCOUNT_UUID" data-charid="CHAR_ID">
-              <div class="manager-item-info">
-                <strong>PlayerName</strong> (Lvl 50) - Zone: Atlas City
-                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">Account: Username</span>
-              </div>
-              <div class="manager-item-controls">
-                <button class="btn-secondary btn-sm">Modify</button>
-                <button class="btn-secondary btn-sm" style="color: var(--rainbow-red); border-color: var(--rainbow-red);">Kick</button>
-                <button class="btn-secondary btn-sm" style="color: var(--rainbow-red); border-color: var(--rainbow-red);">Ban</button>
-              </div>
-            </div>
-           -->
-        </div>
-      </div>
-
-      <!-- NPC Edit Modal -->
-      <div id="npc-edit-modal" class="dev-panel" style="display: none; top: 150px; left: 50%; transform: translateX(-50%); width: 400px; border-color: #9b59b6; box-shadow: 0 0 15px rgba(155, 89, 182, 0.2); z-index: 260;">
-        <div class="dev-panel-header" style="background: rgba(155, 89, 182, 0.8);">
-          <span>Edit NPC</span>
-          <button id="btn-close-npc-edit">X</button>
-        </div>
-        <div class="dev-panel-body" style="background: rgba(5, 7, 10, 0.95); padding: 15px; display: flex; flex-direction: column; gap: 10px;">
-          <input type="hidden" id="edit-npc-uuid">
-
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label style="color: var(--accent); font-family: var(--font-header);">Name</label>
-            <input type="text" id="edit-npc-name" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-          </div>
-
-          <div style="display: flex; gap: 10px;">
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-              <label style="color: var(--accent); font-family: var(--font-header);">HP (Cur / Max)</label>
-              <div style="display: flex; gap: 5px;">
-                <input type="number" id="edit-npc-hp" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-                <input type="number" id="edit-npc-maxhp" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              </div>
-            </div>
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-              <label style="color: var(--accent); font-family: var(--font-header);">Energy</label>
-              <input type="number" id="edit-npc-energy" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-            </div>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <label style="color: var(--accent); font-family: var(--font-header);">Location (X, Y, Z)</label>
-              <button id="btn-edit-npc-tp-me" class="btn-secondary" style="padding: 2px 8px; font-size: 0.75rem; width: auto; height: auto; border-color: #3498db; color: #3498db;">TP to Me</button>
-            </div>
-            <div style="display: flex; gap: 5px;">
-              <input type="number" id="edit-npc-x" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              <input type="number" id="edit-npc-y" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              <input type="number" id="edit-npc-z" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 10px;">
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-              <label style="color: var(--accent); font-family: var(--font-header);">Type</label>
-              <select id="edit-npc-type" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-                <option value="idle">Idle</option>
-                <option value="trainer">Trainer</option>
-              </select>
-            </div>
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-              <label style="color: var(--accent); font-family: var(--font-header);">Direction</label>
-              <select id="edit-npc-dir" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-                <option value="down">Down</option>
-                <option value="up">Up</option>
-                <option value="left">Left</option>
-                <option value="right">Right</option>
-              </select>
-            </div>
-          </div>
-
-          <button id="btn-save-npc-edit" class="btn-primary" style="margin-top: 10px; border-color: #9b59b6; color: #9b59b6; background: rgba(155, 89, 182, 0.1);">Close</button>
-        </div>
-      </div>
-
-      <!-- Player Modifier Modal -->
-      <div id="player-modifier-modal" class="dev-panel" style="display: none; top: 150px; left: 50%; transform: translateX(-50%); width: 450px; border-color: #f39c12; box-shadow: 0 0 15px rgba(243, 156, 18, 0.2); z-index: 260;">
-        <div class="dev-panel-header" style="background: rgba(243, 156, 18, 0.8);">
-          <span>Modify Player</span>
-          <button id="btn-close-player-modifier">X</button>
-        </div>
-        <div class="dev-panel-body" style="background: rgba(5, 7, 10, 0.95); padding: 15px; display: flex; flex-direction: column; gap: 10px;">
-          <input type="hidden" id="edit-player-uuid">
-          <input type="hidden" id="edit-player-char-id">
-
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label style="color: var(--accent); font-family: var(--font-header);">Name</label>
-            <input type="text" id="edit-player-name" readonly style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.5); color: #aaa; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-          </div>
-
-          <div style="display: flex; gap: 10px;">
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-              <label style="color: var(--accent); font-family: var(--font-header);">HP (Cur / Max)</label>
-              <div style="display: flex; gap: 5px;">
-                <input type="number" id="edit-player-hp" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-                <input type="number" id="edit-player-maxhp" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              </div>
-            </div>
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-              <label style="color: var(--accent); font-family: var(--font-header);">Energy</label>
-              <input type="number" id="edit-player-energy" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 10px; margin-top: 5px;">
-              <button id="btn-edit-player-tp-to-them" class="btn-secondary" style="flex: 1; border-color: #3498db; color: #3498db;">Teleport to Player</button>
-              <button id="btn-edit-player-tp-them-to-me" class="btn-secondary" style="flex: 1; border-color: #3498db; color: #3498db;">Teleport Player to Me</button>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label style="color: var(--accent); font-family: var(--font-header);">Location (X, Y, Z) & Zone</label>
-            <div style="display: flex; gap: 5px;">
-              <input type="number" id="edit-player-x" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              <input type="number" id="edit-player-y" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              <input type="number" id="edit-player-z" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-              <input type="text" id="edit-player-zone" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--text-dim); padding-top: 15px;">
-              <button id="btn-kick-player" class="btn-secondary" style="flex: 1; border-color: var(--rainbow-red); color: var(--rainbow-red);">Kick Player</button>
-              <button id="btn-ban-account" class="btn-secondary" style="flex: 1; border-color: var(--rainbow-red); color: var(--rainbow-red);">Ban Account</button>
-          </div>
-          <button id="btn-manage-account" class="btn-secondary" style="margin-top: 5px; border-color: #9b59b6; color: #9b59b6;">Manage Account</button>
-
-          <button id="btn-save-player-modifier" class="btn-primary" style="margin-top: 10px; border-color: #f39c12; color: #f39c12; background: rgba(243, 156, 18, 0.1);">Save & Close</button>
-        </div>
-      </div>
-
-      <!-- Account Manager Modal -->
-      <div id="account-manager-modal" class="dev-panel" style="display: none; top: 100px; left: 50%; transform: translateX(-50%); width: 600px; border-color: #9b59b6; box-shadow: 0 0 15px rgba(155, 89, 182, 0.2); z-index: 270;">
-        <div class="dev-panel-header" style="background: rgba(155, 89, 182, 0.8);">
-          <span>Account Manager</span>
-          <button id="btn-close-account-manager">X</button>
-        </div>
-        <div class="dev-panel-body" style="background: rgba(5, 7, 10, 0.95); padding: 15px; display: flex; flex-direction: column; gap: 15px;">
-          <input type="hidden" id="account-manager-uuid">
-          <div class="pe-input-row"><label>Username</label><input type="text" id="account-manager-username" readonly class="pe-text-input" style="background: rgba(0,0,0,0.5); color: #aaa;"></div>
-          <div class="pe-input-row"><label>Email</label><input type="text" id="account-manager-email" readonly class="pe-text-input" style="background: rgba(0,0,0,0.5); color: #aaa;"></div>
-          <div class="pe-editor-section">
-            <h4 class="pe-section-title">Account Status</h4>
-            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(231, 76, 60, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer;" id="row-toggle-account-ban">
-              <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Account Banned</span>
-              <button id="btn-toggle-account-ban" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">No</button>
-            </div>
-            <div class="pe-input-row" style="margin-top: 10px;"><label>Ban Reason</label><textarea id="account-manager-ban-reason" rows="2" class="pe-text-input" placeholder="Enter reason for ban..."></textarea></div>
-          </div>
-          <div class="pe-editor-section">
-            <h4 class="pe-section-title">Characters on Account</h4>
-            <div id="account-manager-char-list" class="scroll-list" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--text-dim); padding: 5px; background: rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 5px;">
-              <!-- Populated by JS -->
-            </div>
-          </div>
-          <button id="btn-save-account-manager" class="btn-primary" style="margin-top: 10px; border-color: #9b59b6; color: #9b59b6; background: rgba(155, 89, 182, 0.1);">Save Account Changes</button>
-        </div>
-      </div>
-
-      <!-- Power Editor Panel -->
-      <div id="power-editor-panel" class="dev-panel" style="display: none; top: 50px; left: 50%; transform: translateX(-50%); width: 1200px; height: 85vh; border-color: #e67e22; box-shadow: 0 0 20px rgba(230, 126, 34, 0.3); z-index: 300;">
-        <div class="dev-panel-header" style="background: rgba(230, 126, 34, 0.8);">
-          <span style="color: #fff; font-weight: bold; font-family: var(--font-header); letter-spacing: 1px;">Power Customization Engine</span>
-          <button id="btn-close-power-editor" style="background: transparent; border: none; color: #fff; font-weight: bold; cursor: pointer; font-size: 1.2rem;">X</button>
-        </div>
-        <div class="dev-panel-body power-editor-layout" style="display: flex; flex-direction: column; height: calc(100% - 40px); padding: 15px; box-sizing: border-box; background: rgba(5, 7, 10, 0.95); gap: 10px;">
-          <div style="display: flex; flex: 1; gap: 15px; min-height: 0;">
-            <!-- Left Panel: Library/Roster -->
-            <div class="pe-col pe-roster" style="max-width: 300px; flex: 1; display: flex; flex-direction: column; height: 100%;">
-            <button id="btn-pe-create-new" class="btn-primary" style="margin-bottom: 10px; border-color: #e67e22; color: #e67e22; background: rgba(230, 126, 34, 0.1);">+ Create New Power</button>
-            <input type="text" id="pe-search" placeholder="Search powers..." class="pe-text-input" style="margin-bottom: 10px;">
-            <select id="pe-filter-powerset" class="pe-select" style="margin-bottom: 10px;">
-              <option value="all">All Powersets</option>
-              <!-- Populated by JS -->
-            </select>
-            <div id="pe-power-list" class="scroll-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 5px;">
-              <!-- Populated by JS -->
-            </div>
-          </div>
-
-            <!-- Right Column: Editor & Preview -->
-            <div style="flex: 3; display: flex; flex-direction: column; gap: 15px; height: 100%; min-width: 0;">
-              <!-- Row 1: Stats & Configuration -->
-              <div class="pe-col pe-editor" style="flex: 2; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column;">
-            <div class="pe-editor-section">
-              <h4 class="pe-section-title">General</h4>
-              <div style="display: flex; gap: 15px;">
-                <div style="flex: 1;">
-                  <div style="display: flex; gap: 15px;">
-                    <div class="pe-input-row" style="flex: 1;">
-                      <label>Power ID (Internal)</label>
-                      <input type="text" id="pe-id" placeholder="e.g. plasma_burst" class="pe-text-input">
-                    </div>
-                    <div class="pe-input-row" style="flex: 1;">
-                      <label>Display Name</label>
-                      <input type="text" id="pe-name" placeholder="Power Name" class="pe-text-input">
-                    </div>
-                  </div>
-                  <div class="pe-input-row">
-                    <label>Description</label>
-                    <textarea id="pe-desc" rows="2" class="pe-text-input" style="resize: vertical;"></textarea>
-                  </div>
-                  <div class="pe-input-row">
-                    <label>Power Type</label>
-                    <select id="pe-power-type" class="pe-select">
-                      <option value="Click">Click</option><option value="Targeted">Targeted</option>
-                      <option value="Targeted AoE">Targeted AoE</option><option value="PBAoE">PBAoE</option><option value="Toggle">Toggle</option>
-                              <option value="Passive">Passive</option>
-                      <option value="Summon">Summon</option><option value="Targeted Summon">Targeted Summon</option>
-                    </select>
-                  </div>
-                  <div class="pe-input-row">
-                    <label>Custom Engine Script (Advanced)</label>
-                    <input type="text" id="pe-engine-script" placeholder="e.g. teleport, brawl, flashlight" class="pe-text-input">
-                  </div>
-                </div>
-                <div style="flex: 1; display: flex; flex-direction: column;">
-                  <div class="pe-input-row" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
-                    <label>Assigned Powersets (Multi-select)</label>
-                    <div id="pe-assigned-powersets" class="scroll-list" style="flex-grow: 1; max-height: 250px; overflow-y: auto; border: 1px solid var(--text-dim); padding: 5px; background: rgba(0,0,0,0.3); display: grid; grid-template-columns: 1fr; gap: 5px; font-family: var(--font-mono); font-size: 0.8rem; color: #ccc; align-content: start;">
-                      <!-- Checkboxes populated by JS -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="pe-editor-section">
-              <h4 class="pe-section-title">Base Properties</h4>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="pe-input-row" style="grid-column: span 2;"><label>Unlock Tier (Order)</label><input type="number" id="pe-stat-tier" class="pe-text-input" min="1" step="1" value="1"></div>
-                <div class="pe-input-row"><label>Recharge Rate (s)</label><input type="number" id="pe-stat-rech" class="pe-text-input" min="0" step="0.5" value="1.0"></div>
-                <div class="pe-input-row"><label>Activation Time (s)</label><input type="number" id="pe-stat-activation" class="pe-text-input" min="0" step="0.1" value="0.5"></div>
-                <div class="pe-input-row"><label>Energy Cast Cost</label><input type="number" id="pe-stat-ener-cast" class="pe-text-input" min="0" step="1" value="10"></div>
-                <div class="pe-input-row"><label>Energy Cost/s (Toggle)</label><input type="number" id="pe-stat-ener-cost" class="pe-text-input" min="0" step="1" value="5"></div>
-                <div class="pe-input-row"><label>Battery Cast Cost</label><input type="number" id="pe-stat-battery-cast" class="pe-text-input" min="0" step="1" value="0"></div>
-                <div class="pe-input-row"><label>Battery Cost/s (Toggle)</label><input type="number" id="pe-stat-battery-cost" class="pe-text-input" min="0" step="1" value="0"></div>
-                <div class="pe-input-row"><label>Recovery Rate/s (Passive)</label><input type="number" id="pe-stat-recovery" class="pe-text-input" min="0" step="0.5" value="0"></div>
-                <div class="pe-input-row"><label>Battery Recovery/s (Passive)</label><input type="number" id="pe-stat-battery-recovery" class="pe-text-input" min="0" step="0.5" value="0"></div>
-                <div class="pe-input-row"><label>Range (units)</label><input type="number" id="pe-stat-range" class="pe-text-input" min="0" step="50" value="200"></div>
-                <div class="pe-input-row"><label>AoE Radius (units)</label><input type="number" id="pe-stat-aoe" class="pe-text-input" min="0" step="10" value="0"></div>
-                <div class="pe-input-row"><label>Cone Radius (degrees)</label><input type="number" id="pe-stat-cone" class="pe-text-input" min="0" max="360" step="5" value="45"></div>
-                <div class="pe-input-row"><label>Targeted Accuracy %</label><input type="number" id="pe-stat-accuracy" class="pe-text-input" min="0" max="100" step="1" value="85"></div>
-                <div class="pe-input-row"><label>Crit Chance (%)</label><input type="number" id="pe-stat-crit-chance" class="pe-text-input" min="0" max="100" step="1" value="5"></div>
-                <div class="pe-input-row"><label>Crit Multiplier (x)</label><input type="number" id="pe-stat-crit-mult" class="pe-text-input" min="1" step="0.1" value="1.5"></div>
-              </div>
-            </div>
-
-            <div class="pe-editor-section">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h4 class="pe-section-title" style="margin: 0;">Effects Engine</h4>
-                <button id="btn-pe-add-effect" class="btn-secondary" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add Effect</button>
-              </div>
-              <div id="pe-effects-list" class="pe-dynamic-list-container"></div>
-            </div>
-
-            <div class="pe-editor-section">
-              <h4 class="pe-section-title">Visuals</h4>
-              <div style="display: flex; gap: 15px; align-items: flex-end;">
-                <div class="pe-input-row" style="flex: 1;"><label>Integrity Tint</label><input type="color" id="pe-visual-tint" value="#ffffff" style="width: 100%; background: transparent; border: 1px solid var(--text-dim); cursor: pointer; height: 35px; min-height: 32px; min-width: 32px; padding: 0; box-sizing: border-box;"></div>
-                <div class="pe-input-row" style="flex: 2;"><label>Icon Path</label><input type="text" id="pe-visual-icon" placeholder="assets/icons/..." class="pe-text-input"></div>
-              </div>
-              <div class="pe-input-row" style="margin-top: 10px;">
-                <label>Player Animation</label>
-                <select id="pe-visual-anim" class="pe-select">
-                  <option value="idle">None (Idle)</option>
-                  <option value="attack1">Melee Strike (Right Hand)</option>
-                  <option value="attack2">Melee Strike (Left Hand)</option>
-                  <option value="throw-attack1">Throw / Ranged Cast</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="pe-editor-section">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h4 class="pe-section-title" style="margin: 0;">Caster Visuals</h4><button id="btn-pe-add-caster-visual" class="btn-secondary" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add Sprite Event</button></div>
-              <div id="pe-caster-visuals-list" class="pe-dynamic-list-container"></div>
-            </div>
-
-            <div class="pe-editor-section">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h4 class="pe-section-title" style="margin: 0;">Projectile Visuals</h4><button id="btn-pe-add-projectile-visual" class="btn-secondary" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add Sprite Event</button></div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
-                <div class="pe-input-row"><label>Speed (units/sec)</label><input type="number" id="pe-proj-speed" class="pe-text-input" value="400"></div>
-                <div class="pe-input-row"><label>Arc (0-1)</label><input type="number" id="pe-proj-arc" class="pe-text-input" value="0" step="0.1" min="0" max="1"></div>
-              </div>
-              <div id="pe-projectile-visuals-list" class="pe-dynamic-list-container"></div>
-            </div>
-
-            <div class="pe-editor-section">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h4 class="pe-section-title" style="margin: 0;">Target Visuals</h4><button id="btn-pe-add-target-visual" class="btn-secondary" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add Sprite Event</button></div>
-              <div id="pe-target-visuals-list" class="pe-dynamic-list-container"></div>
-            </div>
-
-              </div>
-
-              <!-- Row 2: Live Preview -->
-              <div class="pe-col pe-preview" style="flex: 1; display: flex; flex-direction: column; min-height: 250px;">
-                <div class="pe-editor-section" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
-                  <h4 class="pe-section-title">Live Preview</h4>
-                  <div id="pe-preview-container" style="flex: 1; background: #000; border: 1px solid var(--text-dim); border-radius: 4px; position: relative; overflow: hidden;">
-                  <canvas id="pe-preview-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                  <button id="btn-pe-play-preview" class="btn-secondary" style="flex-shrink: 0; padding: 5px 15px;">Play</button>
-                  <input type="range" id="pe-preview-scrubber" min="0" max="100" value="0" style="flex: 1; cursor: pointer;">
-                </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ROW 3: Commit Button -->
-          <button id="btn-pe-save" class="btn-primary" style="border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1); height: 40px; font-size: 1.1rem; flex-shrink: 0; margin-top: 5px;">Commit To Server</button>
-        </div>
-      </div>
-
-      <!-- Inventory Panel -->
-      <div id="inventory-panel" class="dev-panel" style="display: none; right: 80px; top: 350px; left: auto; border-color: #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.2); width: 235px;">
-        <div class="dev-panel-header" style="background: rgba(241, 196, 15, 0.8);">
-          <span style="color: #000;">Inventory</span>
-          <button id="btn-close-inventory" style="color: #000;">X</button>
-        </div>
-        <div class="dev-panel-body" id="inventory-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 10px;">
-          <!-- Slots populated by JS -->
-        </div>
-        <div style="padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; color: #2ecc71; font-family: var(--font-mono); font-weight: bold; font-size: 1.1rem;">
-          $<span id="inv-currency">0</span>
-        </div>
-      </div>
-
       <!-- Builder Hotbar -->
       <div id="builder-hotbar" class="builder-hotbar" style="display: none;">
+        <div class="palette-help-container" style="display: flex; align-items: center; margin-right: 5px;">
+          <button id="help-toggle-btn" class="help-btn" style="height: 60px; font-weight: bold; line-height: 1.2;">HELP<br>[?]</button>
+
+          <div id="help-menu-content" class="help-content hidden">
+            <h4>Builder Keybinds</h4>
+            <ul>
+              <li><span class="highlight">Click + Drag</span>: Freehand placement</li>
+              <li><span class="highlight">Hold CTRL + Drag</span>: Straight line / Fence snap</li>
+              <li><span class="highlight">Hold SHIFT + Drag</span>: Vertical (Z-Axis) wall</li>
+              <li><span class="highlight">Right-Click</span>: Delete block</li>
+              <br>
+              <li><span class="highlight">[C] - Cutout</span>: Toggles transparency</li>
+              <li><span class="highlight">[M] - Mesh UV</span>: Toggles per-face mapping</li>
+            </ul>
+          </div>
+        </div>
         <input type="color" id="build-color-picker" value="#ffffff" title="Tile Tint Color" style="width: 40px; height: 60px; padding: 0; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; background: transparent;">
         <div class="hotbar-slot active" data-tex="grass" style="background-image: url('assets/tiles/base/floor/grass_block_top.png');"><span>Grass</span></div>
         <div class="hotbar-slot" data-tex="dirt" style="background-image: url('assets/tiles/base/all-facing/dirt.png');"><span>Dirt</span></div>
@@ -876,53 +549,9 @@
       <div id="player-context-menu" class="game-dropdown-menu" style="display: none; position: absolute; z-index: 300; min-width: 150px; right: auto;">
         <div class="dropdown-item" id="ctx-btn-talk" style="display: none;">Talk</div>
         <div class="dropdown-item" id="ctx-btn-trade">Trade Offer</div>
-      </div>
-
-      <!-- Trade Panel -->
-      <div id="trade-panel" class="dev-panel" style="display: none; top: 150px; left: 50%; transform: translateX(-50%); width: 450px; border-color: #3498db; box-shadow: 0 0 15px rgba(52, 152, 219, 0.2); z-index: 150;">
-        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.8);">
-          <span style="color: #000; font-weight: bold;">Trade: <span id="trade-partner-name">Player</span></span>
-          <button id="btn-close-trade" style="color: #000;">X</button>
-        </div>
-        <div class="dev-panel-body" style="display: flex; gap: 10px; padding: 15px;">
-          <div style="flex: 1; border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.5);">
-            <h4 style="margin: 0 0 10px 0; text-align: center; color: var(--accent-neon); font-family: var(--font-header);">Your Offer</h4>
-            <div id="trade-grid-self" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;"></div>
-            <div style="margin-top: 10px; text-align: center;">
-              <input type="number" id="trade-offer-currency" min="0" value="0" style="width: 100%; box-sizing: border-box; text-align: right; background: rgba(0,0,0,0.8); color: #2ecc71; border: 1px solid var(--text-dim); border-radius: 4px; padding: 4px; font-family: var(--font-mono); font-weight: bold; font-size: 1rem; outline: none;">
-            </div>
-          </div>
-          <div style="flex: 1; border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.5);">
-            <h4 style="margin: 0 0 10px 0; text-align: center; color: var(--rainbow-red); font-family: var(--font-header);">Their Offer</h4>
-            <div id="trade-grid-partner" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;"></div>
-            <div style="margin-top: 10px; text-align: right; color: #2ecc71; font-family: var(--font-mono); font-weight: bold; font-size: 1rem; padding: 4px;">
-              $<span id="trade-partner-currency">0</span>
-            </div>
-          </div>
-        </div>
-        <div style="padding: 10px 15px 15px 15px; display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <button id="btn-trade-accept" class="btn-primary" style="flex: 1; height: 40px; font-size: 1.1rem;">Accept Trade</button>
-        </div>
-      </div>
-
-      <!-- Trainer Dialog Modal -->
-      <div id="trainer-dialog-modal" style="display: none; position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); width: 500px; background: rgba(5,7,10,0.95); border: 2px solid #3498db; border-radius: 8px; box-shadow: 0 0 20px rgba(52, 152, 219, 0.4); flex-direction: column; overflow: hidden; font-family: var(--font-mono); z-index: 100;">
-        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 15px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center;">
-          <h3 id="trainer-dialog-name" style="margin: 0; color: #00d2ff; font-family: var(--font-header); letter-spacing: 1px;">Trainer</h3>
-          <button id="btn-close-trainer" style="background: transparent; border: none; color: #3498db; font-weight: bold; cursor: pointer; font-size: 1.2rem;">X</button>
-        </div>
-        <div id="trainer-dialog-view">
-          <div style="padding: 20px; color: #fff; font-size: 1.1rem; line-height: 1.5;" id="trainer-dialog-text">
-            "Hello, recruit. Ready to improve your skills?"
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 5px; padding: 15px; background: rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.1);">
-            <button id="btn-trainer-train" class="btn-primary" style="text-align: left; padding: 10px 15px; border-color: #3498db; color: #00d2ff; background: rgba(52, 152, 219, 0.1);">Select new abilities</button>
-            <button id="btn-trainer-leave" class="btn-secondary" style="text-align: left; padding: 10px 15px; border-color: var(--text-dim);">Leave (close)</button>
-          </div>
-        </div>
-        <div id="trainer-training-view" style="display: none; padding: 15px; flex-direction: column; gap: 10px;">
-          <!-- Populated by JS -->
-        </div>
+        <div class="dropdown-item" id="ctx-btn-arcade-play" style="display: none;">Play</div>
+        <div class="dropdown-item" id="ctx-btn-arcade-edit" style="display: none; color: #e056fd;">Edit Cabinet</div>
+        <div class="dropdown-item" id="ctx-btn-arcade-power" style="display: none; color: #e74c3c;">Power On/Off</div>
       </div>
 
       <!-- Powers Panel -->
@@ -1429,6 +1058,21 @@
             const settings = saved ? JSON.parse(saved) : {};
             settings.maxDynamicLights = parseInt(e.target.value, 10);
             localStorage.setItem('b_client_settings', JSON.stringify(settings));
+          });
+        }
+
+        // Builder Help Toggle Logic
+        const helpBtn = document.getElementById('help-toggle-btn');
+        const helpContent = document.getElementById('help-menu-content');
+        if (helpBtn && helpContent) {
+          helpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            helpContent.classList.toggle('hidden');
+          });
+          document.addEventListener('click', (e) => {
+            if (!helpBtn.contains(e.target) && !helpContent.contains(e.target)) {
+              helpContent.classList.add('hidden');
+            }
           });
         }
       }

@@ -1,12 +1,12 @@
-import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-330';
-import { InventoryUIManager } from './inventory-ui.js?v=new-engine-330';
-import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-330';
-import { TrainerUIManager } from './trainer-ui.js?v=new-engine-330';
-import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-330';
-import { FriendsUIManager } from './friends-ui.js?v=new-engine-330';
-import { GAME_TIPS } from './tips.js?v=new-engine-330';
-import { PowerEditorUIManager } from '../power-editor-ui.js?v=new-engine-330';
-import { PlayerModifierUIManager } from './player-modifier-ui.js?v=new-engine-330';
+import { DevToolsUIManager } from './dev-tools-ui.js?v=cache-bust-005';
+import { InventoryUIManager } from './inventory-ui.js?v=cache-bust-005';
+import { PowerbarUIManager } from './powerbar-ui.js?v=cache-bust-005';
+import { TrainerUIManager } from './trainer-ui.js?v=cache-bust-005';
+import { PlayerListUIManager } from './player-list-ui.js?v=cache-bust-005';
+import { FriendsUIManager } from './friends-ui.js?v=cache-bust-005';
+import { GAME_TIPS } from './tips.js?v=cache-bust-005';
+import { PowerEditorUIManager } from '../power-editor-ui.js?v=cache-bust-005';
+import { PlayerModifierUIManager } from './player-modifier-ui.js?v=cache-bust-005';
 
 export class UIManager {
   constructor(engine) {
@@ -23,11 +23,7 @@ export class UIManager {
 
     this.setupContextMenu();
     this.setupLoadingScreen();
-    this.makeDraggable('power-editor-panel', '.dev-panel-header');
     this.makeDraggable('game-chat-container', '#chat-drag-handle');
-    this.makeDraggable('player-manager-panel', '.dev-panel-header');
-    this.makeDraggable('player-modifier-modal', '.dev-panel-header');
-    this.makeDraggable('account-manager-modal', '.dev-panel-header');
     this.makeDraggable('system-message-dialog', '.dev-panel-header');
 
     this.panelStack = [];
@@ -141,7 +137,7 @@ export class UIManager {
     window.addEventListener('resize', () => {
       const draggablePanels = [
         'dev-panel', 'builder-panel', 'npc-manager-panel', 'npc-edit-modal',
-        'inventory-panel', 'trade-panel', 'power-editor-panel', 'player-modifier-panel',
+        'power-editor-panel', 'player-modifier-panel',
         'player-list-panel', 'game-chat-container', 'powerbar-container', 'buff-indicator-container',
         'builder-hotbar', 'object-library-panel',
         'player-manager-panel', 'player-modifier-modal', 'account-manager-modal'
@@ -190,11 +186,22 @@ export class UIManager {
     };
   }
 
+  formatGameText(text) {
+    if (!text) return '';
+    return text
+      // Highlight Commands (e.g. /editmode, /tpz <zoneName>)
+      .replace(/(\/[a-z_]+(?:\s<[^>]+>)?)/gi, '<span style="color: #e056fd; font-weight: bold;">$1</span>')
+      // Highlight Keybinds (e.g. 'M', 'N', Shift, Ctrl, Right-Click)
+      .replace(/(Shift|Ctrl|Left Click|Right-Click|ESC|'M'|'N'|'P'|'C'|'K')/gi, '<span style="color: #f1c40f; font-weight: bold;">$1</span>')
+      // Highlight specific game terms
+      .replace(/(Potato Mode|Blockbench|Bepis|Operius|Arcade Cabinet|Battery Charge|Energy|Solar Power)/gi, '<span style="color: #2ecc71; font-weight: bold;">$1</span>');
+  }
+
   showSystemMessage(text) {
     const dialog = document.getElementById('system-message-dialog');
     const msgText = document.getElementById('sys-msg-text');
     if (dialog && msgText) {
-      msgText.innerText = text;
+      msgText.innerHTML = this.formatGameText(text);
       dialog.style.display = 'flex';
       const idx = this.panelStack.indexOf(dialog);
       if (idx !== -1) { this.panelStack.splice(idx, 1); this.panelStack.push(dialog); }
@@ -255,16 +262,18 @@ export class UIManager {
         };
         note.changes.forEach(c => {
           const badgeColor = typeColors[c.type] || '#aaa';
+          const formattedText = this.formatGameText ? this.formatGameText(c.text) : c.text;
           html += `
             <li style="display: flex; gap: 10px; align-items: baseline;">
               <span style="color: ${badgeColor}; font-weight: bold; font-family: var(--font-mono); font-size: 0.85rem; text-transform: uppercase; width: 75px; flex-shrink: 0; text-align: right;">[${c.type}]</span>
-              <span style="color: #ccc; font-size: 0.95rem; line-height: 1.4;">${c.text}</span>
+              <span style="color: #ccc; font-size: 0.95rem; line-height: 1.4;">${formattedText}</span>
             </li>
           `;
         });
         html += `</ul>`;
       } else if (note.text) {
-        html += `<div style="color: #ccc; margin: 5px 0 15px 0; padding-left: 10px; font-size: 0.95rem;">${note.text}</div>`;
+        const formattedText = this.formatGameText ? this.formatGameText(note.text) : note.text;
+        html += `<div style="color: #ccc; margin: 5px 0 15px 0; padding-left: 10px; font-size: 0.95rem;">${formattedText}</div>`;
       }
 
       div.innerHTML = html;
@@ -288,7 +297,8 @@ export class UIManager {
 
     if (!modal || !content) return;
 
-    content.innerHTML = message.replace(/\n/g, '<br>');
+    const formattedMessage = this.formatGameText ? this.formatGameText(message.replace(/\n/g, '<br>')) : message.replace(/\n/g, '<br>');
+    content.innerHTML = formattedMessage;
     modal.style.display = 'flex';
 
     if (closeBtn) {
@@ -337,6 +347,7 @@ export class UIManager {
       { cmd: '/tpo, /teleport-other', syntax: '/tpo &lt;player&gt; &lt;x&gt; &lt;y&gt; [z]', desc: 'Teleports another player to the specified coordinates.', perm: 'tp', color: '#e74c3c' },
       { cmd: '/speed', syntax: '/speed &lt;value&gt;', desc: 'Sets your base movement speed.', perm: 'speed', color: '#e74c3c' },
       { cmd: '/announce', syntax: '/announce &lt;message&gt;', desc: 'Broadcasts a high-priority server-wide modal announcement.', perm: 'dev', color: '#e74c3c' },
+      { cmd: '/grant, /revoke', syntax: '/grant &lt;player&gt; &lt;perm&gt;', desc: 'Dynamically grant or revoke a global permission node.', perm: 'dev', color: '#e74c3c' },
       { cmd: '/reload, /forceupdate', syntax: '/reload', desc: 'Forces all clients and the server to reload assets and code.', perm: 'reload', color: '#e74c3c' }
     ];
 
@@ -344,6 +355,7 @@ export class UIManager {
 
     commands.forEach(c => {
       if (checkPerm(c.perm)) {
+        const formattedDesc = this.formatGameText ? this.formatGameText(c.desc) : c.desc;
         const el = document.createElement('div');
         el.style.cssText = `background: rgba(0,0,0,0.6); border: 1px solid ${c.color}; border-left: 4px solid ${c.color}; padding: 12px; border-radius: 4px; display: flex; flex-direction: column; gap: 5px;`;
         el.innerHTML = `
@@ -351,7 +363,7 @@ export class UIManager {
             <strong style="color: ${c.color}; font-family: var(--font-header); font-size: 1.2rem; letter-spacing: 1px;">${c.cmd}</strong>
             <span style="background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; color: #ccc; user-select: all;">${c.syntax}</span>
           </div>
-          <div style="font-family: var(--font-mono); font-size: 0.95rem; color: #e1e1e1; line-height: 1.4; margin-top: 4px;">${c.desc}</div>
+          <div style="font-family: var(--font-mono); font-size: 0.95rem; color: #e1e1e1; line-height: 1.4; margin-top: 4px;">${formattedDesc}</div>
         `;
         list.appendChild(el);
       }
@@ -380,10 +392,54 @@ export class UIManager {
     this.loadingScreen.innerHTML = `
       <h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1>
       <p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Building Geometry...</p>
-      <div style="background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; padding: 15px; border-radius: 6px; max-width: 600px; text-align: center;">
-        <span style="color: #f39c12; font-weight: bold;">TIP:</span> <span style="color: #fff;">${randomTip}</span>
+      <div style="background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; padding: 15px; border-radius: 6px; width: 600px; max-width: 90vw; text-align: center; min-height: 48px; display: flex; flex-direction: column; justify-content: center;">
+        <div><span style="color: #f39c12; font-weight: bold; margin-right: 5px;">TIP:</span> <span id="loading-tip-text" style="color: #fff; transition: opacity 0.5s; line-height: 1.4;">${this.formatGameText(randomTip)}</span></div>
       </div>
+      <button id="btn-potato-mode" style="position: absolute; bottom: 20px; right: 20px; background: rgba(5, 7, 10, 0.8); border: 1px solid var(--text-dim); color: var(--text-dim); padding: 8px 15px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 0.85rem; transition: all 0.3s; opacity: 0; pointer-events: none;">Taking too long to load? Try Potato Mode!</button>
     `;
+
+    const potatoBtn = document.getElementById('btn-potato-mode');
+    if (potatoBtn) {
+      potatoBtn.onmouseenter = () => {
+        potatoBtn.style.borderColor = '#f1c40f';
+        potatoBtn.style.color = '#f1c40f';
+      };
+      potatoBtn.onmouseleave = () => {
+        potatoBtn.style.borderColor = 'var(--text-dim)';
+        potatoBtn.style.color = 'var(--text-dim)';
+      };
+      potatoBtn.onclick = () => {
+        const saved = localStorage.getItem('b_client_settings');
+        const settings = saved ? JSON.parse(saved) : {};
+        Object.assign(settings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0 });
+        localStorage.setItem('b_client_settings', JSON.stringify(settings));
+        window.location.reload();
+      };
+
+      if (this.potatoTimeout) clearTimeout(this.potatoTimeout);
+      this.potatoTimeout = setTimeout(() => {
+        if (this.loadingScreen && this.loadingScreen.style.display !== 'none') {
+          potatoBtn.style.opacity = '1';
+          potatoBtn.style.pointerEvents = 'auto';
+        }
+      }, 10000);
+    }
+
+      // Cycle through tips every 6 seconds
+      if (this.tipInterval) clearInterval(this.tipInterval);
+      this.tipInterval = setInterval(() => {
+        const tipEl = document.getElementById('loading-tip-text');
+        if (tipEl) {
+          tipEl.style.opacity = '0'; // Trigger CSS transition
+          setTimeout(() => {
+            const newTip = GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
+            tipEl.innerHTML = this.formatGameText(newTip);
+            tipEl.style.opacity = '1';
+          }, 500); // Wait for the fade-out before swapping text
+        } else {
+          clearInterval(this.tipInterval);
+        }
+      }, 6000);
   }
 
   hideLoadingScreen() {
@@ -392,6 +448,10 @@ export class UIManager {
       const remaining = Math.max(0, 3000 - elapsed);
       setTimeout(() => {
         this.loadingScreen.style.display = 'none';
+            if (this.tipInterval) {
+              clearInterval(this.tipInterval);
+              this.tipInterval = null;
+            }
       }, remaining);
     }
   }
@@ -561,6 +621,53 @@ export class UIManager {
               this.engine.chat.addMessage('system', 'System', 'This NPC has nothing to say.');
             }
           }
+        }
+        document.getElementById('player-context-menu').style.display = 'none';
+      };
+    }
+    const btnArcadePlay = document.getElementById('ctx-btn-arcade-play');
+    if (btnArcadePlay) {
+      btnArcadePlay.onclick = () => {
+        if (this.engine.contextTarget && this.engine.contextTarget.type === 'arcade') {
+          const target = this.engine.contextTarget;
+          if (this.engine.arcadeSystem) {
+             this.engine.arcadeSystem.interact(target.x, target.y, target.z, target.voxel.dir, target.voxel.gameId);
+          }
+        }
+        document.getElementById('player-context-menu').style.display = 'none';
+      };
+    }
+    const btnArcadeEdit = document.getElementById('ctx-btn-arcade-edit');
+    if (btnArcadeEdit) {
+      btnArcadeEdit.onclick = () => {
+        if (this.engine.contextTarget && this.engine.contextTarget.type === 'arcade') {
+          const target = this.engine.contextTarget;
+          if (this.devTools) {
+             const dt = this.devTools;
+             dt.currentEditCabinet = { wx: target.x, wy: target.y, wz: target.z, voxel: target.voxel };
+             document.getElementById('edit-arcade-name').value = target.voxel.customName || '';
+             document.getElementById('edit-arcade-game').value = target.voxel.gameId || 'pixel';
+             document.getElementById('edit-arcade-power').value = target.voxel.powerState || 'on';
+             document.getElementById('edit-arcade-x').value = target.x;
+             document.getElementById('edit-arcade-y').value = target.y;
+             document.getElementById('edit-arcade-z').value = target.z;
+             document.getElementById('edit-arcade-zone').value = this.engine.currentZone || 'untitled';
+             dt.arcadeEditWindow.open();
+             document.getElementById('edit-arcade-highlight').checked = true;
+          }
+        }
+        document.getElementById('player-context-menu').style.display = 'none';
+      };
+    }
+    const btnArcadePower = document.getElementById('ctx-btn-arcade-power');
+    if (btnArcadePower) {
+      btnArcadePower.onclick = () => {
+        if (this.engine.contextTarget && this.engine.contextTarget.type === 'arcade') {
+          const target = this.engine.contextTarget;
+          const newPower = target.voxel.powerState === 'off' ? 'on' : 'off';
+          const updatedVoxel = { ...target.voxel, powerState: newPower };
+          this.engine.mapManager.setVoxelAt(target.x, target.y, target.z, updatedVoxel, true);
+          this.showSystemMessage(`Arcade cabinet powered ${newPower}.`);
         }
         document.getElementById('player-context-menu').style.display = 'none';
       };
@@ -798,8 +905,7 @@ export class UIManager {
       const dist = Math.hypot(eng.player.x - eng.activeTrainer.x, eng.player.y - eng.activeTrainer.y);
       if (dist > 150) {
         eng.activeTrainer = null;
-        const tModal = document.getElementById('trainer-dialog-modal');
-        if (tModal) tModal.style.display = 'none';
+        if (this.trainer && this.trainer.trainerWindow) this.trainer.trainerWindow.close();
       }
     }
   }

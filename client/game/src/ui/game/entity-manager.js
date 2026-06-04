@@ -1,6 +1,6 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { getBlockProps } from './blocks.js?v=new-engine-330';
-import { POWER_REGISTRY } from './registry.js?v=new-engine-330';
+import { getBlockProps } from './blocks.js?v=cache-bust-005';
+import { POWER_REGISTRY } from './registry.js?v=cache-bust-005';
 
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
 
@@ -340,6 +340,7 @@ export class EntityManager {
 
     if (screenDx !== 0 || screenDy !== 0) {
       player.moveTarget = null;
+      player.movePath = null;
 
       const camAngle = eng.renderer ? (eng.renderer.cameraAngle || 0) : 0;
       const totalRotation = -Math.PI / 4 + (camAngle * Math.PI / 180);
@@ -350,6 +351,36 @@ export class EntityManager {
 
       player.vx = nx * Math.cos(totalRotation) - ny * Math.sin(totalRotation);
       player.vy = nx * Math.sin(totalRotation) + ny * Math.cos(totalRotation);
+          } else if (player.movePath && player.movePath.length > 0) {
+      player.moveTarget.timer -= (dt / 1000);
+      if (player.moveTarget.timer <= 0) {
+        player.moveTarget = null;
+        player.movePath = null;
+      } else {
+        let currentTarget = player.movePath[0];
+        const distToWaypoint = Math.hypot(currentTarget.x - player.x, currentTarget.y - player.y);
+
+        if (distToWaypoint < 16) {
+          player.movePath.shift(); // Reached waypoint
+          if (player.movePath.length > 0) {
+            currentTarget = player.movePath[0];
+          }
+        }
+
+        if (player.movePath.length > 0) {
+          player.vx = currentTarget.x - player.x;
+          player.vy = currentTarget.y - player.y;
+          if (player.moveTarget.sprint) isPressingShift = true;
+
+          const tz = currentTarget.z !== undefined ? currentTarget.z : eng.getTerrainZ(currentTarget.x, currentTarget.y);
+          if (tz > (player.z || 0) + 8 && (player.vz || 0) <= 0 && player.actionTimer <= 0) {
+             isPressingSpace = true;
+          }
+
+        } else {
+          player.moveTarget = null;
+        }
+      }
     } else if (player.moveTarget) {
       player.moveTarget.timer -= (dt / 1000);
       if (player.moveTarget.timer <= 0) {

@@ -1,9 +1,10 @@
+import { TrainerWindow } from '../windows/trainer-windows.js?v=cache-bust-005';
+
 export class TrainerUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;
     this.ui = mainUIManager;
-
-    this.ui.makeDraggable('trainer-dialog-modal', '.dev-panel-header');
+    this.trainerWindow = new TrainerWindow();
   }
 
   openTrainerUI(npc) {
@@ -13,18 +14,11 @@ export class TrainerUIManager {
         return;
     }
     this.engine.activeTrainer = npc;
-    document.getElementById('trainer-dialog-name').innerText = npc.name;
-    const modal = document.getElementById('trainer-dialog-modal');
-    if (modal) modal.style.display = 'flex';
+    this.trainerWindow.setTrainerName(npc.name);
+    this.trainerWindow.open();
 
-    const btnCloseTrainer = document.getElementById('btn-close-trainer');
-    if (btnCloseTrainer) btnCloseTrainer.onclick = () => {
-        this.engine.activeTrainer = null;
-        if (modal) modal.style.display = 'none';
-    };
-
-    const viewDialog = modal ? modal.querySelector('#trainer-dialog-view') : document.getElementById('trainer-dialog-view');
-    const viewTraining = modal ? modal.querySelector('#trainer-training-view') : document.getElementById('trainer-training-view');
+    const viewDialog = document.getElementById('trainer-dialog-view');
+    const viewTraining = document.getElementById('trainer-training-view');
     if (viewDialog) viewDialog.style.display = 'block';
     if (viewTraining) viewTraining.style.display = 'none';
 
@@ -34,8 +28,10 @@ export class TrainerUIManager {
 
     if (viewDialog) {
         viewDialog.innerHTML = `
-            <p style="font-family: var(--font-mono); margin-bottom: 15px; color: #fff;">Hello, recruit. Ready to improve your skills?</p>
-            <div id="trainer-actions-container" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            <div style="padding: var(--spacing-2); color: var(--text-primary); font-size: 1.1rem; line-height: 1.5; font-family: var(--font-mono);" id="trainer-dialog-text">
+              "Hello, recruit. Ready to improve your skills?"
+            </div>
+            <div id="trainer-actions-container" style="display: flex; flex-direction: column; gap: var(--spacing-1); padding: var(--spacing-2); background: rgba(0,0,0,0.5); border-top: 1px solid var(--text-dim); margin: 0 calc(var(--spacing-2) * -1) calc(var(--spacing-2) * -1) calc(var(--spacing-2) * -1);"></div>
         `;
 
         const actionsBox = viewDialog.querySelector('#trainer-actions-container');
@@ -43,8 +39,8 @@ export class TrainerUIManager {
         const btnUnlock = document.createElement('button');
         btnUnlock.id = 'btn-trainer-unlock';
         btnUnlock.innerText = 'Select New Powerset';
-        btnUnlock.className = 'btn-primary';
-        btnUnlock.style.cssText = 'border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1); margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
+        btnUnlock.className = 'b-btn b-btn-success';
+        btnUnlock.style.cssText = 'width: 100%; text-align: left; display: block;';
 
         if (setPicksCount <= 0) {
             btnUnlock.disabled = true;
@@ -70,8 +66,8 @@ export class TrainerUIManager {
         const btnTrain = document.createElement('button');
         btnTrain.id = 'btn-trainer-train';
         btnTrain.innerText = 'Select New Abilities';
-        btnTrain.className = 'btn-secondary';
-        btnTrain.style.cssText = 'margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
+        btnTrain.className = 'b-btn';
+        btnTrain.style.cssText = 'width: 100%; text-align: left; display: block;';
 
         if (powerPicks <= 0) {
             btnTrain.disabled = true;
@@ -97,8 +93,8 @@ export class TrainerUIManager {
         const btnEnhance = document.createElement('button');
         btnEnhance.id = 'btn-trainer-enhance';
         btnEnhance.innerText = 'Select New Enhancement Slots';
-        btnEnhance.className = 'btn-secondary';
-        btnEnhance.style.cssText = 'margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
+        btnEnhance.className = 'b-btn';
+        btnEnhance.style.cssText = 'width: 100%; text-align: left; display: block;';
         btnEnhance.disabled = true;
         btnEnhance.style.opacity = '0.5';
         btnEnhance.style.cursor = 'not-allowed';
@@ -106,11 +102,11 @@ export class TrainerUIManager {
         const btnLeave = document.createElement('button');
         btnLeave.id = 'btn-trainer-leave';
         btnLeave.innerText = 'Leave (close)';
-        btnLeave.className = 'btn-secondary';
-        btnLeave.style.cssText = 'margin-top: 10px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-mono); display: block;';
+        btnLeave.className = 'b-btn';
+        btnLeave.style.cssText = 'width: 100%; text-align: left; display: block; color: var(--text-dim); border-color: var(--text-dim); font-family: var(--font-mono); letter-spacing: 0;';
         btnLeave.onclick = () => {
             this.engine.activeTrainer = null;
-            if (modal) modal.style.display = 'none';
+            this.trainerWindow.close();
         };
 
         actionsBox.appendChild(btnUnlock);
@@ -137,10 +133,10 @@ export class TrainerUIManager {
           <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">
             ${hasPicks ? 'Select a learned Powerset to train abilities:' : 'You have no unspent picks.'}
           </div>
-          <div style="display: flex; flex-direction: column; gap: 5px; max-height: 350px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px; padding-right: 5px;">
-             ${powersets.map((ps, i) => `<button class="btn-ps-select btn-secondary" data-index="${i}" style="text-align: left; padding: 10px;">${ps.toUpperCase()}</button>`).join('')}
+          <div style="display: flex; flex-direction: column; gap: var(--spacing-1); max-height: 350px; overflow-y: auto; margin-top: 5px; padding-right: 5px;">
+             ${powersets.map((ps, i) => `<button class="btn-ps-select b-btn" data-index="${i}" style="text-align: left;">${ps.toUpperCase()}</button>`).join('')}
           </div>
-          <button id="btn-training-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
+          <button id="btn-training-back" class="b-btn" style="margin-top: var(--spacing-1);">Back</button>
         `;
 
         document.getElementById('btn-training-back').onclick = () => {
@@ -172,9 +168,9 @@ export class TrainerUIManager {
            <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
         </div>
         <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Abilities in <strong style="color: var(--accent-neon);">${psName.toUpperCase()}</strong>:</div>
-        <div id="power-select-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 350px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px; padding-right: 5px;">
+        <div id="power-select-list" style="display: flex; flex-direction: column; gap: var(--spacing-1); max-height: 350px; overflow-y: auto; margin-top: 5px; padding-right: 5px;">
         </div>
-        <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
+        <button id="btn-power-back" class="b-btn" style="margin-top: var(--spacing-1);">Back</button>
       `;
         document.getElementById('btn-power-back').onclick = goBackCb;
 
@@ -214,9 +210,8 @@ export class TrainerUIManager {
           const isLocked = i >= 2 && psName !== 'inherited';
 
           const pButton = document.createElement('button');
-          pButton.className = `btn-secondary power-select-item ${alreadyLearned ? 'learned' : ''} ${isLocked ? 'locked' : ''}`;
+          pButton.className = `b-btn power-select-item ${alreadyLearned ? 'learned' : ''} ${isLocked ? 'locked' : ''}`;
           pButton.style.textAlign = 'left';
-          pButton.style.padding = '10px';
           pButton.innerHTML = `<span style="color: ${alreadyLearned ? '#aaa' : '#fff'};">${power.name}</span>`;
 
           if (alreadyLearned) {
@@ -281,9 +276,9 @@ export class TrainerUIManager {
              <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
       </div>
           <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Available Powersets ${pickType !== 'any' ? `(${pickType.toUpperCase()})` : ''}:</div>
-      <div id="powerset-unlock-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 350px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px; padding-right: 5px;">
+      <div id="powerset-unlock-list" style="display: flex; flex-direction: column; gap: var(--spacing-1); max-height: 350px; overflow-y: auto; margin-top: 5px; padding-right: 5px;">
       </div>
-      <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
+      <button id="btn-power-back" class="b-btn" style="margin-top: var(--spacing-1);">Back</button>
     `;
     document.getElementById('btn-power-back').onclick = goBackCb;
 
@@ -317,8 +312,8 @@ export class TrainerUIManager {
                 const isLocked = !meetsMin || !meetsMax;
 
                 const sButton = document.createElement('button');
-                sButton.className = 'btn-secondary';
-                sButton.style.cssText = 'text-align: left; padding: 10px; margin-left: 10px; width: calc(100% - 10px);';
+                sButton.className = 'b-btn';
+                sButton.style.cssText = 'text-align: left; margin-left: 10px; width: calc(100% - 10px);';
                 sButton.innerText = (set.name || set.id || 'Unnamed').toUpperCase();
 
                 if (isLocked) {

@@ -5,7 +5,7 @@ export class InGameMenuUIManager {
   }
 
   setupUI() {
-    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, enableShadows: true, softShadows: true, enableDayNightCycle: true, enableCameraShake: true, enableWeatherParticles: true, maxDynamicLights: 48, enableArcadeCRT: true, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
+    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, enableShadows: true, softShadows: true, enableDayNightCycle: true, enableCameraShake: true, enableWeatherParticles: true, maxDynamicLights: 48, enableArcadeCRT: true, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
     const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
 
@@ -205,6 +205,7 @@ export class InGameMenuUIManager {
           syncToggle('btn-toggle-minimap', 'showMinimap');
           syncToggle('btn-toggle-minimap-rotate', 'rotateMinimap');
           syncToggle('btn-toggle-click-move', 'clickToMove');
+          syncToggle('btn-toggle-click-move-path', 'showClickMovePath');
           syncToggle('btn-toggle-always-sprint', 'alwaysSprint');
           syncToggle('btn-toggle-player-names', 'showPlayerNames');
           syncToggle('btn-toggle-player-health', 'showPlayerHealth');
@@ -213,6 +214,7 @@ export class InGameMenuUIManager {
           syncToggle('btn-toggle-invert-cam-x', 'invertCameraX');
           syncToggle('btn-toggle-invert-cam-y', 'invertCameraY');
           syncToggle('btn-toggle-middle-mouse', 'middleMouseRotation');
+          syncToggle('btn-toggle-mute-arcade', 'muteArcadeSounds');
 
           if (document.getElementById('select-powerbar-orient')) document.getElementById('select-powerbar-orient').value = targetSettings.powerbarOrientation || 'horizontal';
           if (document.getElementById('select-combat-style')) document.getElementById('select-combat-style').value = targetSettings.combatStyle || 'hybrid';
@@ -418,6 +420,7 @@ export class InGameMenuUIManager {
       setupSettingToggle('row-toggle-power-raytrace', 'btn-toggle-power-raytrace', 'showPowerRaytrace');
       setupSettingToggle('row-toggle-day-night', 'btn-toggle-day-night', 'enableDayNightCycle');
       setupSettingToggle('row-toggle-shadows', 'btn-toggle-shadows', 'enableShadows');
+      setupSettingToggle('row-toggle-mute-arcade', 'btn-toggle-mute-arcade', 'muteArcadeSounds');
 
       // Fallback injection if the rows are missing from your HTML file
       const ensureSettingRow = (rowId, btnId, settingKey, labelText, insertAfterId) => {
@@ -445,6 +448,8 @@ export class InGameMenuUIManager {
       setupSettingToggle('row-toggle-minimap', 'btn-toggle-minimap', 'showMinimap');
       setupSettingToggle('row-toggle-minimap-rotate', 'btn-toggle-minimap-rotate', 'rotateMinimap');
       setupSettingToggle('row-toggle-click-move', 'btn-toggle-click-move', 'clickToMove');
+      setupSettingToggle('row-toggle-click-move-path', 'btn-toggle-click-move-path', 'showClickMovePath');
+      ensureSettingRow('row-toggle-click-move-path', 'btn-toggle-click-move-path', 'showClickMovePath', 'Show Click-to-Move Path', 'row-toggle-click-move');
       setupSettingToggle('row-toggle-always-sprint', 'btn-toggle-always-sprint', 'alwaysSprint');
 
       ensureSettingRow('row-toggle-merge-synth', 'btn-toggle-merge-synth', 'mergeSynthBar', 'Merge Synthetic Energy Bar', 'row-toggle-power-raytrace');

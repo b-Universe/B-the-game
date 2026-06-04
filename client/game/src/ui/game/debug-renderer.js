@@ -1,5 +1,5 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 
 export class DebugRenderer {
   constructor(renderer) {
@@ -133,6 +133,21 @@ export class DebugRenderer {
     this.renderer.tpRing.visible = false;
     this.renderer.scene.add(this.renderer.tpRing);
 
+    const clickMoveGeo = new THREE.RingGeometry(8, 12, 32);
+    const clickMoveMat = new THREE.MeshBasicMaterial({ color: 0x2ecc71, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+    this.renderer.clickMoveRing = new THREE.Mesh(clickMoveGeo, clickMoveMat);
+    this.renderer.clickMoveRing.add(new THREE.LineSegments(new THREE.EdgesGeometry(clickMoveGeo), new THREE.LineBasicMaterial({ color: 0x2ecc71, transparent: true, opacity: 0.9, depthTest: false })));
+    this.renderer.clickMoveRing.visible = false;
+    this.renderer.scene.add(this.renderer.clickMoveRing);
+
+    const pathLineMat = new THREE.LineBasicMaterial({ color: 0x2ecc71, transparent: true, opacity: 0.4, depthTest: false, linewidth: 2 });
+    const pathLineGeo = new THREE.BufferGeometry();
+    pathLineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(800 * 3), 3));
+    this.renderer.clickMovePathLine = new THREE.Line(pathLineGeo, pathLineMat);
+    this.renderer.clickMovePathLine.visible = false;
+    this.renderer.clickMovePathLine.renderOrder = 998;
+    this.renderer.scene.add(this.renderer.clickMovePathLine);
+
     const arcadeBoxGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(32.5, 32.5, 96.5));
     const arcadeBoxMat = new THREE.LineBasicMaterial({ color: 0xe056fd, depthTest: false, linewidth: 2 });
     this.renderer.arcadeHighlightBox = new THREE.LineSegments(arcadeBoxGeo, arcadeBoxMat);
@@ -200,14 +215,41 @@ export class DebugRenderer {
       this.renderer.targetRing.visible = false;
     }
 
+    let hoverCab = null;
+    if (eng.devOptions.showArcadeHover && !eng.editMode) {
+        if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
+            let bestDist = Infinity;
+            for (let dx = -32; dx <= 32; dx += 32) {
+                for (let dy = -32; dy <= 32; dy += 32) {
+                    for (let dz = 32; dz >= -96; dz -= 32) {
+                        let v = eng.mapManager.getVoxelAt(eng.cursorGridPos.x + dx, eng.cursorGridPos.y + dy, eng.cursorGridPos.z + dz);
+                        if (v && v.shape && v.shape.startsWith('arcade-box')) {
+                            const dist = Math.hypot(eng.mouseWorldPos.x - (eng.cursorGridPos.x + dx), eng.mouseWorldPos.y - (eng.cursorGridPos.y + dy));
+                            if (dist < bestDist) {
+                                bestDist = dist;
+                                hoverCab = { x: eng.cursorGridPos.x + dx, y: eng.cursorGridPos.y + dy, z: eng.cursorGridPos.z + dz };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Highlight Arcade Cabinet Editor Focus
     const devTools = eng.ui?.devTools;
+    let highlightVisible = false;
     if (devTools && devTools.currentEditCabinet && document.getElementById('arcade-edit-modal')?.style.display !== 'none' && document.getElementById('edit-arcade-highlight')?.checked) {
         const cab = devTools.currentEditCabinet;
         this.renderer.arcadeHighlightBox.position.set(cab.wx, cab.wy, cab.wz + 32); // Z-center of 3 block height offset
-        this.renderer.arcadeHighlightBox.visible = true;
-    } else if (this.renderer.arcadeHighlightBox) {
-        this.renderer.arcadeHighlightBox.visible = false;
+        highlightVisible = true;
+    } else if (hoverCab) {
+        this.renderer.arcadeHighlightBox.position.set(hoverCab.x, hoverCab.y, hoverCab.z + 32);
+        highlightVisible = true;
+    }
+
+    if (this.renderer.arcadeHighlightBox) {
+        this.renderer.arcadeHighlightBox.visible = highlightVisible;
     }
 
     if (eng.devOptions.showMelee) {
@@ -402,6 +444,23 @@ export class DebugRenderer {
       const zHeight = (ft.z || 0) + (ft.offsetY * 0.4);
       batcher.drawText(ft.text, ft.x + (ft.rndX || 0), ft.y + (ft.rndY || 0), zHeight, baseFontSize, ft.color, Math.max(0, ft.life));
     });
+
+    // Arcade Hover Text
+    if (eng.arcadeSystem && eng.arcadeSystem.nearestCabinet && !eng.arcadeSystem.isActive) {
+       const cab = eng.arcadeSystem.nearestCabinet;
+       if (cab.powerState !== 'off') {
+           const zFloat = 100 + (Math.sin(performance.now() / 200) * 5);
+           batcher.drawText('Press [T] to Play', cab.x, cab.y, cab.z + zFloat, 14, '#e056fd');
+           if (cab.customName) {
+               batcher.drawText(`"${cab.customName}"`, cab.x, cab.y, cab.z + zFloat + 18, 16, '#f1c40f');
+           }
+       }
+    }
+
+    // NPC Hover Text
+    if (eng.nearestTrainer && !eng.activeTrainer) {
+       batcher.drawText('Press [T] to Talk', eng.nearestTrainer.x, eng.nearestTrainer.y, (eng.nearestTrainer.z || 0) + 130 + (Math.sin(performance.now() / 200) * 5), 14, '#3498db');
+    }
   }
 
   update2DOverlay() {
@@ -653,9 +712,14 @@ export class DebugRenderer {
 
     if (this.renderer.previewCubeMesh) this.renderer.previewCubeMesh.count = 0;
     if (this.renderer.previewSlabMesh) this.renderer.previewSlabMesh.count = 0;
+    if (this.renderer.previewTopSlabMesh) this.renderer.previewTopSlabMesh.count = 0;
     if (this.renderer.previewRampMesh) this.renderer.previewRampMesh.count = 0;
+    if (this.renderer.previewHalfRampMesh) this.renderer.previewHalfRampMesh.count = 0;
+    if (this.renderer.previewTopHalfRampMesh) this.renderer.previewTopHalfRampMesh.count = 0;
     if (this.renderer.previewStairMesh) this.renderer.previewStairMesh.count = 0;
+    if (this.renderer.previewDecalMesh) this.renderer.previewDecalMesh.count = 0;
     if (this.renderer.previewFenceMesh) this.renderer.previewFenceMesh.count = 0;
+    if (this.renderer.previewDoorMesh) this.renderer.previewDoorMesh.count = 0;
     for (const id in this.renderer.assetManager.previewModelMeshes) this.renderer.assetManager.previewModelMeshes[id].count = 0;
 
     eng.cursorGridPos = null;
@@ -745,7 +809,7 @@ export class DebugRenderer {
       let targetZ = Math.round(hitPos.z / 32) * 32;
       eng.cursorGridPos = { x: targetX, y: targetY, z: targetZ, normal: normal.clone(), hitExisting: !!blockHit };
 
-      if (eng.isDraggingSelection && eng.selectionStart && eng.selectionEnd) {
+      if (eng.editMode && eng.isDraggingSelection && eng.selectionStart && eng.selectionEnd) {
         const minX = Math.min(eng.selectionStart.x, eng.selectionEnd.x);
         const maxX = Math.max(eng.selectionStart.x, eng.selectionEnd.x);
         const minY = Math.min(eng.selectionStart.y, eng.selectionEnd.y);
@@ -781,11 +845,14 @@ export class DebugRenderer {
         }
       }
 
-      if (eng.devOptions.showTile && !eng.devOptions.useBlockPreview) {
+      if (eng.editMode && eng.devOptions.showTile && !eng.devOptions.useBlockPreview) {
         const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-        if (clickedVoxel && (clickedVoxel.shape === 'slab' || clickedVoxel.shape === 'decal')) {
+        if (clickedVoxel && (clickedVoxel.shape === 'slab' || clickedVoxel.shape === 'decal' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('half_ramp')))) {
           this.renderer.highlightBox.scale.set(1, 1, 0.5);
           this.renderer.highlightBox.position.set(targetX, targetY, targetZ - 8);
+        } else if (clickedVoxel && (clickedVoxel.shape === 'top_slab' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('top_half_ramp')))) {
+          this.renderer.highlightBox.scale.set(1, 1, 0.5);
+          this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 8);
         } else if (clickedVoxel && clickedVoxel.shape && clickedVoxel.shape.startsWith('door')) {
           this.renderer.highlightBox.scale.set(1, 1, 2);
           this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 16);
@@ -797,7 +864,7 @@ export class DebugRenderer {
         this.renderer.highlightBox.visible = true;
       }
 
-      if (eng.devOptions.useBlockPreview) {
+      if (eng.editMode && eng.devOptions.useBlockPreview) {
         const activeSlot = document.querySelector('.hotbar-slot.active');
         const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
         const isDeleting = eng.input.keys['shift'] || tex === 'erase';
@@ -813,13 +880,16 @@ export class DebugRenderer {
            if (clickedVoxel && clickedVoxel.shape && clickedVoxel.shape.startsWith('door')) {
              this.renderer.highlightBox.scale.set(1, 1, 2);
              this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 16);
-           } else if (clickedVoxel && (clickedVoxel.shape === 'slab' || clickedVoxel.shape === 'decal')) {
-             this.renderer.highlightBox.scale.set(1, 1, 0.5);
-             this.renderer.highlightBox.position.set(targetX, targetY, targetZ - 8);
-           } else {
-             this.renderer.highlightBox.scale.set(1, 1, 1);
-             this.renderer.highlightBox.position.set(targetX, targetY, targetZ);
-           }
+               } else if (clickedVoxel && (clickedVoxel.shape === 'slab' || clickedVoxel.shape === 'decal' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('half_ramp')))) {
+                 this.renderer.highlightBox.scale.set(1, 1, 0.5);
+                 this.renderer.highlightBox.position.set(targetX, targetY, targetZ - 8);
+               } else if (clickedVoxel && (clickedVoxel.shape === 'top_slab' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('top_half_ramp')))) {
+                 this.renderer.highlightBox.scale.set(1, 1, 0.5);
+                 this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 8);
+               } else {
+                 this.renderer.highlightBox.scale.set(1, 1, 1);
+                 this.renderer.highlightBox.position.set(targetX, targetY, targetZ);
+               }
            this.renderer.highlightBox.material.color.setHex(0xff4757); // Red for delete
            this.renderer.highlightBox.visible = !eng.isDraggingSelection;
         } else {
@@ -844,8 +914,15 @@ export class DebugRenderer {
                tilesToPreview = [...eng.selectedTiles];
              } else {
                const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-               if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && clickedVoxel.tex === tex && clickedVoxel.color === colorHex) {
+               const texMatch = clickedVoxel && clickedVoxel.tex === tex && clickedVoxel.color === colorHex;
+               if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && placeShape === 'top_slab' && texMatch) {
                  placeShape = 'cube';
+               } else if (clickedVoxel && clickedVoxel.shape === 'top_slab' && normal.z === -1 && placeShape === 'slab' && texMatch) {
+                 placeShape = 'cube';
+               } else if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && placeShape.startsWith('top_half_ramp') && texMatch) {
+                 placeShape = placeShape.replace('top_half_ramp', 'ramp');
+               } else if (clickedVoxel && clickedVoxel.shape === 'top_slab' && normal.z === -1 && placeShape.startsWith('half_ramp') && texMatch) {
+                 placeShape = placeShape.replace('half_ramp', 'ramp');
                } else if (clickedVoxel && clickedVoxel.shape === 'decal' && normal.z === 1) {
                  // Do nothing, overwrite the decal on the exact same coordinate plane
                } else {
@@ -867,11 +944,22 @@ export class DebugRenderer {
              let doorRot = 0;
              let doorIsFlip = false;
              if (placeShape === 'slab') { currentMesh = this.renderer.previewSlabMesh; }
+             else if (placeShape === 'top_slab') { currentMesh = this.renderer.previewTopSlabMesh; }
              else if (placeShape.startsWith('ramp')) {
                currentMesh = this.renderer.previewRampMesh;
                if (placeShape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
                else if (placeShape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI);
                else if (placeShape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+             } else if (placeShape.startsWith('half_ramp')) {
+               currentMesh = this.renderer.previewHalfRampMesh;
+               if (placeShape === 'half_ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+               else if (placeShape === 'half_ramp_n') dummy.rotation.set(0, 0, Math.PI);
+               else if (placeShape === 'half_ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+             } else if (placeShape.startsWith('top_half_ramp')) {
+               currentMesh = this.renderer.previewTopHalfRampMesh;
+               if (placeShape === 'top_half_ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+               else if (placeShape === 'top_half_ramp_n') dummy.rotation.set(0, 0, Math.PI);
+               else if (placeShape === 'top_half_ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
              } else if (placeShape.startsWith('stair')) {
                currentMesh = this.renderer.previewStairMesh;
                if (placeShape === 'stair_e') dummy.rotation.set(0, 0, -Math.PI / 2);
@@ -1268,6 +1356,45 @@ export class DebugRenderer {
       }
     } else {
       if (this.renderer.tpRing) this.renderer.tpRing.visible = false;
+    }
+
+    if (eng.clientSettings.clickToMove && eng.player && eng.player.moveTarget && eng.player.moveTarget.timer > 0 && eng.clientSettings.showClickMovePath !== false) {
+      const cmZ = eng.getTerrainZ(eng.player.moveTarget.x, eng.player.moveTarget.y);
+      this.renderer.clickMoveRing.position.set(eng.player.moveTarget.x, eng.player.moveTarget.y, cmZ + 2);
+      this.renderer.clickMoveRing.scale.set(1.0 + Math.sin(performance.now() / 150) * 0.2, 1.0 + Math.sin(performance.now() / 150) * 0.2, 1);
+      this.renderer.clickMoveRing.visible = true;
+
+      if (eng.player.movePath && eng.player.movePath.length > 0) {
+        if (eng.player.movePath.hasHazard) {
+          this.renderer.clickMovePathLine.material.color.setHex(0xe67e22); // Orange
+        } else {
+          this.renderer.clickMovePathLine.material.color.setHex(0x2ecc71); // Green
+        }
+        const positions = this.renderer.clickMovePathLine.geometry.attributes.position.array;
+        let count = 0;
+
+        positions[count++] = eng.player.x;
+        positions[count++] = eng.player.y;
+        positions[count++] = (eng.player.z || 0) + 2;
+
+        for (let i = 0; i < eng.player.movePath.length; i++) {
+          const pt = eng.player.movePath[i];
+          positions[count++] = pt.x;
+          positions[count++] = pt.y;
+          positions[count++] = (pt.z !== undefined ? pt.z : eng.getTerrainZ(pt.x, pt.y)) + 2;
+          if (count >= 800 * 3) break;
+        }
+
+        this.renderer.clickMovePathLine.geometry.setDrawRange(0, count / 3);
+        this.renderer.clickMovePathLine.geometry.attributes.position.needsUpdate = true;
+        this.renderer.clickMovePathLine.visible = true;
+      } else if (this.renderer.clickMovePathLine) {
+        this.renderer.clickMovePathLine.visible = false;
+      }
+
+    } else {
+      if (this.renderer.clickMoveRing) this.renderer.clickMoveRing.visible = false;
+      if (this.renderer.clickMovePathLine) this.renderer.clickMovePathLine.visible = false;
     }
   }
 }

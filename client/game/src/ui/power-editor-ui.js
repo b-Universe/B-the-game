@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { POWER_REGISTRY } from './game/registry.js?v=new-engine-330';
+import { POWER_REGISTRY } from './game/registry.js?v=cache-bust-005';
+import { PowerEditorWindow } from './windows/power-windows.js?v=cache-bust-005';
 
 export class PowerEditorUIManager {
   constructor(engine) {
@@ -30,13 +31,13 @@ export class PowerEditorUIManager {
       events: []
     };
 
+    this.window = new PowerEditorWindow();
     this.setupUI();
   }
 
   setupUI() {
-    this.els.panel = document.getElementById('power-editor-panel');
+    this.els.panel = this.window.element;
     this.els.btnOpen = document.getElementById('btn-dev-power-editor');
-    this.els.btnClose = document.getElementById('btn-close-power-editor');
     this.els.rosterList = document.getElementById('pe-power-list');
     this.els.filterPowerset = document.getElementById('pe-filter-powerset');
     this.els.searchInput = document.getElementById('pe-search');
@@ -48,14 +49,8 @@ export class PowerEditorUIManager {
       this.els.btnOpen.style.borderColor = '#e056fd';
       this.els.btnOpen.style.color = '#e056fd';
       this.els.btnOpen.addEventListener('click', () => {
-        this.els.panel.style.display = 'block';
+        this.window.open();
         this.loadData();
-      });
-    }
-
-    if (this.els.btnClose) {
-      this.els.btnClose.addEventListener('click', () => {
-        this.els.panel.style.display = 'none';
       });
     }
 
@@ -464,7 +459,7 @@ export class PowerEditorUIManager {
       row.innerHTML = `
         <div class="pe-input-row" style="flex: 1; margin: 0;">
           <label style="font-size: 0.75rem;">Type</label>
-          <select class="pe-select effect-type" data-index="${index}">
+          <select class="b-select effect-type" data-index="${index}">
             <option value="Damage" ${effect.type === 'Damage' ? 'selected' : ''}>Damage</option>
             <option value="Heal" ${effect.type === 'Heal' ? 'selected' : ''}>Heal</option>
             <option value="DoT" ${effect.type === 'DoT' ? 'selected' : ''}>DoT</option>
@@ -477,21 +472,21 @@ export class PowerEditorUIManager {
         </div>
         <div class="pe-input-row" style="flex: 1; margin: 0;">
           <label style="font-size: 0.75rem;">Magnitude</label>
-          <input type="number" class="pe-text-input effect-mag" data-index="${index}" value="${effect.magnitude}">
+          <input type="number" class="b-input effect-mag" data-index="${index}" value="${effect.magnitude}">
         </div>
         <div class="pe-input-row" style="flex: 1; margin: 0;">
           <label style="font-size: 0.75rem;">Chance (%)</label>
-          <input type="number" class="pe-text-input effect-chance" data-index="${index}" min="0" max="100" value="${effect.chance}">
+          <input type="number" class="b-input effect-chance" data-index="${index}" min="0" max="100" value="${effect.chance}">
         </div>
         <div class="pe-input-row" style="flex: 1; margin: 0;">
           <label style="font-size: 0.75rem;">Dur (s)</label>
-          <input type="number" class="pe-text-input effect-dur" data-index="${index}" min="0" step="0.5" value="${effect.duration !== undefined ? effect.duration : 5}">
+          <input type="number" class="b-input effect-dur" data-index="${index}" min="0" step="0.5" value="${effect.duration !== undefined ? effect.duration : 5}">
         </div>
         <div class="pe-input-row" style="flex: 1; margin: 0;">
           <label style="font-size: 0.75rem;">Tick (s)</label>
-          <input type="number" class="pe-text-input effect-tick" data-index="${index}" min="0.1" step="0.1" value="${effect.tickRate !== undefined ? effect.tickRate : 1}">
+          <input type="number" class="b-input effect-tick" data-index="${index}" min="0.1" step="0.1" value="${effect.tickRate !== undefined ? effect.tickRate : 1}">
         </div>
-        <button class="btn-secondary btn-remove-effect" data-index="${index}" style="border-color: #e74c3c; color: #e74c3c; padding: 0 10px; height: 35px;">X</button>
+        <button class="b-btn b-btn-danger btn-remove-effect" data-index="${index}" style="padding: 0 10px; height: 35px;">X</button>
       `;
 
       this.els.effectsList.appendChild(row);
@@ -542,22 +537,22 @@ export class PowerEditorUIManager {
 
       row.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 2px;">
-          <button class="btn-secondary btn-move-up-sprite" data-index="${index}" style="padding: 2px 5px; font-size: 0.6rem; height: 16px;" title="Move Up">▲</button>
-          <button class="btn-secondary btn-move-down-sprite" data-index="${index}" style="padding: 2px 5px; font-size: 0.6rem; height: 16px;" title="Move Down">▼</button>
+          <button class="b-btn btn-move-up-sprite" data-index="${index}" style="padding: 2px 5px; font-size: 0.6rem; height: 16px;" title="Move Up">▲</button>
+          <button class="b-btn btn-move-down-sprite" data-index="${index}" style="padding: 2px 5px; font-size: 0.6rem; height: 16px;" title="Move Down">▼</button>
         </div>
         <div style="flex: 2; display: flex; flex-direction: column; gap: 5px;">
            <label style="font-size: 0.75rem; color: var(--accent);">Sequence</label>
-           <select class="pe-select sprite-event-select" data-index="${index}">${optionsHtml}</select>
+           <select class="b-select sprite-event-select" data-index="${index}">${optionsHtml}</select>
         </div>
         <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
            <label style="font-size: 0.75rem; color: var(--accent);">Height Offset</label>
-           <input type="number" class="pe-text-input sprite-event-offset" data-index="${index}" value="${event.offsetZ || 0}">
+           <input type="number" class="b-input sprite-event-offset" data-index="${index}" value="${event.offsetZ || 0}">
         </div>
         <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
            <label style="font-size: 0.75rem; color: var(--accent);">Delay (s)</label>
-           <input type="number" class="pe-text-input sprite-event-delay" data-index="${index}" min="0" step="0.1" value="${event.delay || 0}">
+           <input type="number" class="b-input sprite-event-delay" data-index="${index}" min="0" step="0.1" value="${event.delay || 0}">
         </div>
-        <button class="btn-secondary btn-remove-sprite-event" data-index="${index}" style="border-color: #e74c3c; color: #e74c3c; padding: 0 10px; height: 35px; margin-top: auto;">X</button>
+        <button class="b-btn b-btn-danger btn-remove-sprite-event" data-index="${index}" style="padding: 0 10px; height: 35px; margin-top: auto;">X</button>
       `;
       listEl.appendChild(row);
     });

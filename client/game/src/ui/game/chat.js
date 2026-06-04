@@ -1,5 +1,5 @@
-import { CHAT_CONFIG } from './chat-config.js?v=new-engine-330';
-import { CommandHandler } from './command-handler.js?v=new-engine-330';
+import { CHAT_CONFIG } from './chat-config.js?v=cache-bust-005';
+import { CommandHandler } from './command-handler.js?v=cache-bust-005';
 
 export class ChatManager {
   constructor(engine) {

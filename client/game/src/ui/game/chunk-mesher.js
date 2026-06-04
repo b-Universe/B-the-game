@@ -1,6 +1,6 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
-import { MeshCache } from './mesh-cache.js?v=new-engine-330';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
+import { MeshCache } from './mesh-cache.js?v=cache-bust-005';
 
 export class ChunkMesher {
   constructor(engine) {
@@ -13,7 +13,7 @@ export class ChunkMesher {
 
     if (this.useWorkers && typeof Worker !== 'undefined') {
         for (let i = 0; i < 2; i++) {
-            const worker = new Worker(new URL('./mesher.worker.js?v=new-engine-331', import.meta.url), { type: 'module' });
+            const worker = new Worker(new URL('./mesher.worker.js?v=cache-bust-005', import.meta.url), { type: 'module' });
             worker.onmessage = (e) => {
                 if (e.data.error) {
                     console.error("[ChunkMesher] Worker execution failed:", e.data.error);
@@ -588,11 +588,22 @@ export class ChunkMesher {
             let rot = 0;
 
             if (shape === 'slab') geo = renderer.blockGeometries.slab;
+            else if (shape === 'top_slab') geo = renderer.blockGeometries.top_slab;
             else if (shape.startsWith('ramp')) {
               geo = renderer.blockGeometries.ramp;
               if (shape === 'ramp_e') rot = -Math.PI / 2;
               else if (shape === 'ramp_n') rot = Math.PI;
               else if (shape === 'ramp_w') rot = Math.PI / 2;
+            } else if (shape.startsWith('half_ramp')) {
+              geo = renderer.blockGeometries.half_ramp;
+              if (shape === 'half_ramp_e') rot = -Math.PI / 2;
+              else if (shape === 'half_ramp_n') rot = Math.PI;
+              else if (shape === 'half_ramp_w') rot = Math.PI / 2;
+            } else if (shape.startsWith('top_half_ramp')) {
+              geo = renderer.blockGeometries.top_half_ramp;
+              if (shape === 'top_half_ramp_e') rot = -Math.PI / 2;
+              else if (shape === 'top_half_ramp_n') rot = Math.PI;
+              else if (shape === 'top_half_ramp_w') rot = Math.PI / 2;
             } else if (shape.startsWith('stair')) {
               geo = renderer.blockGeometries.stair;
               if (shape === 'stair_e') rot = -Math.PI / 2;
@@ -637,16 +648,19 @@ export class ChunkMesher {
             if (idxAttr) {
                 let cullMap = { '1,0,0': false, '-1,0,0': false, '0,1,0': false, '0,-1,0': false, '0,0,1': false, '0,0,-1': false };
 
-                if (shape === 'slab') {
+                if (shape === 'slab' || shape === 'top_slab' || shape.startsWith('half_ramp') || shape.startsWith('top_half_ramp')) {
                     const checkCull = (dx, dy, dz) => {
-                        if (dz === 1) return false;
+                        if ((shape === 'slab' || shape.startsWith('half_ramp')) && dz === 1) return false;
+                        if ((shape === 'top_slab' || shape.startsWith('top_half_ramp')) && dz === -1) return false;
+
                         const adjVoxel = getLocalVoxel(x + dx, y + dy, z + dz);
                         if (!adjVoxel) return false;
 
                         const adjShape = adjVoxel.shape || 'cube';
                         let physicallyTouches = false;
                         if (dz === -1 && adjShape === 'cube') physicallyTouches = true;
-                        else if (dz === 0 && (adjShape === 'cube' || adjShape === 'slab')) physicallyTouches = true;
+                        else if (dz === 1 && adjShape === 'cube') physicallyTouches = true;
+                        else if (dz === 0 && (adjShape === 'cube' || adjShape === 'slab' || adjShape === 'top_slab' || adjShape.includes('ramp'))) physicallyTouches = true;
 
                         if (physicallyTouches) {
                             const tex1 = voxel.tex || '';

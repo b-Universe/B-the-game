@@ -1,0 +1,86 @@
+#row-toggle-coords:hover, #row-toggle-fps:hover, #row-toggle-ping:hover, #row-toggle-baseplates:hover, #row-toggle-combat-chat:hover, #row-toggle-cam-jump:hover, #row-toggle-minimap:hover, #row-toggle-click-move:hover, #row-toggle-click-move-path:hover, #row-toggle-always-sprint:hover, #row-toggle-player-names:hover, #row-toggle-player-health:hover, #row-toggle-entity-names:hover, #row-toggle-entity-health:hover, #row-toggle-weather:hover, #row-toggle-day-night:hover, #row-toggle-shadows:hover, #row-toggle-mute-arcade:hover {
+  background: rgba(116, 185, 255, 0.2) !important;
+}
+
+.settings-group-box {
+  border: 2px solid #3498db;
+  border-radius: 6px;
+  padding: 0 15px;
+  margin: 15px 0;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  color: #ccc;
+}
+
+/* ==========================================================================
+   Settings Menu Layout & Responsive Rules
+   ========================================================================== */
+.settings-modal-content {
+  width: 800px;
+  height: auto;
+  min-height: 400px;
+  justify-content: flex-start;
+  gap: 20px;
+  position: relative;
+  background-image: none;
+}
+
+.settings-title {
+  font-family: var(--font-header);
+  color: var(--accent-neon);
+  margin-top: 0;
+  text-align: center;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 10px;
+  font-size: 2rem;
+}
+
+.settings-layout {
+  display: flex;
+  width: 100%;
+  min-height: 300px;
+}
+
+.settings-tabs {
+  width: 220px;
+  border-right: 2px solid var(--text-dim);
+  padding-right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-panels {
+  flex: 1;
+  padding-left: 20px;
+}
+
+/* --- Mobile Device Overrides --- */
+@media (max-width: 768px) {
+  .settings-modal-content { width: 90%; min-width: unset; padding: 20px; }
+  .settings-title { font-size: 1.25rem; }
+  .settings-layout { flex-direction: column; }
+  .settings-panels { padding-left: 0; }
+
+  .settings-tabs { width: 100%; border-right: none; border-bottom: 2px solid var(--text-dim); padding-right: 0; padding-bottom: 15px; margin-bottom: 10px; }
+  .settings-tabs .settings-tab-btn { text-align: center !important; }
+
+  .settings-group-box { padding: 0 10px; }
+  .settings-row { flex-direction: column; align-items: flex-start; gap: 10px; padding: 15px 0; }
+  .settings-row button { width: 100% !important; }
+}

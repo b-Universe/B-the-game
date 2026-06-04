@@ -9,5 +9,14 @@ export const GAME_TIPS = [
   "Toggle abilities like Flashlight use Battery Charge, which can be restored with Solar Power during the day.",
   "Drag and drop abilities from your Powers panel (P) to organize your hotbar.",
   "Passive abilities (blue) and Active Toggles (green) are displayed below your Energy bar.",
-  "You can merge the Battery Charge and Energy bars in the Settings menu under Powers & Combat."
+  "You can merge the Battery Charge and Energy bars in the Settings menu under Powers & Combat.",
+  "Taking too long to load? A 'Potato Mode' button will appear to help you load in faster!",
+  "Hold SHIFT while dragging in Edit Mode to instantly build vertical walls and pillars.",
+  "Hold CTRL while dragging in Edit Mode to build perfectly straight lines and snap fences together.",
+  "Right-Click while in Edit Mode to quickly delete blocks.",
+  "Press 'C' in Edit Mode to toggle Cutout transparency for windows and grates.",
+  "Press 'M' in Edit Mode to toggle Mesh UV mapping for precise Blockbench textures.",
+  "Did you know you can play fully networked arcade games like Bepis and Operius? Just interact with an Arcade Cabinet!",
+  "Type /tpz <zoneName> to instantly warp to a different dimension or zone.",
+  "Press 'K' or use the top right menu to open your Settings and tweak your Render Distance for better performance."
 ];

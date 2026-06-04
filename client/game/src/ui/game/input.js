@@ -1,6 +1,6 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
-import { InputRouter } from './input-router.js?v=new-engine-330';
+import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
+import { InputRouter } from './input-router.js?v=cache-bust-005';
 
 export class InputManager {
   constructor(engine) {
@@ -73,6 +73,7 @@ export class InputManager {
       eng.player.lastActionTime = Date.now();
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
+      this.keys['mouse' + e.button] = true;
 
       if (e.button === 1 && eng.clientSettings.middleMouseRotation !== false) {
         e.preventDefault();
@@ -242,7 +243,20 @@ export class InputManager {
                 const dirBtn = document.getElementById('build-dir-btn');
                 const relBtn = document.getElementById('build-rel-btn');
                 const flipBtn = document.getElementById('build-flip-btn');
-                if (shapeBtn) shapeBtn.innerText = 'Shape: ' + matchShape.toUpperCase();
+                if (shapeBtn) {
+                    if (shapeBtn.tagName === 'SELECT') {
+                        if (!Array.from(shapeBtn.options).some(o => o.value === matchShape)) {
+                            const opt = document.createElement('option');
+                            opt.value = matchShape;
+                            let disp = FURNITURE_REGISTRY[matchShape] ? FURNITURE_REGISTRY[matchShape].name : matchShape.replace(/_/g, ' ');
+                            opt.innerText = 'SHAPE: ' + disp.toUpperCase();
+                            shapeBtn.appendChild(opt);
+                        }
+                        shapeBtn.value = matchShape;
+                    } else {
+                        shapeBtn.innerText = 'Shape: ' + matchShape.toUpperCase();
+                    }
+                }
                 if (matchShape === 'door') {
                     if (dirBtn) dirBtn.style.display = 'block';
                     if (relBtn) relBtn.style.display = 'none';
@@ -363,12 +377,19 @@ export class InputManager {
           }
         } else if (!eng.mapOverlay || !eng.mapOverlay.active) {
           if ((this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) && eng.mouseWorldPos) {
-            // Use the pre-calculated world position from the renderer's raycast
+            eng.player.movePath = eng.physics.findPath(eng.player.x, eng.player.y, eng.player.z || 0, eng.mouseWorldPos.x, eng.mouseWorldPos.y);
             eng.player.moveTarget = { x: eng.mouseWorldPos.x, y: eng.mouseWorldPos.y, sprint: !!this.keys['shift'], timer: 15 };
+            eng.lastPathCalc = Date.now();
           }
         }
       } else if (e.button === 2) {
         e.preventDefault();
+
+        if (eng.clientSettings.clickToMove && this.keys['mouse0'] && !eng.editMode) {
+           this.keys[' '] = true;
+           setTimeout(() => { this.keys[' '] = false; }, 100);
+           return;
+        }
 
         const mapPos = eng.getMapWorldPosFromScreen(e.clientX, e.clientY);
         if (mapPos) {
@@ -395,12 +416,28 @@ export class InputManager {
         let rootX, rootY, rootZ;
 
         if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
-          rootX = eng.cursorGridPos.x;
-          rootY = eng.cursorGridPos.y;
-          rootZ = eng.cursorGridPos.z;
-          let v = eng.mapManager.getVoxelAt(rootX, rootY, rootZ);
-              if (v && v.shape && (v.shape.includes('door') || FURNITURE_REGISTRY[v.shape.replace('_open', '')])) {
-            clickedVoxel = v;
+          let bestDist = Infinity;
+          let bestRootX, bestRootY, bestRootZ;
+          for (let dx = -32; dx <= 32; dx += 32) {
+              for (let dy = -32; dy <= 32; dy += 32) {
+                  for (let dz = 32; dz >= -96; dz -= 32) {
+                      let tempX = eng.cursorGridPos.x + dx;
+                      let tempY = eng.cursorGridPos.y + dy;
+                      let tempZ = eng.cursorGridPos.z + dz;
+                      let v = eng.mapManager.getVoxelAt(tempX, tempY, tempZ);
+                      if (v && v.shape && (v.shape.includes('door') || v.shape.startsWith('arcade-box') || FURNITURE_REGISTRY[v.shape.replace('_open', '')])) {
+                        let dist = Math.hypot(eng.mouseWorldPos.x - tempX, eng.mouseWorldPos.y - tempY);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            clickedVoxel = v;
+                            bestRootX = tempX; bestRootY = tempY; bestRootZ = tempZ;
+                        }
+                      }
+                  }
+              }
+          }
+          if (clickedVoxel) {
+              rootX = bestRootX; rootY = bestRootY; rootZ = bestRootZ;
           }
         }
 
@@ -410,7 +447,7 @@ export class InputManager {
             for (let dy = -32; dy <= 32; dy += 32) {
               for (let dz = -96; dz <= 32; dz += 32) {
                 let v = eng.mapManager.getVoxelAt(rc.gx * 32 + dx, rc.gy * 32 + dy, rc.z * 32 + dz);
-                    if (v && v.shape && (v.shape.includes('door') || FURNITURE_REGISTRY[v.shape.replace('_open', '')])) {
+                if (v && v.shape && (v.shape.includes('door') || v.shape.startsWith('arcade-box') || FURNITURE_REGISTRY[v.shape.replace('_open', '')])) {
                   clickedVoxel = v;
                   rootX = rc.gx * 32 + dx; rootY = rc.gy * 32 + dy; rootZ = rc.z * 32 + dz;
                   break;
@@ -425,7 +462,9 @@ export class InputManager {
         if (clickedVoxel && !eng.editMode) {
           const dist = Math.hypot(eng.player.x - rootX, eng.player.y - rootY);
           if (dist <= 160) {
-            if (clickedVoxel.shape.includes('door')) {
+            if (clickedVoxel.shape && clickedVoxel.shape.startsWith('arcade-box')) {
+              clickedTarget = { type: 'arcade', x: rootX, y: rootY, z: rootZ, voxel: clickedVoxel };
+            } else if (clickedVoxel.shape.includes('door')) {
               let entityInWay = false;
               [...eng.npcs, ...Object.values(eng.otherPlayers), eng.player].forEach(ent => {
                 if (ent.state !== 'dead' && ent.state !== 'death') {
@@ -513,9 +552,24 @@ export class InputManager {
           if (ctxMenu) {
             const btnTrade = document.getElementById('ctx-btn-trade');
             const btnTalk = document.getElementById('ctx-btn-talk');
+            const btnPlay = document.getElementById('ctx-btn-arcade-play');
+            const btnEdit = document.getElementById('ctx-btn-arcade-edit');
+            const btnPower = document.getElementById('ctx-btn-arcade-power');
 
             if (btnTrade) btnTrade.style.display = clickedTarget.type === 'player' ? 'block' : 'none';
             if (btnTalk) btnTalk.style.display = clickedTarget.type === 'npc' ? 'block' : 'none';
+            if (btnPlay) btnPlay.style.display = clickedTarget.type === 'arcade' ? 'block' : 'none';
+
+            const pName = eng.playerData.name ? eng.playerData.name.toLowerCase() : '';
+            const isDev = eng.permissions?.dev?.includes('*') || eng.permissions?.dev?.includes(pName);
+
+            if (btnEdit) btnEdit.style.display = (clickedTarget.type === 'arcade' && isDev) ? 'block' : 'none';
+            if (btnPower) {
+                btnPower.style.display = (clickedTarget.type === 'arcade' && isDev) ? 'block' : 'none';
+                if (clickedTarget.type === 'arcade') {
+                    btnPower.innerText = clickedTarget.voxel.powerState === 'off' ? 'Enable Power' : 'Disable Power';
+                }
+            }
 
             ctxMenu.style.left = `${menuX}px`;
             ctxMenu.style.top = `${menuY}px`;
@@ -529,6 +583,17 @@ export class InputManager {
       eng.player.lastActionTime = Date.now();
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
+
+      if (eng.clientSettings.clickToMove && !eng.editMode && this.keys['mouse0'] && !eng.isDraggingMinimap && !this.isDraggingCamera && !eng.targetingPower) {
+         if (eng.mouseWorldPos) {
+            const now = Date.now();
+            if (!eng.lastPathCalc || now - eng.lastPathCalc > 250) {
+                eng.lastPathCalc = now;
+                eng.player.movePath = eng.physics.findPath(eng.player.x, eng.player.y, eng.player.z || 0, eng.mouseWorldPos.x, eng.mouseWorldPos.y);
+            }
+            eng.player.moveTarget = { x: eng.mouseWorldPos.x, y: eng.mouseWorldPos.y, sprint: !!this.keys['shift'], timer: 15 };
+         }
+      }
 
       if (eng.isDraggingMinimap) {
         eng.clientSettings.minimapX = e.clientX - eng.minimapDragOffset.x;
@@ -577,6 +642,8 @@ export class InputManager {
     };
 
     this.handleMouseUp = (e) => {
+      this.keys['mouse' + e.button] = false;
+
       if (e.button === 0 && eng.isDraggingSelection) {
         eng.isDraggingSelection = false;
         if (eng.selectedTiles && eng.selectedTiles.length > 0) {

@@ -1,4 +1,4 @@
-import { HERITAGE_MAP } from './heritage-data.js?v=new-engine-330';
+import { HERITAGE_MAP } from './heritage-data.js?v=cache-bust-005';
 
 export function initHeritageUI() {
   const classList = document.getElementById('class-list');
@@ -10,7 +10,7 @@ export function initHeritageUI() {
   const selectType = (type, classification) => {
     splashTitle.innerText = type.name;
     splashDesc.innerText = type.desc;
-    
+
     if (type.id === 'human') {
       splashImg.src = 'https://placehold.co/800x450/0b0e14/74b9ff?text=Human,+Cyborg,+And+Automaton';
     } else {

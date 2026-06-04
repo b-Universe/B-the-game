@@ -1,11 +1,13 @@
+import { InventoryWindow, TradeWindow } from '../windows/item-windows.js?v=cache-bust-005';
+
 export class InventoryUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;
     this.ui = mainUIManager;
     this.currentTrade = null;
 
-    this.ui.makeDraggable('inventory-panel', '.dev-panel-header');
-    this.ui.makeDraggable('trade-panel', '.dev-panel-header');
+    this.inventoryWindow = new InventoryWindow();
+    this.tradeWindow = new TradeWindow();
 
     this.setupInventory();
     this.setupTradeUI();
@@ -13,13 +15,15 @@ export class InventoryUIManager {
 
   setupInventory() {
     const btnInv = document.getElementById('btn-inventory');
-    const invPanel = document.getElementById('inventory-panel');
-    if (btnInv && invPanel) {
+    if (btnInv) {
       btnInv.onclick = () => {
-        invPanel.style.display = invPanel.style.display === 'none' ? 'flex' : 'none';
-        this.renderInventory();
+        if (this.inventoryWindow.element.style.display === 'none') {
+          this.inventoryWindow.open();
+          this.renderInventory();
+        } else {
+          this.inventoryWindow.close();
+        }
       };
-      document.getElementById('btn-close-inventory').onclick = () => invPanel.style.display = 'none';
     }
   }
 
@@ -29,7 +33,7 @@ export class InventoryUIManager {
     grid.innerHTML = '';
     this.engine.playerData.inventory = this.engine.playerData.inventory || [];
     const inv = this.engine.playerData.inventory;
-    
+
     for (let i = 0; i < 16; i++) {
       const slot = document.createElement('div');
       slot.className = 'inv-slot';
@@ -37,7 +41,7 @@ export class InventoryUIManager {
         slot.innerHTML = `<span>${inv[i].icon || '📦'}</span><span class="inv-qty">${inv[i].qty}</span>`;
         slot.draggable = true;
         slot.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'inventory', index: i }));
-        
+
         slot.onmouseenter = (e) => {
           const tooltip = document.getElementById('item-tooltip');
           if (tooltip) {
@@ -59,7 +63,7 @@ export class InventoryUIManager {
           if (tooltip) tooltip.style.display = 'none';
         };
       }
-      
+
       slot.ondragover = (e) => e.preventDefault();
       slot.ondrop = (e) => {
         e.preventDefault();
@@ -78,7 +82,7 @@ export class InventoryUIManager {
             this.engine.network.sendInventoryMove(data.index, i);
         }
       };
-      
+
       grid.appendChild(slot);
     }
 
@@ -87,8 +91,6 @@ export class InventoryUIManager {
   }
 
   setupTradeUI() {
-    const tradePanel = document.getElementById('trade-panel');
-    const btnCloseTrade = document.getElementById('btn-close-trade');
     const btnAcceptTrade = document.getElementById('btn-trade-accept');
 
     const tradeCurrencyInput = document.getElementById('trade-offer-currency');
@@ -101,21 +103,18 @@ export class InventoryUIManager {
       };
     }
 
-    if (tradePanel) {
-      if (btnCloseTrade) btnCloseTrade.onclick = () => this.closeTrade();
-      if (btnAcceptTrade) btnAcceptTrade.onclick = () => {
+    if (btnAcceptTrade) {
+      btnAcceptTrade.onclick = () => {
         btnAcceptTrade.innerText = "Accepted!";
         btnAcceptTrade.style.pointerEvents = 'none';
-        btnAcceptTrade.style.background = 'rgba(46, 204, 113, 0.2)';
-        btnAcceptTrade.style.borderColor = '#2ecc71';
-        btnAcceptTrade.style.color = '#2ecc71';
+        btnAcceptTrade.classList.remove('b-btn');
+        btnAcceptTrade.classList.add('b-btn-success');
       };
     }
   }
 
   closeTrade() {
-    const tradePanel = document.getElementById('trade-panel');
-    if (tradePanel) tradePanel.style.display = 'none';
+    this.tradeWindow.close();
 
     if (this.currentTrade) {
       const inv = this.engine.playerData.inventory || [];
@@ -144,14 +143,14 @@ export class InventoryUIManager {
 
     gridSelf.innerHTML = '';
     for (let i = 0; i < 9; i++) {
-      const slotS = document.createElement('div'); 
-      slotS.className = 'inv-slot'; 
+      const slotS = document.createElement('div');
+      slotS.className = 'inv-slot';
       const item = this.currentTrade.self[i];
       if (item) {
         slotS.innerHTML = `<span>${item.icon || '📦'}</span><span class="inv-qty">${item.qty}</span>`;
         slotS.draggable = true;
         slotS.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'trade', index: i }));
-        
+
         slotS.onmouseenter = (e) => {
           const tooltip = document.getElementById('item-tooltip');
           if (tooltip) {
@@ -195,8 +194,8 @@ export class InventoryUIManager {
 
     gridPartner.innerHTML = '';
     for (let i = 0; i < 9; i++) {
-      const slotP = document.createElement('div'); 
-      slotP.className = 'inv-slot'; 
+      const slotP = document.createElement('div');
+      slotP.className = 'inv-slot';
       const item = this.currentTrade.partner[i];
       if (item) {
         slotP.innerHTML = `<span>${item.icon || '📦'}</span><span class="inv-qty">${item.qty}</span>`;
@@ -206,29 +205,23 @@ export class InventoryUIManager {
   }
 
   openTrade(partnerName) {
-    const tradePanel = document.getElementById('trade-panel');
-    if (tradePanel) {
-      document.getElementById('trade-partner-name').innerText = partnerName;
-      tradePanel.style.display = 'flex';
-      
-      this.currentTrade = { self: new Array(9).fill(null), partner: new Array(9).fill(null) };
-      
-      const tradeCurrencyInput = document.getElementById('trade-offer-currency');
-      if (tradeCurrencyInput) tradeCurrencyInput.value = '0';
-      const tradePartnerCurrency = document.getElementById('trade-partner-currency');
-      if (tradePartnerCurrency) tradePartnerCurrency.innerText = '0';
+    this.tradeWindow.setPartnerName(partnerName);
+    this.tradeWindow.open();
 
-      const btnAcceptTrade = document.getElementById('btn-trade-accept');
-      if (btnAcceptTrade) {
-        btnAcceptTrade.innerText = "Accept Trade";
-        btnAcceptTrade.style.pointerEvents = 'auto';
-        btnAcceptTrade.className = 'btn-primary';
-        btnAcceptTrade.style.background = '';
-        btnAcceptTrade.style.borderColor = '';
-        btnAcceptTrade.style.color = '';
-      }
+    this.currentTrade = { self: new Array(9).fill(null), partner: new Array(9).fill(null) };
 
-      this.renderTradeGrids();
+    const tradeCurrencyInput = document.getElementById('trade-offer-currency');
+    if (tradeCurrencyInput) tradeCurrencyInput.value = '0';
+    const tradePartnerCurrency = document.getElementById('trade-partner-currency');
+    if (tradePartnerCurrency) tradePartnerCurrency.innerText = '0';
+
+    const btnAcceptTrade = document.getElementById('btn-trade-accept');
+    if (btnAcceptTrade) {
+      btnAcceptTrade.innerText = "Accept Trade";
+      btnAcceptTrade.style.pointerEvents = 'auto';
+      btnAcceptTrade.className = 'b-btn';
     }
+
+    this.renderTradeGrids();
   }
 }

@@ -908,12 +908,43 @@ export class CharacterCreatorUIManager {
             loader = document.createElement('div');
             loader.id = 'loading-screen';
             loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: monospace; pointer-events: auto;';
-            loader.innerHTML = '<h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1><p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Loading Engine...</p>';
+            loader.innerHTML = `
+              <h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1>
+              <p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Loading Engine...</p>
+              <button id="btn-potato-mode" style="position: absolute; bottom: 20px; right: 20px; background: rgba(5, 7, 10, 0.8); border: 1px solid var(--text-dim); color: var(--text-dim); padding: 8px 15px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 0.85rem; transition: all 0.3s; opacity: 0; pointer-events: none;">Taking too long to load? Try Potato Mode!</button>
+            `;
             const gameScreen = document.getElementById('game-screen');
             if (gameScreen) gameScreen.appendChild(loader);
             else document.body.appendChild(loader);
+
+            const potatoBtn = document.getElementById('btn-potato-mode');
+            if (potatoBtn) {
+              potatoBtn.onmouseenter = () => { potatoBtn.style.borderColor = '#f1c40f'; potatoBtn.style.color = '#f1c40f'; };
+              potatoBtn.onmouseleave = () => { potatoBtn.style.borderColor = 'var(--text-dim)'; potatoBtn.style.color = 'var(--text-dim)'; };
+              potatoBtn.onclick = () => {
+                const saved = localStorage.getItem('b_client_settings');
+                const settings = saved ? JSON.parse(saved) : {};
+                Object.assign(settings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0 });
+                localStorage.setItem('b_client_settings', JSON.stringify(settings));
+                window.location.reload();
+              };
+
+              if (this.potatoTimeout) clearTimeout(this.potatoTimeout);
+              this.potatoTimeout = setTimeout(() => {
+                if (loader && loader.style.display !== 'none') {
+                  potatoBtn.style.opacity = '1';
+                  potatoBtn.style.pointerEvents = 'auto';
+                }
+              }, 10000);
+            }
           } else {
             loader.style.display = 'flex';
+            const btn = document.getElementById('btn-potato-mode');
+            if (btn) {
+              btn.style.opacity = '0';
+              btn.style.pointerEvents = 'none';
+              setTimeout(() => { if (loader.style.display !== 'none') { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; } }, 10000);
+            }
           }
 
           import(`./game/engine.js?v=${Date.now()}`).then(module => {

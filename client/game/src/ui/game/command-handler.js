@@ -7,7 +7,7 @@ export class CommandHandler {
   handleTabComplete(val) {
     let matches = [];
     if (val.startsWith('/') && !val.includes(' ')) {
-      const cmds = ['/teleport', '/tp', '/tpo', '/teleport-other', '/teleport_zone', '/tpz', '/speed', '/stuck', '/editmode', '/reload', '/dev', '/npc', '/players', '/pm', '/time', '/patchnotes', '/news', '/announce', '/weather', '/afk', '/givemoney', '/level', '/integrity', '/save', '/load', '/applymap'];
+      const cmds = ['/teleport', '/tp', '/tpo', '/teleport-other', '/teleport_zone', '/tpz', '/speed', '/stuck', '/editmode', '/reload', '/dev', '/npc', '/players', '/pm', '/time', '/patchnotes', '/news', '/announce', '/weather', '/afk', '/givemoney', '/level', '/integrity', '/save', '/load', '/applymap', '/grant', '/revoke'];
       matches = cmds.filter(c => c.startsWith(val.toLowerCase()));
     } else if (val.toLowerCase().startsWith('/tp ') || val.toLowerCase().startsWith('/teleport ')) {
     } else if (val.toLowerCase().startsWith('/tpo ') || val.toLowerCase().startsWith('/teleport-other ') || val.toLowerCase().startsWith('/pm ') || val.toLowerCase().startsWith('/w ') || val.toLowerCase().startsWith('/whisper ')) {
@@ -169,6 +169,10 @@ export class CommandHandler {
           eng.ui.showSystemMessage('Auto-saved world changes on exiting edit mode.');
         }
       }
+
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.updateBuildingMode) {
+        eng.ui.devTools.updateBuildingMode();
+      }
     } else if (cmd === '/reload' || cmd === '/forceupdate') {
       // Handled by the 'force_refresh' network event
     } else if (cmd === '/dev') {
@@ -231,6 +235,12 @@ export class CommandHandler {
       if (isNaN(targetIntegrity) || targetIntegrity < -100 || targetIntegrity > 100) return eng.ui.showSystemMessage('Usage: /integrity <number between -100 and 100>');
       eng.network.socket.emit('dev_set_integrity', { integrity: targetIntegrity });
       eng.ui.showSystemMessage(`Setting Integrity to ${targetIntegrity}%...`);
+    } else if (cmd === '/grant' || cmd === '/revoke') {
+      if (!checkPerm('dev')) return eng.ui.showSystemMessage(`You do not have permission to use ${cmd}.`);
+      const targetName = args[1];
+      const permission = args[2];
+      if (!targetName || !permission) return eng.ui.showSystemMessage(`Usage: ${cmd} <player> <permission>`);
+      eng.network.socket.emit('admin_grant_permission', { targetName, permission, revoke: cmd === '/revoke' });
     } else if (cmd === '/save') {
       if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /save.');
       const filename = args[1] || eng.currentZone || 'untitled';

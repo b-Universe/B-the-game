@@ -1,0 +1,162 @@
+/* Global Scrollbar Override */
+::-webkit-scrollbar {
+  width: var(--spacing-1);
+  height: var(--spacing-1);
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: var(--border-radius);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-neon);
+}
+
+/* Base Window (Extends to all Manager/Editor panels) */
+.b-window {
+  position: absolute;
+  background: var(--bg-panel);
+  border: 2px solid var(--accent);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-window);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.b-window-header {
+  height: var(--spacing-4); /* 32px */
+  background: linear-gradient(90deg, rgba(155,89,182,0.8), rgba(52,152,219,0.8)); /* Neon-rainbow theme */
+  padding: 0 var(--spacing-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  user-select: none;
+  border-bottom: 2px solid var(--accent);
+}
+
+.b-window-title {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  text-shadow: var(--shadow-text);
+}
+
+.b-window-controls {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.b-window-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-weight: bold;
+  font-size: 1.2rem;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+
+.b-window-btn:hover {
+  color: var(--rainbow-yellow);
+}
+
+.b-window-body {
+  padding: var(--spacing-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1); /* Strict 8px spacing */
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* 8px Grid Input Groups */
+.b-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-1) / 2); /* 4px between label and input */
+  margin-bottom: var(--spacing-1);
+}
+
+.b-input-row {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.b-label {
+  font-family: var(--font-header);
+  color: var(--accent);
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+/* Standardized Inputs */
+.b-input, .b-select {
+  background: var(--bg-input);
+  border: 1px solid var(--text-dim);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-1);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.b-input:focus, .b-select:focus {
+  border-color: var(--accent-neon);
+}
+
+/* Standardized Buttons */
+.b-btn {
+  background: rgba(116, 185, 255, 0.1);
+  border: 1px solid var(--accent);
+  border-radius: var(--border-radius);
+  color: var(--accent-neon);
+  padding: var(--spacing-1) var(--spacing-2);
+  font-family: var(--font-header);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, border-color 0.2s;
+  letter-spacing: 1px;
+}
+
+.b-btn:hover {
+  background: rgba(116, 185, 255, 0.3);
+  border-color: var(--accent-neon);
+}
+
+.b-btn:active {
+  transform: scale(0.98);
+}
+
+/* Action variations */
+.b-btn-danger {
+  color: var(--rainbow-red);
+  border-color: var(--rainbow-red);
+  background: rgba(255, 71, 87, 0.1);
+}
+.b-btn-danger:hover {
+  border-color: #ff6b81;
+  background: rgba(255, 71, 87, 0.3);
+}
+
+.b-btn-success {
+  color: var(--rainbow-green);
+  border-color: var(--rainbow-green);
+  background: rgba(46, 204, 113, 0.1);
+}
+.b-btn-success:hover {
+  border-color: #27ae60;
+  background: rgba(46, 204, 113, 0.3);
+}

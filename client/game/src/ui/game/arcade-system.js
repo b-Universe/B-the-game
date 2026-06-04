@@ -1,13 +1,14 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-331';
-import { PixelVM } from './arcade-games/pixel.js?v=new-engine-331';
-import { BonkVM } from './arcade-games/pong.js?v=new-engine-331';
-import { InvadersVM } from './arcade-games/invaders.js?v=new-engine-331';
-import { BmanVM } from './arcade-games/b-man.js?v=new-engine-331';
-import { FlappyBeeVM } from './arcade-games/flappy-bee.js?v=new-engine-331';
-import { PixelCrossVM } from './arcade-games/pixel-cross.js?v=new-engine-331';
-import { BepisVM } from './arcade-games/bepis.js?v=new-engine-331';
-import { OperiusVM } from './arcade-games/operius.js?v=new-engine-332';
+import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
+import { PixelVM } from './arcade-games/pixel.js?v=cache-bust-005';
+import { BonkVM } from './arcade-games/pong.js?v=cache-bust-005';
+import { InvadersVM } from './arcade-games/invaders.js?v=cache-bust-005';
+import { BmanVM } from './arcade-games/b-man.js?v=cache-bust-005';
+import { FlappyBeeVM } from './arcade-games/flappy-bee.js?v=cache-bust-005';
+import { PixelCrossVM } from './arcade-games/pixel-cross.js?v=cache-bust-005';
+import { BepisVM } from './arcade-games/bepis.js?v=cache-bust-005';
+import { OperiusVM } from './arcade-games/operius.js?v=cache-bust-005';
+import { NumberMunchersVM } from './arcade-games/number-munchers.js?v=cache-bust-005';
 
 export class CameraManager {
     constructor(engine) {
@@ -141,6 +142,8 @@ export class ArcadeAudio {
     }
 
     playTone(type, startFreq, endFreq, duration, vol = 0.1) {
+
+      if (this.engine && this.engine.clientSettings && this.engine.clientSettings.muteArcadeSounds) return;
         this.init();
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
@@ -162,7 +165,14 @@ export class ArcadeAudio {
     explosion() { this.playTone('sawtooth', 100, 10, 0.3, 0.1); }
     shoot() { this.playTone('square', 600, 200, 0.1, 0.05); }
     blip(high) { this.playTone('square', high ? 400 : 200, high ? 400 : 200, 0.1, 0.05); }
-    death() { if (this.engine) { this.engine.playSound('assets/audio/sfx/death.wav', 0.5); } else { this.explosion(); } }
+    levelClear() {
+        if (this.engine && this.engine.clientSettings && this.engine.clientSettings.muteArcadeSounds) return;
+        this.playTone('square', 440, 440, 0.1, 0.05); // Da
+        setTimeout(() => this.playTone('square', 440, 440, 0.1, 0.05), 120); // da
+        setTimeout(() => this.playTone('square', 440, 440, 0.1, 0.05), 240); // da
+        setTimeout(() => this.playTone('square', 587.33, 587.33, 0.4, 0.05), 360); // DAA!
+    }
+    death() { if (this.engine && this.engine.clientSettings && this.engine.clientSettings.muteArcadeSounds) return; if (this.engine) { this.engine.playSound('assets/audio/sfx/death.wav', 0.5); } else { this.explosion(); } }
 }
 
 export class ArcadeVMFactory {
@@ -175,6 +185,7 @@ export class ArcadeVMFactory {
             case 'pixel-cross': return new PixelCrossVM(virtualScreen, audio, engine);
             case 'bepis': return new BepisVM(virtualScreen, audio, engine);
             case 'operius': return new OperiusVM(virtualScreen, audio, engine);
+            case 'number-munchers': return new NumberMunchersVM(virtualScreen, audio, engine);
             case 'pixel': default: return new PixelVM(virtualScreen, audio, engine);
         }
     }
@@ -190,6 +201,7 @@ export class ArcadeSystem {
         this.originalBg = null;
         this.bgPos = null;
         this.isActive = false;
+        this.nearestCabinet = null;
 
         this.overlayCanvas = document.createElement('canvas');
         this.overlayCanvas.width = 512;
@@ -222,7 +234,7 @@ export class ArcadeSystem {
                         const dist = Math.hypot(vx - px, vy - py);
                         if (dist < minDist) {
                             minDist = dist;
-                            nearest = { x: vx, y: vy, z: vz, dir: voxel.dir, gameId: voxel.gameId || 'pixel' };
+                            nearest = { x: vx, y: vy, z: vz, dir: voxel.dir, gameId: voxel.gameId || 'pixel', powerState: voxel.powerState || 'on', customName: voxel.customName };
                         }
                     }
                 }
@@ -246,15 +258,8 @@ export class ArcadeSystem {
         this.vm = ArcadeVMFactory.create(gameId, this.virtualScreen, this.audio, this.engine);
         this.vm.start();
 
-        const assetManager = this.engine.renderer.assetManager;
-        const atlasPos = assetManager.atlasMap['arcade-box-1'];
-        if (atlasPos && assetManager.atlasCtx) {
-            const furn = FURNITURE_REGISTRY['arcade-box-1'];
-            const suvs = furn && furn.screenUVs ? furn.screenUVs : { x: 8, y: 8, w: 48, h: 48 };
-            const destX = atlasPos.x * 64 + suvs.x;
-            const destY = atlasPos.y * 64 + suvs.y;
-            this.originalBg = assetManager.atlasCtx.getImageData(destX, destY, suvs.w, suvs.h);
-            this.bgPos = { x: destX, y: destY };
+        if (this.engine.renderer.createArcadeScreen) {
+            this.physicalScreen = this.engine.renderer.createArcadeScreen(x, y, z, dir, this.virtualScreen.canvas);
         }
     }
 
@@ -265,16 +270,21 @@ export class ArcadeSystem {
         if (this.vm) this.vm.stop();
         this.overlayCanvas.style.display = 'none';
 
-        const assetManager = this.engine.renderer.assetManager;
-        if (this.originalBg && assetManager.atlasCtx) {
-            assetManager.atlasCtx.putImageData(this.originalBg, this.bgPos.x, this.bgPos.y);
-            assetManager.atlasTexture.needsUpdate = true;
-            this.originalBg = null;
+        if (this.physicalScreen) {
+            this.engine.renderer.scene.remove(this.physicalScreen.group);
+            this.physicalScreen = null;
         }
     }
 
     update(dt) {
         this.cameraManager.update(dt);
+
+        if (!this.isActive) {
+            this.nearestCabinet = this.findNearestCabinet();
+        } else {
+            this.nearestCabinet = null;
+        }
+
         if (this.vm && this.vm.isRunning) {
             try {
                 this.vm.update(dt / 1000);
@@ -298,23 +308,16 @@ export class ArcadeSystem {
                     this.overlayCtx.fillText(showQ ? '[ESC] LEAVE  [Q] MENU' : '[ESC] LEAVE', 10, 512 - 8);
                     this.overlayCtx.textAlign = 'right';
                     this.overlayCtx.fillText(`[C] CRT: ${this.engine.clientSettings.enableArcadeCRT !== false ? 'ON' : 'OFF'}`, 512 - 10, 512 - 8);
+
+                    if (this.physicalScreen) {
+                        this.physicalScreen.group.visible = false;
+                    }
                 } else {
                     this.overlayCanvas.style.display = 'none';
 
-                    // Throttle the 3D texture update to ~20fps to save massive GPU bandwidth!
-                    this.atlasUpdateTimer = (this.atlasUpdateTimer || 0) + dt;
-                    if (this.atlasUpdateTimer >= 50) {
-                        this.atlasUpdateTimer = 0;
-                        const assetManager = this.engine.renderer.assetManager;
-                        const atlasPos = assetManager.atlasMap['arcade-box-1'];
-                        if (atlasPos && assetManager.atlasCtx) {
-                            const furn = FURNITURE_REGISTRY['arcade-box-1'];
-                            const suvs = furn && furn.screenUVs ? furn.screenUVs : { x: 8, y: 8, w: 48, h: 48 };
-                            const destX = atlasPos.x * 64 + suvs.x;
-                            const destY = atlasPos.y * 64 + suvs.y;
-                            assetManager.atlasCtx.drawImage(this.virtualScreen.canvas, destX, destY, suvs.w, suvs.h);
-                            assetManager.atlasTexture.needsUpdate = true;
-                        }
+                    if (this.physicalScreen) {
+                        this.physicalScreen.group.visible = true;
+                        this.physicalScreen.texture.needsUpdate = true;
                     }
                 }
             } catch (err) {

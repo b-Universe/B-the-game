@@ -1,4 +1,8 @@
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
+import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
+import { NPCManagerWindow, NPCEditWindow } from '../windows/npc-windows.js?v=cache-bust-005';
+import { PlayerManagerWindow } from '../windows/player-windows.js?v=cache-bust-005';
+import { ZoneManagerWindow } from '../windows/zone-windows.js?v=cache-bust-005';
+import { ArcadeManagerWindow, ArcadeEditWindow } from '../windows/arcade-windows.js?v=cache-bust-005';
 const HUD_BTN_STYLE = 'width: auto; height: 45px; padding: 0 10px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
 const DEV_BTN_STYLE = 'width: 100%; margin-top: 5px;';
 const HEADER_STYLE = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; margin-bottom: 10px;';
@@ -12,7 +16,6 @@ const SHAPE_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(
 const DIR_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #f39c12; color: #f39c12; display: none; min-width: 40px;';
 const REL_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #9b59b6; color: #9b59b6; display: none; min-width: 40px;';
 const FLUID_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #3498db; color: #3498db; display: none; width: 100%;';
-const PLAYER_PANEL_STYLE = 'position: absolute; top: 150px; left: 50px; display: none; width: 800px; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; flex-direction: column; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
 const PLAYER_ROW_STYLE = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
 
 export class DevToolsUIManager {
@@ -21,10 +24,15 @@ export class DevToolsUIManager {
     this.engine.buildColor = '#ffffff';
     this.ui = mainUIManager;
 
+    this.npcManagerWindow = new NPCManagerWindow();
+    this.npcEditWindow = new NPCEditWindow();
+    this.playerManagerWindow = new PlayerManagerWindow();
+    this.zoneManagerWindow = new ZoneManagerWindow();
+    this.arcadeManagerWindow = new ArcadeManagerWindow();
+    this.arcadeEditWindow = new ArcadeEditWindow();
+
     this.ui.makeDraggable('dev-panel', '.dev-panel-header');
     this.ui.makeDraggable('builder-panel', '.dev-panel-header');
-    this.ui.makeDraggable('npc-manager-panel', '.dev-panel-header');
-    this.ui.makeDraggable('npc-edit-modal', '.dev-panel-header');
 
     this.setupDevTools();
     this.setupBuilderTools();
@@ -33,7 +41,6 @@ export class DevToolsUIManager {
     this.setupPlayerManager();
     this.setupZoneManager();
     this.setupArcadeManager();
-    this.setupArcadeEditModal();
     this.updateBuildingMode();
   }
 
@@ -67,10 +74,11 @@ export class DevToolsUIManager {
     };
 
     createBtn('btn-hud-npc', 'NPC', 'NPC Manager', () => {
-      const npcPanel = document.getElementById('npc-manager-panel');
-      if (npcPanel) {
-        npcPanel.style.display = npcPanel.style.display === 'none' ? 'flex' : 'none';
-        if (npcPanel.style.display === 'flex') this.renderNpcManager();
+      if (this.npcManagerWindow.element.style.display === 'none') {
+        this.npcManagerWindow.open();
+        this.renderNpcManager();
+      } else {
+        this.npcManagerWindow.close();
       }
     });
     createBtn('btn-hud-dev', '/dev', 'Toggle Dev Tools', () => this.engine.chat.commandHandler.processCommand('/dev'));
@@ -118,6 +126,7 @@ export class DevToolsUIManager {
       setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f', 'Dist: Player to NPC');
       setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757', 'Toggle Melee Range');
       setupDevBtn('btn-dev-los', 'showLoS', '#f1c40f', 'Toggle Line of Sight');
+      setupDevBtn('btn-dev-arcade-hover', 'showArcadeHover', '#e056fd', 'Toggle Arcade Hover');
 
       const btnLos = document.getElementById('btn-dev-los');
       if (btnLos && !document.getElementById('btn-dev-los-edit')) {
@@ -196,24 +205,20 @@ export class DevToolsUIManager {
               document.getElementById('edit-npc-type').value = npc.type || 'idle';
               document.getElementById('edit-npc-dir').value = npc.dir || 'down';
 
-              document.getElementById('npc-edit-modal').style.display = 'flex';
+              this.npcEditWindow.open();
             }
           }
         };
       }
 
       const btnNpcManager = document.getElementById('btn-dev-npc-manager');
-      const npcPanel = document.getElementById('npc-manager-panel');
-      if (btnNpcManager && npcPanel) {
+      if (btnNpcManager) {
         btnNpcManager.style.borderColor = '#e056fd';
         btnNpcManager.style.color = '#e056fd';
         btnNpcManager.onclick = () => {
-          npcPanel.style.display = 'flex';
+          this.npcManagerWindow.open();
           this.renderNpcManager();
         };
-        document.getElementById('btn-close-npc-manager').onclick = () => npcPanel.style.display = 'none';
-
-        document.getElementById('btn-close-npc-edit').onclick = () => document.getElementById('npc-edit-modal').style.display = 'none';
 
         document.getElementById('btn-edit-npc-tp-me').onclick = () => {
           document.getElementById('edit-npc-x').value = Math.round(eng.player.x);
@@ -248,22 +253,22 @@ export class DevToolsUIManager {
           document.getElementById(id).addEventListener('change', emitNpcUpdate);
         });
 
-        document.getElementById('btn-save-npc-edit').onclick = () => document.getElementById('npc-edit-modal').style.display = 'none';
+        document.getElementById('btn-save-npc-edit').onclick = () => this.npcEditWindow.close();
 
         eng.socket.on('npc_deleted', (uuid) => {
           const idx = eng.npcs.findIndex(n => n.uuid === uuid);
           if (idx !== -1) eng.npcs.splice(idx, 1);
-          if (npcPanel.style.display === 'flex') this.renderNpcManager();
+          if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
         });
         eng.socket.on('npc_spawned', () => {
-          if (npcPanel.style.display === 'flex') this.renderNpcManager();
+          if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
         });
         eng.socket.on('npc_updated', (updatedNpc) => {
           const idx = eng.npcs.findIndex(n => n.uuid === updatedNpc.uuid);
           if (idx !== -1) {
             Object.assign(eng.npcs[idx], updatedNpc);
           }
-          if (npcPanel.style.display === 'flex') this.renderNpcManager();
+          if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
         });
       }
 
@@ -326,15 +331,24 @@ export class DevToolsUIManager {
         btnZoneManager.innerText = 'Zone Manager';
         btnZoneManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
         btnZoneManager.onclick = () => {
-           const zPanel = document.getElementById('zone-manager-panel');
-           if (zPanel) {
-              zPanel.style.display = zPanel.style.display === 'none' ? 'flex' : 'none';
-              if (zPanel.style.display === 'flex') this.renderZoneManager();
+           if (this.zoneManagerWindow.element.style.display === 'none') {
+              this.zoneManagerWindow.open();
+              this.renderZoneManager();
+           } else {
+              this.zoneManagerWindow.close();
            }
         };
       } else if (btnZoneManager) {
         btnZoneManager.style.borderColor = '#e056fd';
         btnZoneManager.style.color = '#e056fd';
+        btnZoneManager.onclick = () => {
+           if (this.zoneManagerWindow.element.style.display === 'none') {
+              this.zoneManagerWindow.open();
+              this.renderZoneManager();
+           } else {
+              this.zoneManagerWindow.close();
+           }
+        };
       }
 
       let btnArcadeManager = document.getElementById('btn-dev-arcade-manager');
@@ -344,11 +358,16 @@ export class DevToolsUIManager {
         btnArcadeManager.className = 'btn-secondary';
         btnArcadeManager.innerText = 'Arcade Manager';
         btnArcadeManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
+      }
+      if (btnArcadeManager) {
+        btnArcadeManager.style.borderColor = '#e056fd';
+        btnArcadeManager.style.color = '#e056fd';
         btnArcadeManager.onclick = () => {
-           const aPanel = document.getElementById('arcade-manager-panel');
-           if (aPanel) {
-              aPanel.style.display = aPanel.style.display === 'none' ? 'flex' : 'none';
-              if (aPanel.style.display === 'flex') this.renderArcadeManager();
+           if (this.arcadeManagerWindow.element.style.display === 'none') {
+              this.arcadeManagerWindow.open();
+              this.renderArcadeManager();
+           } else {
+              this.arcadeManagerWindow.close();
            }
         };
       }
@@ -361,6 +380,10 @@ export class DevToolsUIManager {
         if (btnArcadeManager) mgmtGroup.appendChild(btnArcadeManager);
         if (btnEditTarget) mgmtGroup.appendChild(btnEditTarget);
         if (btnEditMode) mgmtGroup.appendChild(btnEditMode);
+        const btnArcadeHover = document.getElementById('btn-dev-arcade-hover');
+        if (btnArcadeHover) {
+            mgmtGroup.appendChild(btnArcadeHover);
+        }
       }
 
       const orderList = [
@@ -424,36 +447,6 @@ export class DevToolsUIManager {
 
   setupZoneManager() {
     const eng = this.engine;
-    let panel = document.getElementById('zone-manager-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'zone-manager-panel';
-      panel.className = 'dev-panel';
-      panel.style.cssText = 'position: absolute; top: 120px; left: 120px; width: 350px; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
-
-      panel.innerHTML = `
-        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
-          <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Zone Manager</span>
-          <button id="btn-close-zone-manager" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
-        </div>
-        <div style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
-          <div>
-            <label style="color: #ccc; font-size: 0.8rem; margin-bottom: 5px; display: block;">Create New Zone</label>
-            <div style="display: flex; gap: 5px;">
-              <input type="text" id="zm-new-zone-input" placeholder="e.g., sewers" style="flex: 1; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px;">
-              <button id="btn-zm-create" class="btn-primary" style="padding: 5px 10px;">Create</button>
-            </div>
-          </div>
-          <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-            <label style="color: #ccc; font-size: 0.8rem; margin-bottom: 5px; display: block;">Available Zones</label>
-            <div id="zone-manager-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 250px; overflow-y: auto;">
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(panel);
-      document.getElementById('btn-close-zone-manager').onclick = () => panel.style.display = 'none';
-
       document.getElementById('btn-zm-create').onclick = async () => {
         const input = document.getElementById('zm-new-zone-input');
         const newZone = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -475,9 +468,6 @@ export class DevToolsUIManager {
           console.error(e);
         }
       };
-
-      this.ui.makeDraggable('zone-manager-panel', '.dev-panel-header');
-    }
   }
 
   async renderZoneManager() {
@@ -502,12 +492,12 @@ export class DevToolsUIManager {
 
           row.innerHTML = `
             <span style="color: ${isActive ? '#2ecc71' : '#fff'}; font-weight: ${isActive ? 'bold' : 'normal'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${zone} ${isActive ? '(Active)' : ''}</span>
-            <button class="btn-secondary btn-apply-zone" data-zone="${zone}" style="padding: 4px 8px; font-size: 0.8rem; border-color: #f1c40f; color: #f1c40f;">Load</button>
+            <button class="b-btn btn-apply-zone" data-zone="${zone}" style="padding: 4px 8px; font-size: 0.8rem; border-color: #f1c40f; color: #f1c40f;">Load</button>
           `;
 
           row.querySelector('.btn-apply-zone').onclick = () => {
             this.engine.chat.commandHandler.processCommand('/applymap ' + zone);
-            document.getElementById('zone-manager-panel').style.display = 'none';
+            this.zoneManagerWindow.close();
           };
 
           list.appendChild(row);
@@ -520,104 +510,23 @@ export class DevToolsUIManager {
   }
 
   setupArcadeManager() {
-      const eng = this.engine;
-      let panel = document.getElementById('arcade-manager-panel');
-      if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'arcade-manager-panel';
-        panel.className = 'dev-panel';
-        panel.style.cssText = 'position: absolute; top: 120px; right: 120px; width: 400px; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
-
-        panel.innerHTML = `
-          <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
-            <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Arcade Cabinet Manager</span>
-            <button id="btn-close-arcade-manager" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
-          </div>
-          <div style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="color: #ccc; font-size: 0.8rem; margin-bottom: 5px;">Configure the game installed on each arcade cabinet in the current zone.</div>
-            <div id="arcade-manager-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 400px; overflow-y: auto;">
-            </div>
-            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 5px;">
-              <span style="color: #f1c40f; font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 5px;">Global Leaderboards</span>
-              <div id="arcade-manager-leaderboard" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: #aaa;">
-              </div>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(panel);
-        document.getElementById('btn-close-arcade-manager').onclick = () => panel.style.display = 'none';
-
-        this.ui.makeDraggable('arcade-manager-panel', '.dev-panel-header');
+    document.getElementById('btn-save-arcade-edit').onclick = () => {
+      if (!this.currentEditCabinet) return;
+      const updatedVoxel = {
+        ...this.currentEditCabinet.voxel,
+        customName: document.getElementById('edit-arcade-name').value.trim(),
+        gameId: document.getElementById('edit-arcade-game').value,
+        powerState: document.getElementById('edit-arcade-power').value
+      };
+      const nX = parseInt(document.getElementById('edit-arcade-x').value, 10), nY = parseInt(document.getElementById('edit-arcade-y').value, 10), nZ = parseInt(document.getElementById('edit-arcade-z').value, 10);
+      if (nX !== this.currentEditCabinet.wx || nY !== this.currentEditCabinet.wy || nZ !== this.currentEditCabinet.wz) {
+          this.engine.mapManager.setVoxelAt(this.currentEditCabinet.wx, this.currentEditCabinet.wy, this.currentEditCabinet.wz, null, true);
       }
-  }
-
-  setupArcadeEditModal() {
-      let modal = document.getElementById('arcade-edit-modal');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'arcade-edit-modal';
-        modal.className = 'dev-panel';
-        modal.style.cssText = 'position: absolute; top: 150px; right: 150px; width: 300px; background: rgba(5, 7, 10, 0.95); border: 2px solid #e056fd; border-radius: 6px; display: none; flex-direction: column; z-index: 10005; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
-
-        modal.innerHTML = `
-          <div class="dev-panel-header" style="background: rgba(224, 86, 253, 0.2); padding: 8px 10px; border-bottom: 2px solid #e056fd; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
-            <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Edit Arcade Cabinet</span>
-            <button id="btn-close-arcade-edit" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
-          </div>
-          <div style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
-            <div>
-              <label style="color: #ccc; font-size: 0.8rem;">Game Installed</label>
-              <select id="edit-arcade-game" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px; margin-top: 2px;">
-                <option value="pixel">Pixel (Platformer)</option>
-                <option value="pong">Bonk (Retro)</option>
-                <option value="invaders">Space Invaders</option>
-                <option value="b-man">B-Man</option>
-                <option value="flappy-bee">Flappy Bee</option>
-                <option value="pixel-cross">Pixel-Cross (Frogger)</option>
-                <option value="bepis">Bepis (Tetris)</option>
-                <option value="operius">Operius</option>
-              </select>
-            </div>
-            <div>
-              <label style="color: #ccc; font-size: 0.8rem;">Power State</label>
-              <select id="edit-arcade-power" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px; margin-top: 2px;">
-                <option value="on">Powered On</option>
-                <option value="off">Powered Off</option>
-              </select>
-            </div>
-            <div style="display: flex; gap: 5px;">
-              <div style="flex: 1;"><label style="color: #ccc; font-size: 0.8rem;">X</label><input type="number" id="edit-arcade-x" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; box-sizing: border-box;"></div>
-              <div style="flex: 1;"><label style="color: #ccc; font-size: 0.8rem;">Y</label><input type="number" id="edit-arcade-y" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; box-sizing: border-box;"></div>
-              <div style="flex: 1;"><label style="color: #ccc; font-size: 0.8rem;">Z</label><input type="number" id="edit-arcade-z" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; box-sizing: border-box;"></div>
-            </div>
-            <div>
-              <label style="color: #ccc; font-size: 0.8rem;">Zone</label>
-              <input type="text" id="edit-arcade-zone" style="width: 100%; background: #222; color: #888; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); box-sizing: border-box;" disabled>
-            </div>
-            <div style="display: flex; gap: 5px; align-items: center; margin-top: 5px;">
-              <input type="checkbox" id="edit-arcade-highlight" checked style="cursor: pointer;">
-              <label for="edit-arcade-highlight" style="color: #ccc; font-size: 0.8rem; cursor: pointer;">Highlight Cabinet in World</label>
-            </div>
-            <button id="btn-save-arcade-edit" class="btn-primary" style="margin-top: 5px; padding: 8px; border-color: #e056fd; color: #e056fd; background: rgba(224, 86, 253, 0.1);">Save Cabinet</button>
-          </div>
-        `;
-        document.body.appendChild(modal);
-
-        document.getElementById('btn-close-arcade-edit').onclick = () => modal.style.display = 'none';
-        document.getElementById('btn-save-arcade-edit').onclick = () => {
-          if (!this.currentEditCabinet) return;
-          const updatedVoxel = { ...this.currentEditCabinet.voxel, gameId: document.getElementById('edit-arcade-game').value, powerState: document.getElementById('edit-arcade-power').value };
-          const nX = parseInt(document.getElementById('edit-arcade-x').value, 10), nY = parseInt(document.getElementById('edit-arcade-y').value, 10), nZ = parseInt(document.getElementById('edit-arcade-z').value, 10);
-          if (nX !== this.currentEditCabinet.wx || nY !== this.currentEditCabinet.wy || nZ !== this.currentEditCabinet.wz) {
-              this.engine.mapManager.setVoxelAt(this.currentEditCabinet.wx, this.currentEditCabinet.wy, this.currentEditCabinet.wz, null, true);
-          }
-          this.engine.mapManager.setVoxelAt(nX, nY, nZ, updatedVoxel, true);
-          modal.style.display = 'none';
-          this.renderArcadeManager();
-          this.engine.ui.showSystemMessage('Arcade Cabinet updated.');
-        };
-        this.ui.makeDraggable('arcade-edit-modal', '.dev-panel-header');
-      }
+      this.engine.mapManager.setVoxelAt(nX, nY, nZ, updatedVoxel, true);
+      this.arcadeEditWindow.close();
+      this.renderArcadeManager();
+      this.engine.ui.showSystemMessage('Arcade Cabinet updated.');
+    };
   }
 
   renderArcadeManager() {
@@ -653,7 +562,8 @@ export class DevToolsUIManager {
           { id: 'flappy-bee', name: 'Flappy Bee' },
           { id: 'pixel-cross', name: 'Pixel-Cross' },
           { id: 'bepis', name: 'Bepis' },
-          { id: 'operius', name: 'Operius' }
+          { id: 'operius', name: 'Operius' },
+          { id: 'number-munchers', name: 'Num Munchers' }
       ];
 
       const lbContainer = document.getElementById('arcade-manager-leaderboard');
@@ -683,16 +593,17 @@ export class DevToolsUIManager {
           const currentPower = cab.voxel.powerState || 'on';
           const gameName = availableGames.find(g => g.id === currentGame)?.name || currentGame;
           const statusDot = currentPower === 'on' ? '🟢' : '🔴';
+          const displayName = cab.voxel.customName ? `"${cab.voxel.customName}"` : `Cabinet #${index + 1}`;
 
           row.innerHTML = `
               <div style="display: flex; flex-direction: column; gap: 3px; flex: 1;">
-                  <span style="color: #fff; font-weight: bold; font-size: 0.85rem;">Cabinet #${index + 1} <span style="font-size: 0.7rem; color: #aaa;">${statusDot} ${gameName}</span></span>
+                  <span style="color: #fff; font-weight: bold; font-size: 0.85rem;">${displayName} <span style="font-size: 0.7rem; color: #aaa;">${statusDot} ${gameName}</span></span>
                   <span style="color: #aaa; font-family: var(--font-mono); font-size: 0.75rem;">X:${cab.wx} Y:${cab.wy} Z:${cab.wz}</span>
               </div>
               <div style="display: flex; gap: 5px;">
-                  <button class="btn-tp-arcade btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #f39c12; border-color: #f39c12;" title="Teleport to Cabinet">TP</button>
-                  <button class="btn-edit-arcade btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #e056fd; border-color: #e056fd;" title="Edit Cabinet">✎</button>
-                  <button class="btn-del-arcade btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #e74c3c; border-color: #e74c3c;" title="Delete Cabinet">X</button>
+                  <button class="btn-tp-arcade b-btn" style="padding: 4px 8px; font-size: 0.8rem; border-color: #f39c12; color: #f39c12;" title="Teleport to Cabinet">TP</button>
+                  <button class="btn-edit-arcade b-btn" style="padding: 4px 8px; font-size: 0.8rem; border-color: #e056fd; color: #e056fd;" title="Edit Cabinet">✎</button>
+                  <button class="btn-del-arcade b-btn b-btn-danger" style="padding: 4px 8px; font-size: 0.8rem;" title="Delete Cabinet">X</button>
               </div>
           `;
 
@@ -712,13 +623,14 @@ export class DevToolsUIManager {
 
           row.querySelector('.btn-edit-arcade').onclick = () => {
               this.currentEditCabinet = cab;
+              document.getElementById('edit-arcade-name').value = cab.voxel.customName || '';
               document.getElementById('edit-arcade-game').value = currentGame;
               document.getElementById('edit-arcade-power').value = currentPower;
               document.getElementById('edit-arcade-x').value = cab.wx;
               document.getElementById('edit-arcade-y').value = cab.wy;
               document.getElementById('edit-arcade-z').value = cab.wz;
               document.getElementById('edit-arcade-zone').value = this.engine.currentZone || 'untitled';
-              document.getElementById('arcade-edit-modal').style.display = 'flex';
+              this.arcadeEditWindow.open();
           };
 
           row.querySelector('.btn-del-arcade').onclick = () => {
@@ -781,7 +693,7 @@ export class DevToolsUIManager {
         document.getElementById('edit-npc-type').value = npc.type || 'idle';
         document.getElementById('edit-npc-dir').value = npc.dir || 'down';
 
-        document.getElementById('npc-edit-modal').style.display = 'flex';
+        this.npcEditWindow.open();
       };
 
       row.querySelector('.btn-tp').onclick = () => {
@@ -914,9 +826,21 @@ export class DevToolsUIManager {
           eng.editShapeBase = base;
           eng.editShape = base;
 
-          const shapeBtn = document.getElementById('build-shape-btn');
-          if (shapeBtn) {
-              shapeBtn.innerText = 'Shape: ' + base.toUpperCase();
+          if (this.updateShapeUI) {
+              this.updateShapeUI();
+          } else {
+              const shapeBtn = document.getElementById('build-shape-btn');
+              if (shapeBtn) {
+                  if (shapeBtn.tagName === 'SELECT') {
+                      let hasOpt = Array.from(shapeBtn.options).some(o => o.value === base);
+                      if (!hasOpt) {
+                          shapeBtn.innerHTML = `<option value="${base}">SHAPE: ${base.toUpperCase()}</option>`;
+                      }
+                      shapeBtn.value = base;
+                  } else {
+                      shapeBtn.innerText = 'Shape: ' + base.toUpperCase();
+                  }
+              }
           }
           if (activeSlot && !activeSlot.classList.contains('active')) activeSlot.click();
       } else if (olVisible) {
@@ -929,7 +853,10 @@ export class DevToolsUIManager {
           eng.editShapeBase = 'none';
           eng.editShape = 'none';
           const shapeBtn = document.getElementById('build-shape-btn');
-          if (shapeBtn) shapeBtn.innerText = 'Shape: NONE';
+          if (shapeBtn) {
+              if (shapeBtn.tagName === 'SELECT') shapeBtn.innerHTML = '<option value="none">SHAPE: NONE</option>';
+              else shapeBtn.innerText = 'Shape: NONE';
+          }
       }
   }
 
@@ -1017,7 +944,16 @@ export class DevToolsUIManager {
           const relBtn = document.getElementById('build-rel-btn');
           const flipBtn = document.getElementById('build-flip-btn');
 
-          if (shapeBtn) shapeBtn.innerText = `Shape: ${data.name.toUpperCase()}`;
+          if (shapeBtn) {
+              if (shapeBtn.tagName === 'SELECT') {
+                  if (!Array.from(shapeBtn.options).some(o => o.value === id)) {
+                      shapeBtn.innerHTML = `<option value="${id}">SHAPE: ${data.name.toUpperCase()}</option>`;
+                  }
+                  shapeBtn.value = id;
+              } else {
+                  shapeBtn.innerText = `Shape: ${data.name.toUpperCase()}`;
+              }
+          }
           if (dirBtn) { dirBtn.style.display = 'block'; dirBtn.innerText = eng.editShapeDir.toUpperCase(); }
           if (relBtn) relBtn.style.display = 'none';
           if (flipBtn) flipBtn.style.display = 'none';
@@ -1181,11 +1117,15 @@ export class DevToolsUIManager {
     shapeContainer.id = 'build-shape-container';
     shapeContainer.style.cssText = SHAPE_CONTAINER_STYLE;
 
-    const shapeBtn = document.createElement('button');
+    const shapeBtn = document.createElement('select');
     shapeBtn.id = 'build-shape-btn';
     shapeBtn.className = 'btn-secondary';
-    shapeBtn.style.cssText = SHAPE_BTN_STYLE;
-    shapeBtn.innerText = 'Shape: CUBE';
+    shapeBtn.style.cssText = SHAPE_BTN_STYLE + ' text-transform: uppercase; cursor: pointer; border: 1px solid #3498db; outline: none; background: rgba(0,0,0,0.8);';
+
+    shapeBtn.onchange = (e) => {
+      eng.editShapeBase = e.target.value;
+      updateShapeUI();
+    };
 
     const axisBtn = document.createElement('button');
     axisBtn.id = 'build-axis-btn';
@@ -1237,7 +1177,7 @@ export class DevToolsUIManager {
 
     builderHotbar.appendChild(controlsContainer);
 
-    setupTooltip(shapeBtn, 'Cycle Block Shape (Cube, Slab, Ramp, Stair)');
+    setupTooltip(shapeBtn, 'Select Block Shape');
     setupTooltip(axisBtn, 'Toggle Drag Selection Axis (Horizontal X/Y vs Vertical Z)');
     setupTooltip(dirBtn, 'Cycle Block Direction (N, E, S, W)');
     setupTooltip(relBtn, 'Toggle Player-Relative Rotation');
@@ -1276,14 +1216,45 @@ export class DevToolsUIManager {
 
     const updateShapeUI = () => {
       if (eng.editShapeBase === 'none') {
-        if (shapeBtn) shapeBtn.innerText = 'Shape: NONE';
+        if (shapeBtn) {
+            if (shapeBtn.tagName === 'SELECT') shapeBtn.innerHTML = '<option value="none">SHAPE: NONE</option>';
+            else shapeBtn.innerText = 'Shape: NONE';
+        }
         if (dirBtn) dirBtn.style.display = 'none';
         if (relBtn) relBtn.style.display = 'none';
         if (flipBtn) flipBtn.style.display = 'none';
         if (uvBtn) uvBtn.style.display = 'none';
         return;
       }
-      shapeBtn.innerText = 'Shape: ' + eng.editShapeBase.toUpperCase();
+
+      const activeSlot = document.querySelector('.hotbar-slot.active');
+      const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+      let bases = ['cube', 'slab', 'top_slab', 'ramp', 'half_ramp', 'top_half_ramp', 'stair', 'decal', 'fence'];
+      if (tex && tex.includes('door')) bases = ['door'];
+      else if (tex && tex.startsWith('line-')) bases = ['decal'];
+      else if (FURNITURE_REGISTRY[eng.editShapeBase]) bases = [eng.editShapeBase, ...bases];
+
+      if (shapeBtn && shapeBtn.tagName === 'SELECT') {
+          const currentOptions = Array.from(shapeBtn.options).map(o => o.value).join(',');
+          if (currentOptions !== bases.join(',')) {
+              shapeBtn.innerHTML = '';
+              bases.forEach(b => {
+                  const opt = document.createElement('option');
+                  opt.value = b;
+                  let displayName = b;
+                  if (FURNITURE_REGISTRY[b]) displayName = FURNITURE_REGISTRY[b].name;
+                  else displayName = b.replace(/_/g, ' ');
+                  opt.innerText = 'SHAPE: ' + displayName.toUpperCase();
+                  shapeBtn.appendChild(opt);
+              });
+          }
+          if (bases.includes(eng.editShapeBase)) {
+              shapeBtn.value = eng.editShapeBase;
+          } else {
+              eng.editShapeBase = bases[0];
+              shapeBtn.value = bases[0];
+          }
+      }
 
       if (eng.editShapeBase === 'door') {
         dirBtn.style.display = 'block';
@@ -1305,7 +1276,7 @@ export class DevToolsUIManager {
             uvBtn.innerText = 'Box UV';
             uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
         }
-      } else if (eng.editShapeBase === 'ramp' || eng.editShapeBase === 'stair' || eng.editShapeBase === 'decal') {
+      } else if (eng.editShapeBase === 'ramp' || eng.editShapeBase === 'half_ramp' || eng.editShapeBase === 'top_half_ramp' || eng.editShapeBase === 'stair' || eng.editShapeBase === 'decal') {
         dirBtn.style.display = eng.editShapeRelative ? 'none' : 'block';
         relBtn.style.display = 'block';
         flipBtn.style.display = 'none';
@@ -1323,7 +1294,7 @@ export class DevToolsUIManager {
       flipBtn.style.background = eng.editShapeFlip ? 'rgba(46, 204, 113, 0.2)' : 'transparent';
 
       let finalShape = eng.editShapeBase;
-      if (finalShape === 'ramp' || finalShape === 'stair' || finalShape === 'door') {
+      if (finalShape === 'ramp' || finalShape === 'half_ramp' || finalShape === 'top_half_ramp' || finalShape === 'stair' || finalShape === 'door') {
           if (eng.editShapeRelative && finalShape !== 'door') {
             eng.editShape = finalShape + '_player';
           } else {
@@ -1336,21 +1307,6 @@ export class DevToolsUIManager {
       }
     };
 
-    shapeBtn.onclick = () => {
-      const activeSlot = document.querySelector('.hotbar-slot.active');
-      const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-      let bases = ['cube', 'slab', 'ramp', 'stair'];
-      if (tex.includes('door')) bases = ['door'];
-      else if (tex.startsWith('line-')) bases = ['decal'];
-      else if (FURNITURE_REGISTRY[eng.editShapeBase]) bases = [eng.editShapeBase, 'cube', 'slab', 'ramp', 'stair', 'decal', 'fence'];
-      else bases = ['cube', 'slab', 'ramp', 'stair', 'decal', 'fence'];
-
-      let nextIdx = bases.indexOf(eng.editShapeBase) + 1;
-      if (nextIdx >= bases.length) nextIdx = 0;
-      eng.editShapeBase = bases[nextIdx];
-      updateShapeUI();
-    };
-
     dirBtn.onclick = () => {
       const dirs = ['n', 'e', 's', 'w'];
       eng.editShapeDir = dirs[(dirs.indexOf(eng.editShapeDir) + 1) % dirs.length];
@@ -1361,6 +1317,7 @@ export class DevToolsUIManager {
       eng.editShapeRelative = !eng.editShapeRelative;
       updateShapeUI();
     };
+    this.updateShapeUI = updateShapeUI;
     updateShapeUI();
 
     const tabsContainer = document.createElement('div');
@@ -1485,12 +1442,12 @@ export class DevToolsUIManager {
                eng.editShapeBase = 'decal';
                eng.editShapeFlip = false;
                updateShapeUI();
-            } else if (eng.editShapeBase === 'door' || (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence')) {
+            } else if (eng.editShapeBase === 'door' || (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'top_slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'half_ramp' && eng.editShapeBase !== 'top_half_ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence')) {
                eng.editShapeBase = 'cube';
                eng.editShapeFlip = false;
                updateShapeUI();
             } else {
-               if (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence') {
+               if (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'top_slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'half_ramp' && eng.editShapeBase !== 'top_half_ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence') {
                  eng.editShapeBase = 'cube';
                  eng.editShapeFlip = false;
                  updateShapeUI();
@@ -1666,27 +1623,7 @@ export class DevToolsUIManager {
 
   setupPlayerManager() {
     const eng = this.engine;
-    let panel = document.getElementById('player-manager-panel');
-    if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'player-manager-panel';
-        document.body.appendChild(panel);
-    }
-    panel.className = 'dev-panel';
-    panel.style.cssText = PLAYER_PANEL_STYLE;
-    panel.innerHTML = `
-        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
-            <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Player Manager</span>
-            <button id="btn-close-player-manager" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
-        </div>
-        <div style="padding: 10px 10px 0 10px;">
-            <input type="text" id="pm-search-input" placeholder="Search characters..." style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; font-family: var(--font-mono); border-radius: 4px;">
-        </div>
-        <div id="player-manager-list" class="npc-manager-list" style="max-height: 500px; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px;"></div>
-    `;
-    document.getElementById('btn-close-player-manager').onclick = () => panel.style.display = 'none';
     document.getElementById('pm-search-input').addEventListener('input', () => this.renderPlayerManager());
-    this.ui.makeDraggable('player-manager-panel', '.dev-panel-header');
   }
 
   renderPlayerManager() {
@@ -1697,7 +1634,17 @@ export class DevToolsUIManager {
     list.innerHTML = '';
 
     const searchVal = document.getElementById('pm-search-input')?.value.toLowerCase() || '';
-    const filtered = this.allPlayersList.filter(p => p.name.toLowerCase().includes(searchVal));
+
+    // Deduplicate by name (preferring online status if there are dupes)
+    const uniquePlayers = new Map();
+    this.allPlayersList.forEach(p => {
+        const name = p.name.toLowerCase();
+        if (!uniquePlayers.has(name) || (p.online && !uniquePlayers.get(name).online)) {
+            uniquePlayers.set(name, p);
+        }
+    });
+
+    const filtered = Array.from(uniquePlayers.values()).filter(p => p.name.toLowerCase().includes(searchVal));
 
     filtered.sort((a, b) => {
       if (a.online && !b.online) return -1;

@@ -1,0 +1,67 @@
+.sidebar {
+  width: 400px;
+  height: 100%;
+  background: url('../assets/images/ui/shared/ui-panel-bg.png');
+  background-color: rgba(5, 7, 10, 0.85);
+  border-left: 2px solid var(--accent);
+  padding: 60px 40px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.launcher-banner {
+  width: 100%;
+  height: auto;
+  margin-bottom: 20px;
+}
+
+.left-align {
+  justify-content: flex-start;
+  border-left: none;
+  border-right: 2px solid var(--accent);
+  margin-right: auto;
+}
+
+.header-text {
+  font-family: var(--font-header);
+  color: var(--accent-neon);
+  margin-top: 0;
+}
+
+.char-slot {
+  background: rgba(116, 185, 255, 0.1);
+  border: 1px solid var(--text-dim);
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.char-slot:hover {
+  background: rgba(116, 185, 255, 0.2);
+  border-color: var(--accent);
+}
+
+.char-slot.active {
+  border-color: var(--accent-neon);
+  background: rgba(116, 185, 255, 0.3);
+}
+
+.selection-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.toggle-text span {
+  text-decoration: underline;
+  cursor: pointer;
+  color: var(--accent-neon);
+}
+
+#toggle-auth {
+  color: var(--accent-neon);
+  cursor: pointer;
+  text-decoration: underline;
+}

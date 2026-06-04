@@ -1,5 +1,5 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 
 self.onmessage = function(e) {
  try {

@@ -122,7 +122,34 @@ export class InputRouter {
       if (eng.editMode) {
         e.preventDefault();
         const shapeBtn = document.getElementById('build-shape-btn');
-        if (shapeBtn) shapeBtn.click();
+        if (shapeBtn && shapeBtn.tagName === 'SELECT') {
+          const opts = Array.from(shapeBtn.options);
+          const curIdx = shapeBtn.selectedIndex;
+          if (opts.length > 0) {
+             const nextIdx = e.shiftKey ? (curIdx - 1 + opts.length) % opts.length : (curIdx + 1) % opts.length;
+             shapeBtn.selectedIndex = nextIdx;
+             shapeBtn.dispatchEvent(new Event('change'));
+          }
+        } else if (shapeBtn) {
+          shapeBtn.click();
+        }
+      }
+    }
+
+    if (key === 't' && !eng.editMode) {
+      e.preventDefault();
+      let trainerDist = eng.nearestTrainer && !eng.activeTrainer ? Math.hypot(eng.player.x - eng.nearestTrainer.x, eng.player.y - eng.nearestTrainer.y) : Infinity;
+      let arcadeDist = eng.arcadeSystem && eng.arcadeSystem.nearestCabinet && !eng.arcadeSystem.isActive && eng.arcadeSystem.nearestCabinet.powerState !== 'off'
+          ? Math.hypot(eng.player.x - eng.arcadeSystem.nearestCabinet.x, eng.player.y - eng.arcadeSystem.nearestCabinet.y)
+          : Infinity;
+
+      if (trainerDist < Infinity || arcadeDist < Infinity) {
+          if (trainerDist < arcadeDist) {
+              eng.ui.trainer.openTrainerUI(eng.nearestTrainer);
+          } else {
+              const cab = eng.arcadeSystem.nearestCabinet;
+              eng.arcadeSystem.interact(cab.x, cab.y, cab.z, cab.dir, cab.gameId);
+          }
       }
     }
 

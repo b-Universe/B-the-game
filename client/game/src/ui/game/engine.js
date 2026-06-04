@@ -1,20 +1,20 @@
 
-import { ChatManager } from './chat.js?v=new-engine-330';
-import { NetworkManager } from './network.js?v=new-engine-330';
-import { UIManager } from './ui.js?v=new-engine-330';
-import { InputManager } from './input.js?v=new-engine-330';
-import { MinimapManager } from './minimap.js?v=new-engine-330';
-import { Renderer } from './renderer.js?v=new-engine-330';
-import { CombatManager } from './combat.js?v=new-engine-330';
-import { EntityManager } from './entity-manager.js?v=new-engine-330';
-import { MapOverlayManager } from './map_overlay.js?v=new-engine-330';
-import { MapManager } from './chunk_manager.js?v=new-engine-330';
-import { getBlockProps } from './blocks.js?v=new-engine-330';
-import { FURNITURE_REGISTRY, POWERSET_REGISTRY, POWER_REGISTRY, EFFECT_REGISTRY } from './registry.js?v=new-engine-330';
-import { PhysicsManager } from './physics-manager.js?v=new-engine-330';
-import { BuilderManager } from './builder-manager.js?v=new-engine-330';
-import { WorldSerializer } from './world-serializer.js?v=new-engine-330';
-import { ArcadeSystem } from './arcade-system.js?v=new-engine-332';
+import { ChatManager } from './chat.js?v=cache-bust-005';
+import { NetworkManager } from './network.js?v=cache-bust-005';
+import { UIManager } from './ui.js?v=cache-bust-005';
+import { InputManager } from './input.js?v=cache-bust-005';
+import { MinimapManager } from './minimap.js?v=cache-bust-005';
+import { Renderer } from './renderer.js?v=cache-bust-005';
+import { CombatManager } from './combat.js?v=cache-bust-005';
+import { EntityManager } from './entity-manager.js?v=cache-bust-005';
+import { MapOverlayManager } from './map_overlay.js?v=cache-bust-005';
+import { MapManager } from './chunk_manager.js?v=cache-bust-005';
+import { getBlockProps } from './blocks.js?v=cache-bust-005';
+import { FURNITURE_REGISTRY, POWERSET_REGISTRY, POWER_REGISTRY, EFFECT_REGISTRY } from './registry.js?v=cache-bust-005';
+import { PhysicsManager } from './physics-manager.js?v=cache-bust-005';
+import { BuilderManager } from './builder-manager.js?v=cache-bust-005';
+import { WorldSerializer } from './world-serializer.js?v=cache-bust-005';
+import { ArcadeSystem } from './arcade-system.js?v=cache-bust-005';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -42,7 +42,7 @@ export class GameEngine {
       this.playerData.powerTray = this.playerData.powers.filter(p => window.POWER_REGISTRY && window.POWER_REGISTRY[p] && window.POWER_REGISTRY[p].type?.toLowerCase() !== 'passive');
     }
 
-    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
+    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
     this.tilt = 0.5;
@@ -587,6 +587,19 @@ export class GameEngine {
       ft.offsetY += 40 * (dt / 1000);
       if (ft.life <= 0) this.floatingTexts.splice(i, 1);
     }
+
+    let nearestTrainer = null;
+    let minTrainerDist = 150;
+    this.npcs.forEach(npc => {
+      if (npc.state !== 'dead' && npc.type === 'trainer') {
+        const dist = Math.hypot(this.player.x - npc.x, this.player.y - npc.y);
+        if (dist < minTrainerDist) {
+          minTrainerDist = dist;
+          nearestTrainer = npc;
+        }
+      }
+    });
+    this.nearestTrainer = nearestTrainer;
 
     if (this.renderer && this.renderer.particleManager) {
       this.renderer.particleManager.updatePhysics(dt);

@@ -1,0 +1,129 @@
+/* ==========================================================================
+   Developer Panel
+   ========================================================================== */
+.dev-panel {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  width: 250px;
+  background: rgba(11, 14, 20, 0.95);
+  border: 1px solid #ff4757;
+  border-radius: 4px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 71, 87, 0.2);
+}
+
+.dev-panel-header {
+  background: rgba(255, 71, 87, 0.8);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.dev-panel-header button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.dev-panel-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dev-panel-body button {
+  font-size: 0.85rem;
+  padding: 8px;
+  transition: 0.2s;
+}
+
+/* ==========================================================================
+   Power Editor Layout Rules
+   ========================================================================== */
+.power-editor-layout {
+  display: flex;
+  gap: 15px;
+  height: calc(100% - 35px); /* Account for header */
+  padding: 15px;
+  box-sizing: border-box;
+  background: rgba(5, 7, 10, 0.95);
+  overflow: hidden;
+}
+
+.pe-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--text-dim);
+  border-radius: 4px;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.pe-roster .list-item {
+  padding: 10px;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  color: #ccc;
+  font-family: var(--font-mono);
+}
+.pe-roster .list-item:hover {
+  background: rgba(230, 126, 34, 0.1);
+  color: #e67e22;
+}
+.pe-roster .list-item.active {
+  border-color: #e67e22;
+  background: rgba(230, 126, 34, 0.2);
+  color: #e67e22;
+}
+
+.pe-editor-section {
+  background: rgba(5, 7, 10, 0.6);
+  border: 1px solid rgba(230, 126, 34, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pe-section-title {
+  margin: 0 0 5px 0;
+  color: #e67e22;
+  font-family: var(--font-header);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(230, 126, 34, 0.2);
+  padding-bottom: 5px;
+}
+
+.pe-input-row { display: flex; flex-direction: column; gap: 4px; }
+.pe-input-row label { color: var(--accent); font-family: var(--font-header); font-size: 0.9rem; letter-spacing: 1px;}
+
+.pe-text-input, .pe-select {
+  width: 100%; background: rgba(0,0,0,0.5); color: #fff;
+  border: 1px solid var(--text-dim); padding: 8px;
+  font-family: var(--font-mono); box-sizing: border-box; outline: none;
+}
+.pe-text-input:focus, .pe-select:focus { border-color: #e67e22; }
+
+.pe-slider-row { display: flex; flex-direction: column; gap: 4px; }
+.pe-slider-label { display: flex; justify-content: space-between; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.85rem; }
+.pe-slider-label .pe-val { color: #e67e22; font-weight: bold; }
+.pe-slider-row input[type="range"] { width: 100%; cursor: pointer; }

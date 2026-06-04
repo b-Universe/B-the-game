@@ -86,7 +86,13 @@ module.exports = function(app, helpers) {
 
     if (indexEntry && indexEntry.passwordHash === passwordHash) {
       const playerFile = path.join(PLAYER_DATA_DIR, `${indexEntry.uuid}.json`);
-      const playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+      let playerData;
+      try {
+        playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+      } catch (e) {
+        logSystem(`LOGIN FAILURE (CORRUPT ACCOUNT): ${indexEntry.uuid}`, "ERROR");
+        return res.status(500).json({ error: 'Account data is corrupted. Please contact an admin.' });
+      }
 
       if (playerData.isBanned) {
           logSystem(`LOGIN REJECTED (BANNED): ${playerData.username}`);
@@ -103,7 +109,13 @@ module.exports = function(app, helpers) {
           const charFile = path.join(CHAR_DATA_DIR, `${charNameStr.toLowerCase()}.json`);
           let charObj;
           if (typeof char === 'object') { charObj = char; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); accountNeedsSave = true; }
-          else if (fs.existsSync(charFile)) { charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); }
+          else if (fs.existsSync(charFile)) {
+            try {
+              charObj = JSON.parse(fs.readFileSync(charFile, 'utf8'));
+            } catch(e) {
+              logSystem(`LOGIN CORRUPTION: Skipping corrupted character ${charNameStr}`, "ERROR");
+            }
+          }
 
           if (charObj) {
             let needsSave = false;
@@ -193,10 +205,20 @@ module.exports = function(app, helpers) {
     const playerFile = path.join(PLAYER_DATA_DIR, `${uuid}.json`);
     if (!fs.existsSync(playerFile)) return res.status(404).send('Account data not found.');
 
-    const playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+    let playerData;
+    try {
+      playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+    } catch(e) {
+      return res.status(500).send('Account data corrupted.');
+    }
     const lowerName = charData.name.toLowerCase();
     const charFile = path.join(CHAR_DATA_DIR, `${lowerName}.json`);
     if (fs.existsSync(charFile)) return res.status(400).send('Character name already exists.');
+
+    const maxChars = playerData.maxCharacters || 3;
+    if (playerData.characters && playerData.characters.length >= maxChars) {
+        return res.status(403).send(`You have reached the maximum character limit of ${maxChars}.`);
+    }
 
     let requestedPowersets = charData.powersets || [];
     let requestedPowers = charData.powers || [];
@@ -252,10 +274,20 @@ module.exports = function(app, helpers) {
     const { uuid, charData } = req.body;
     const playerFile = path.join(PLAYER_DATA_DIR, `${uuid}.json`);
     if (!fs.existsSync(playerFile)) return res.status(404).send('Account data not found.');
-    const playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+    let playerData;
+    try {
+      playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+    } catch(e) {
+      return res.status(500).send('Account data corrupted.');
+    }
     const charFile = path.join(CHAR_DATA_DIR, `${charData.name.toLowerCase()}.json`);
     if (!fs.existsSync(charFile)) return res.status(404).send('Character not found.');
-    const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8'));
+    let charObj;
+    try {
+      charObj = JSON.parse(fs.readFileSync(charFile, 'utf8'));
+    } catch(e) {
+      return res.status(500).send('Character data corrupted.');
+    }
     charObj.bio = charData.bio;
     fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2));
     logSystem(`CHARACTER UPDATED: ${charData.name} on account ${uuid}`);
@@ -266,7 +298,12 @@ module.exports = function(app, helpers) {
     const { uuid, charName } = req.body;
     const playerFile = path.join(PLAYER_DATA_DIR, `${uuid}.json`);
     if (!fs.existsSync(playerFile)) return res.status(404).send('Account data not found.');
-    const playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+    let playerData;
+    try {
+      playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8'));
+    } catch(e) {
+      return res.status(500).send('Account data corrupted.');
+    }
     const charFile = path.join(CHAR_DATA_DIR, `${charName.toLowerCase()}.json`);
     if (fs.existsSync(charFile)) fs.unlinkSync(charFile);
     playerData.characters = playerData.characters.map(c => typeof c === 'object' ? c.name.toLowerCase() : c).filter(c => c !== charName.toLowerCase());
@@ -283,8 +320,10 @@ module.exports = function(app, helpers) {
       let nameTaken = false;
       for (const file of fs.readdirSync(PLAYER_DATA_DIR)) {
         if (file.endsWith('.json')) {
-          const playerData = JSON.parse(fs.readFileSync(path.join(PLAYER_DATA_DIR, file), 'utf8'));
-          if (playerData.characters && playerData.characters.some(char => (typeof char === 'object' ? char.name : char).toLowerCase() === lowerCharName)) { nameTaken = true; break; }
+          try {
+            const playerData = JSON.parse(fs.readFileSync(path.join(PLAYER_DATA_DIR, file), 'utf8'));
+            if (playerData.characters && playerData.characters.some(char => (typeof char === 'object' ? char.name : char).toLowerCase() === lowerCharName)) { nameTaken = true; break; }
+          } catch(e) {}
         }
       }
       return res.json({ available: !nameTaken });

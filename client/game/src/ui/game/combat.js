@@ -1,5 +1,5 @@
-import { POWER_REGISTRY } from './registry.js?v=new-engine-330';
-import { PowerScripts, PowerExecutors } from './power-scripts.js?v=new-engine-330';
+import { POWER_REGISTRY } from './registry.js?v=cache-bust-005';
+import { PowerScripts, PowerExecutors } from './power-scripts.js?v=cache-bust-005';
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
 
 export class CombatManager {

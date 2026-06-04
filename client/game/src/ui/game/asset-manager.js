@@ -1,7 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
-import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-330';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 
 export class AssetManager {
   constructor(renderer) {

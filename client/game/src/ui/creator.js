@@ -1,8 +1,8 @@
-import { AuthLogic } from './creator-logic.js?v=new-engine-330';
-import { initSelection } from './selection.js?v=new-engine-330';
-import { AuthUIManager } from './auth-ui.js?v=new-engine-330';
-import { CharacterCreatorUIManager } from './character-creator-ui.js?v=new-engine-330';
-import { InGameMenuUIManager } from './in-game-menu-ui.js?v=new-engine-330';
+import { AuthLogic } from './creator-logic.js?v=cache-bust-005';
+import { initSelection } from './selection.js?v=cache-bust-005';
+import { AuthUIManager } from './auth-ui.js?v=cache-bust-005';
+import { CharacterCreatorUIManager } from './character-creator-ui.js?v=cache-bust-005';
+import { InGameMenuUIManager } from './in-game-menu-ui.js?v=cache-bust-005';
 
 const applyUIScaling = () => {
   const scalers = document.querySelectorAll('.screen-scaler');

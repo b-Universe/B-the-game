@@ -1,5 +1,77 @@
 [
   {
+    "version": "v2.4.5",
+    "color": "#00d2ff",
+    "changes": [
+      { "type": "Engine", "text": "Implemented a Global UI Component Library to standardize all developer and player interfaces, drastically reducing HTML DOM bloat." },
+      { "type": "Design", "text": "Overhauled the entire UI theme with a cohesive dark panel design, vibrant gradient headers, and a strict 8px spacing grid." },
+      { "type": "UI", "text": "Refactored over a dozen legacy windows (Power Editor, Trade, Inventory, Trainers, Player/NPC Managers) to the new unified component standard." },
+      { "type": "Content", "text": "Arcade Cabinets can now be given custom names via the Arcade Editor, which persist in the world and display natively on the 3D hover HUD!" },
+      { "type": "Fix", "text": "Resolved a ghosting issue in the Player Manager where players would occasionally appear duplicated." }
+    ]
+  },
+  {
+    "version": "v2.4.4",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "Engine", "text": "Implemented an A* pathfinding algorithm for Click-to-Move, allowing the player to automatically route around buildings, fences, and walls." },
+      { "type": "Gameplay", "text": "Click-to-Move now features intelligent hazard avoidance, naturally pathing around lava, acid, and water when possible." },
+      { "type": "Gameplay", "text": "Click-to-Move now automatically evaluates terrain elevation and executes jumps to vault over obstacles in your path." },
+      { "type": "Design", "text": "Added a dynamic, glowing 3D path line to visualize your Click-to-Move route. The line turns orange if the only available path forces you through a hazard." },
+      { "type": "Gameplay", "text": "You can now hold down Left-Click to continuously update your Click-to-Move path in real-time." },
+      { "type": "Gameplay", "text": "Clicking Right-Click while holding Left-Click during Click-to-Move will now manually trigger a jump." },
+      { "type": "Design", "text": "Restored the pulsating target ring visual indicator when using Click-to-Move." },
+      { "type": "Design", "text": "Added a 'Show Click-to-Move Path' toggle to the Settings Menu." }
+    ]
+  },
+  {
+    "version": "v2.4.3",
+    "color": "#1dd1a1",
+    "changes": [
+      { "type": "Gameplay", "text": "Added wandering 'Troggles' and a structured 7-stage learning curve to Number Munchers to balance the early-game difficulty." },
+      { "type": "Design", "text": "Added a classic 'Level Clear' fanfare to Number Munchers and the Arcade Audio system." },
+      { "type": "Design", "text": "Added floating 'Press [T] to Talk/Play' indicators above nearby NPCs and Arcade Cabinets for seamless keyboard interaction." },
+      { "type": "Design", "text": "Holding Shift while pressing 'R' in Edit Mode will now reverse the cycle direction of builder shapes." },
+      { "type": "Fix", "text": "Safeguarded the server against corrupted 0-byte character save files, preventing fatal crashes during login and background data syncs." },
+      { "type": "Fix", "text": "Fixed an issue where newly added builder preview shapes (like Top Slabs and Half Ramps) would occasionally freeze on the screen." },
+      { "type": "Fix", "text": "Fixed an issue where the Builder Texture Palette dropdown would appear empty until manually refreshed." }
+    ]
+  },
+  {
+    "version": "v2.4.2",
+    "color": "#9b59b6",
+    "changes": [
+      { "type": "Content", "text": "Added 'Number Munchers' (Math) to the Arcade! Eat numbers based on Multiples, Factors, and Primes while dodging wandering Troggles." },
+      { "type": "Content", "text": "Added new builder block shapes: Top Slabs, Half Ramps, and Top Half Ramps for complex sloped structures." },
+      { "type": "Design", "text": "Arcade Cabinets now render physical 3D screens directly into the game world, complete with dynamic glowing screen light." },
+      { "type": "Design", "text": "Added a Right-Click Context Menu to Arcade Cabinets for quick access to playing, and Developer options for editing and power toggling." },
+      { "type": "Design", "text": "Added a global 'Mute Arcade Sounds' toggle to the Settings menu." },
+      { "type": "Design", "text": "Added 'Potato Mode' to the loading screen, allowing players to instantly drop graphics settings if loading takes too long." },
+      { "type": "Design", "text": "Loading screens now cycle through game tips, and system texts seamlessly highlight important keybinds and commands." },
+      { "type": "Design", "text": "Added floating score indicators to Pixel for collecting coins, powerups, and bouncing on enemies." },
+      { "type": "Design", "text": "Upgraded the Builder Tool's shape selector to a dropdown list for easier access to the growing roster of shapes." }
+    ]
+  },
+  {
+    "version": "v2.4.1",
+    "color": "#3498db",
+    "changes": [
+      { "type": "Content", "text": "Added 24 new transparent decal street lines to the Object Library, including corners, T-intersections, and pedestrian crosswalks." },
+      { "type": "Design", "text": "Added a new Vertical (Z-Axis) drag mode for the builder tool to effortlessly drag-and-build walls and pillars." },
+      { "type": "Design", "text": "Added dynamic Fence blocks that automatically connect to adjacent solid blocks and other fences." },
+      { "type": "Engine", "text": "Implemented the '/grant' and '/revoke' commands alongside the Player Modifier UI for real-time global permission management." },
+      { "type": "Engine", "text": "Enforced a 3-character maximum limit per account during the character creation process." }
+    ]
+  },
+  {
+    "version": "v2.4.0",
+    "color": "#2ecc71",
+    "changes": [
+      { "type": "Engine", "text": "Drafted the Stable Prototype Build v2.4.0! The core engine foundations for 3D networking, chunk meshing, and asset management are now fully solidified." },
+      { "type": "Content", "text": "The engine is now fully prepared to scale into Issue 1 gameplay and mechanic development." }
+    ]
+  },
+  {
     "version": "v2.3.8",
     "color": "#f39c12",
     "changes": [
