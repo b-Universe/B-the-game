@@ -1,0 +1,10 @@
+{
+  "Id": "gadgetry",
+  "Name": "Gadgetry",
+  "Focus": "Utilize advanced technological gadgets for traversal and combat.",
+  "Requirement": "synthetic exclusive",
+  "Powers": [
+    {"Id": "jetpack"},
+    {"Id": "grappling-hook"}
+  ]
+}

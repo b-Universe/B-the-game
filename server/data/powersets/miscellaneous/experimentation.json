@@ -1,0 +1,10 @@
+{
+  "Id": "experimentation",
+  "Name": "Experimentation",
+  "Focus": "Utilize experimental serums to alter your physical capabilities.",
+  "Requirement": "synthetic exclusive",
+  "Powers": [
+    {"Id": "speed-serum"},
+    {"Id": "toxic-dart"}
+  ]
+}

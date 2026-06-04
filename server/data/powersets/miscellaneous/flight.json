@@ -1,0 +1,10 @@
+{
+  "Id": "flight",
+  "Name": "Flight",
+  "Focus": "Defy gravity through mystical means.",
+  "Requirement": "mutated exclusive",
+  "Powers": [
+    {"Id": "combat-flight"},
+    {"Id": "fly"}
+  ]
+}

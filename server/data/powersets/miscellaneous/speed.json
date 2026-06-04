@@ -1,0 +1,10 @@
+{
+  "Id": "speed",
+  "Name": "Speed",
+  "Focus": "Tap into your mutated metabolism to move at blinding speeds.",
+  "Requirement": "mutated exclusive",
+  "Powers": [
+    {"Id": "flurry"},
+    {"Id": "super-speed"}
+  ]
+}

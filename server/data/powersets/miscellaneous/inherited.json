@@ -1,0 +1,14 @@
+{
+  "Id": "inherited",
+  "Name": "Inherited",
+  "Focus": "Basic abilities innate to all entities.",
+  "Requirement": "",
+  "Powers": [
+    {
+      "Id": "brawl"
+    },
+    {
+      "Id": "throw-airplane"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "Id": "teleportation",
+  "Name": "Teleportation",
+  "Focus": "Manipulate space and reality to instantly traverse distances.",
+  "Requirement": "mutated exclusive",
+  "Powers": [
+    {"Id": "teleport-target"},
+    {"Id": "teleport"}
+  ]
+}

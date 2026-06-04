@@ -1,0 +1,10 @@
+{
+  "Id": "leaping",
+  "Name": "Leaping",
+  "Focus": "Use your mutated physiology to bound across the battlefield.",
+  "Requirement": "mutated exclusive",
+  "Powers": [
+    {"Id": "combat-jumping"},
+    {"Id": "super-jump"}
+  ]
+}

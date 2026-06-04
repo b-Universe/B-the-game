@@ -1,0 +1,16 @@
+{
+  "Id": "developer",
+  "Name": "Developer",
+  "Focus": "Absolute control over the simulation.",
+  "Requirement": "",
+  "Powers": [
+    {"Id": "dev-reset"},
+    {"Id": "dev-reset-target"},
+    {"Id": "dev-defeat"},
+    {"Id": "disable-combat"},
+    {"Id": "super-speed"},
+    {"Id": "super-jump"},
+    {"Id": "teleport"},
+    {"Id": "fly"}
+  ]
+}

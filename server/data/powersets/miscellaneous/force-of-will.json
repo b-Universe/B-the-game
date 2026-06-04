@@ -1,0 +1,10 @@
+{
+  "Id": "force-of-will",
+  "Name": "Force of Will",
+  "Focus": "Manifest physical capabilities through sheer determination.",
+  "Requirement": "",
+  "Powers": [
+    {"Id": "mighty-leap"},
+    {"Id": "dash"}
+  ]
+}
