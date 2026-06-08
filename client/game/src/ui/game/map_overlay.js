@@ -1,4 +1,4 @@
-const SCREEN_ANGLES = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
+const SCREEN_ANGLES = { 'right': 0, 'down-right': Math.PI / 4, 'down': Math.PI / 2, 'down-left': Math.PI * 0.75, 'left': Math.PI, 'up-left': -Math.PI * 0.75, 'up': -Math.PI / 2, 'up-right': -Math.PI / 4 };
 
 export class MapOverlayManager {
   constructor(engine) {
@@ -17,7 +17,10 @@ export class MapOverlayManager {
       const controls = document.getElementById('map-controls');
       if (controls) {
         controls.style.display = this.active ? 'flex' : 'none';
-        if (this.active) this.updateScale();
+        if (this.active) {
+          this.updateScale();
+          if (this.engine.mapManager) this.engine.mapManager.loadFullMap();
+        }
       }
     };
 
@@ -182,10 +185,6 @@ export class MapOverlayManager {
     const offsetX = (pFracX - pGx) * mmTileSize;
     const offsetY = (pFracY - pGy) * mmTileSize;
 
-    const tilesX = Math.ceil((canvasW / mmTileSize) / 2) + 1;
-    const tilesY = Math.ceil((canvasH / mmTileSize) / 2) + 1;
-    const maxRadius = Math.max(tilesX, tilesY);
-
     if (eng.mapManager.cacheBounds) {
       const bounds = eng.mapManager.cacheBounds;
       const drawWidth = eng.mapManager.mapCacheCanvas.width * mmTileSize;
@@ -234,7 +233,7 @@ export class MapOverlayManager {
 
       ctx.fillStyle = '#f1c40f';
       ctx.beginPath();
-      ctx.arc(0, 0, Math.max(4, mmTileSize/2), 0, Math.PI * 2);
+      ctx.arc(0, 0, Math.max(4, mmTileSize / 2), 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 2;
@@ -248,6 +247,28 @@ export class MapOverlayManager {
       ctx.restore();
     });
 
+    if (eng.mapPings) {
+      eng.mapPings.forEach(ping => {
+        const pDrawX = (ping.x / 32 - pFracX) * mmTileSize;
+        const pDrawY = (ping.y / 32 - pFracY) * mmTileSize;
+        if (pDrawX < -canvasW || pDrawX > canvasW || pDrawY < -canvasH || pDrawY > canvasH) return;
+        const maxRadius = mmTileSize * 4;
+        const currentRadius = maxRadius * (1.0 - ping.life);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pDrawX, pDrawY, currentRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = ping.color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = Math.max(0, ping.life);
+        ctx.stroke();
+        if (currentRadius > mmTileSize) {
+          ctx.beginPath(); ctx.arc(pDrawX, pDrawY, currentRadius - mmTileSize, 0, Math.PI * 2);
+          ctx.lineWidth = 1; ctx.globalAlpha = Math.max(0, ping.life * 0.5); ctx.stroke();
+        }
+        ctx.restore();
+      });
+    }
+
     const drawMapAvatar = (entity, isPlayer = false) => {
       const drawX = (entity.x / 32 - pFracX) * mmTileSize;
       const drawY = (entity.y / 32 - pFracY) * mmTileSize;
@@ -259,7 +280,7 @@ export class MapOverlayManager {
 
       ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
       ctx.beginPath();
-      ctx.arc(0, 0, Math.max(4, mmTileSize/2), 0, Math.PI * 2);
+      ctx.arc(0, 0, Math.max(4, mmTileSize / 2), 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 1;
@@ -295,9 +316,9 @@ export class MapOverlayManager {
       ctx.fillRect(-15, textOffset + 6, 30 * hpPercent, 4);
 
       if (entity.energy !== undefined && entity.maxEnergy) {
-         const epPercent = Math.max(0, entity.energy / entity.maxEnergy);
-         ctx.fillStyle = '#0984e3';
-         ctx.fillRect(-15, textOffset + 10, 30 * epPercent, 4);
+        const epPercent = Math.max(0, entity.energy / entity.maxEnergy);
+        ctx.fillStyle = '#0984e3';
+        ctx.fillRect(-15, textOffset + 10, 30 * epPercent, 4);
       }
 
       ctx.restore();

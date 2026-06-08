@@ -1,4 +1,6 @@
 export class BaseWindow {
+  static currentZIndex = 1000;
+
   /**
    * @param {string} id - The DOM ID for the window wrapper
    * @param {string} title - The display text in the header
@@ -20,14 +22,27 @@ export class BaseWindow {
   }
 
   build() {
+    const existing = document.getElementById(this.id);
+    if (existing) existing.remove();
+
     this.element = document.createElement('div');
     this.element.id = this.id;
     this.element.className = 'b-window';
     this.element.style.width = typeof this.width === 'number' ? `${this.width}px` : this.width;
     this.element.style.height = typeof this.height === 'number' ? `${this.height}px` : this.height;
-    this.element.style.left = `${this.x}px`;
-    this.element.style.top = `${this.y}px`;
     this.element.style.display = 'none'; // Hidden by default
+
+    const savedPos = localStorage.getItem(`b_window_pos_${this.id}`);
+    if (savedPos) {
+      try {
+        const pos = JSON.parse(savedPos);
+        if (pos.left) this.element.style.left = pos.left;
+        if (pos.top) this.element.style.top = pos.top;
+      } catch(e) {}
+    } else {
+      this.element.style.left = `${this.x}px`;
+      this.element.style.top = `${this.y}px`;
+    }
 
     // Header (32px, Neon-rainbow theme via CSS)
     const header = document.createElement('div');
@@ -65,6 +80,8 @@ export class BaseWindow {
     this.element.appendChild(header);
     this.element.appendChild(this.body);
 
+    this.element.addEventListener('mousedown', () => this.bringToFront());
+
     // Append to game screen if available, otherwise document body
     const container = document.getElementById('game-screen') || document.body;
     container.appendChild(this.element);
@@ -85,6 +102,7 @@ export class BaseWindow {
 
   open() {
     this.element.style.display = 'flex';
+    this.bringToFront();
     this.onOpen();
   }
 
@@ -101,6 +119,11 @@ export class BaseWindow {
       this.body.style.display = 'none';
       this.element.style.height = '32px'; // Snap to header height
     }
+  }
+
+  bringToFront() {
+    BaseWindow.currentZIndex++;
+    this.element.style.zIndex = BaseWindow.currentZIndex;
   }
 
   // Lifecycle hooks for subclasses to implement
@@ -139,6 +162,11 @@ export class BaseWindow {
         isDragging = false;
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+
+        if (this.id) {
+            const posObj = { left: this.element.style.left, top: this.element.style.top };
+            localStorage.setItem(`b_window_pos_${this.id}`, JSON.stringify(posObj));
+        }
       };
 
       document.addEventListener('mousemove', onMouseMove);

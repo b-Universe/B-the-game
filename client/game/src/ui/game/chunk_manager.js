@@ -56,7 +56,8 @@ export class MapManager {
     this.unloadDistantChunks(playerX, playerY);
 
     const startTime = performance.now();
-    const timeBudgetMs = 16; // Spend up to 16ms per frame generating chunks
+    const speedMult = this.engine.clientSettings.chunkGenSpeed || 3;
+    const timeBudgetMs = 5 + (speedMult * 3.5); // Ranges from 8.5ms (Potato) to ~40ms (Ultra) per frame
 
     while (this.chunkQueue.size > 0 && (performance.now() - startTime) < timeBudgetMs) {
       this.processChunkQueue(playerX, playerY);
@@ -191,21 +192,38 @@ export class MapManager {
 
     this.generator.generateChunk(chunkX, chunkY, 16, chunk);
     this.updateChunkMinimap(chunkX, chunkY, chunk);
-    if (this.engine.renderer) {
-      this.engine.renderer.updateChunkColumn(chunkX, chunkY, chunk);
 
-      // Force adjacent chunks to rebuild so border faces (like water blocks) cull correctly
-      const neighbors = [
-        { cx: chunkX - 1, cy: chunkY },
-        { cx: chunkX + 1, cy: chunkY },
-        { cx: chunkX, cy: chunkY - 1 },
-        { cx: chunkX, cy: chunkY + 1 }
-      ];
-      neighbors.forEach(n => {
-        if (this.chunks.has(`${n.cx}_${n.cy}`)) {
-          this.engine.renderer.updateChunkColumn(n.cx, n.cy, this.chunks.get(`${n.cx}_${n.cy}`), true);
-        }
-      });
+    const playerX = this.engine.player ? this.engine.player.x : 0;
+    const playerY = this.engine.player ? this.engine.player.y : 0;
+    const pxChunk = Math.floor(playerX / 512);
+    const pyChunk = Math.floor(playerY / 512);
+    const renderRadius = this.engine.clientSettings.renderDistance || 2000;
+    const unloadRadius = Math.ceil(renderRadius / 512) + 2;
+
+    // Only pass the chunk over to the 3D Mesher if it's within visual range!
+    if (Math.abs(chunkX - pxChunk) <= unloadRadius && Math.abs(chunkY - pyChunk) <= unloadRadius) {
+      if (this.engine.renderer) {
+        this.engine.renderer.updateChunkColumn(chunkX, chunkY, chunk);
+
+        const neighbors = [
+          { cx: chunkX - 1, cy: chunkY },
+          { cx: chunkX + 1, cy: chunkY },
+          { cx: chunkX, cy: chunkY - 1 },
+          { cx: chunkX, cy: chunkY + 1 }
+        ];
+        neighbors.forEach(n => {
+          if (this.chunks.has(`${n.cx}_${n.cy}`)) {
+            this.engine.renderer.updateChunkColumn(n.cx, n.cy, this.chunks.get(`${n.cx}_${n.cy}`), true);
+          }
+        });
+      }
+    } else {
+      // We generated the terrain and drew it to the 2D Map Cache, but it's too far to render in 3D.
+      // Immediately free it from RAM since we no longer need the raw grid data!
+      this.generatedChunks.delete(chunkKey);
+      if (!chunk.isModified) {
+          this.chunks.delete(chunkKey);
+      }
     }
   }
 
@@ -271,6 +289,11 @@ export class MapManager {
           this._lastCy = null;
           this._lastChunk = null;
         }
+
+      const chunk = this.chunks.get(chunkKey);
+      if (chunk && !chunk.isModified) {
+          this.chunks.delete(chunkKey);
+      }
       }
     }
   }

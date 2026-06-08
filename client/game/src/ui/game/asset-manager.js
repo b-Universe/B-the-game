@@ -2,6 +2,7 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
+import { ROBOTICS_SPRITES } from './entities/robotics.js?v=cache-bust-005';
 
 export class AssetManager {
   constructor(renderer) {
@@ -66,6 +67,9 @@ export class AssetManager {
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
+        if (this.renderer && this.renderer.webgl) {
+            this.renderer.webgl.initTexture(tex);
+        }
         this.textures[key] = tex;
         if (callback) callback(tex);
         this.assetsPending--;
@@ -202,6 +206,9 @@ export class AssetManager {
       this.assetsPending++;
       loader.load(url, (tex) => {
         callback(tex);
+        if (this.renderer && this.renderer.webgl) {
+            this.renderer.webgl.initTexture(tex);
+        }
         this.assetsPending--;
         this.checkComplete();
       }, undefined, () => {
@@ -255,6 +262,60 @@ export class AssetManager {
       this.sequenceLibrary['fx_speed_step'] = { name: 'FX Speed Step', path: 'assets/sprites/fx/fx4.png', frames: 8, speed: 80, texture: tex };
     });
 
+    loadTex(`assets/sprites/fx/fx5.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/6, 1);
+      this.textures['fx_heal'] = tex;
+      this.sequenceLibrary['fx_heal'] = { name: 'FX Heal', path: 'assets/sprites/fx/fx5.png', frames: 6, speed: 100, texture: tex };
+    });
+
+    loadTex(`assets/sprites/fx/fx6.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/5, 1);
+      this.textures['fx_drone_explode'] = tex;
+      this.sequenceLibrary['fx_drone_explode'] = { name: 'FX Drone Explode', path: 'assets/sprites/fx/fx6.png', frames: 5, speed: 100, texture: tex };
+    });
+
+    loadTex(`assets/sprites/fx/fx7.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/5, 1);
+      this.textures['fx_drone_circuit'] = tex;
+      this.sequenceLibrary['fx_drone_circuit'] = { name: 'FX Drone Circuit', path: 'assets/sprites/fx/fx7.png', frames: 5, speed: 100, texture: tex };
+    });
+
+    loadTex(`assets/sprites/fx/fx8.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/4, 1);
+      this.textures['fx_stun'] = tex;
+      this.sequenceLibrary['fx_stun'] = { name: 'FX Stun', path: 'assets/sprites/fx/fx8.png', frames: 4, speed: 100, texture: tex };
+    });
+
+    loadTex(`assets/sprites/fx/fx10.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/8, 1);
+      this.textures['fx_sparks'] = tex;
+      this.sequenceLibrary['fx_sparks'] = { name: 'FX Sparks', path: 'assets/sprites/fx/fx10.png', frames: 8, speed: 60, texture: tex };
+    });
+
+    loadTex(`assets/sprites/fx/fx11.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/9, 1);
+      this.textures['fx_electric_zap'] = tex;
+      this.sequenceLibrary['fx_electric_zap'] = { name: 'FX Electric Zap', path: 'assets/sprites/fx/fx11.png', frames: 9, speed: 50, texture: tex };
+    });
+
     ['crumpled-cronched-paper-1', 'crumpled-cronched-paper-2', 'crumpled-cronched-paper-3'].forEach((name, i) => {
       loadTex(`assets/sprites/projectiles/${name}.png${cb}`, (tex) => {
         tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
@@ -305,16 +366,9 @@ export class AssetManager {
       });
     });
 
-    const droneSpriteConfigs = [
-        { state: 'drone_idle', file: 'idle' },
-        { state: 'drone_forward', file: 'forward' },
-        { state: 'drone_backward', file: 'backward' },
-        { state: 'drone_death', file: 'death' }
-    ];
-
-    const dronePath = 'assets/sprites/entities/drone';
-    droneSpriteConfigs.forEach(config => {
-        loadTex(`${dronePath}/${config.file}.png${cb}`, (tex) => {
+    const roboticsPath = 'assets/sprites/entities/robotics';
+    ROBOTICS_SPRITES.forEach(config => {
+        loadTex(`${roboticsPath}/${config.file}.png${cb}`, (tex) => {
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
             tex.colorSpace = THREE.SRGBColorSpace;

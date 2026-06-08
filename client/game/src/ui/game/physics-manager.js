@@ -11,8 +11,8 @@ export class PhysicsManager {
     if (voxel.shape === 'slab') return (zIndex * 32) + 0;
     if (voxel.shape === 'top_slab') return (zIndex * 32) + 16;
     if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[voxel.shape]) {
-        const customHeight = FURNITURE_REGISTRY[voxel.shape].collisionHeight;
-        return customHeight !== undefined ? (zIndex * 32) - 16 + (customHeight * 32) : (zIndex * 32) + 0;
+      const customHeight = FURNITURE_REGISTRY[voxel.shape].collisionHeight;
+      return customHeight !== undefined ? (zIndex * 32) - 16 + (customHeight * 32) : (zIndex * 32) + 0;
     }
     if (voxel.shape && (voxel.shape.startsWith('ramp') || voxel.shape.startsWith('half_ramp') || voxel.shape.startsWith('top_half_ramp') || voxel.shape.startsWith('stair'))) {
       const vx = Math.round(x / 32) * 32;
@@ -26,9 +26,9 @@ export class PhysicsManager {
       else if (voxel.shape.endsWith('_w')) factor = (16 - localX) / 32;
 
       if (voxel.shape.startsWith('half_ramp')) {
-          return (zIndex * 32) - 16 + (16 * factor);
+        return (zIndex * 32) - 16 + (16 * factor);
       } else if (voxel.shape.startsWith('top_half_ramp')) {
-          return (zIndex * 32) + 0 + (16 * factor);
+        return (zIndex * 32) + 0 + (16 * factor);
       }
       return (zIndex * 32) - 16 + (32 * factor);
     }
@@ -81,9 +81,9 @@ export class PhysicsManager {
           curr = cameFrom.get(curr);
         }
         if (path.length > 0) {
-            path[path.length - 1].x = endX;
-            path[path.length - 1].y = endY;
-            path[path.length - 1].z = this.getTerrainZ(endX, endY, zMap.get(endNode));
+          path[path.length - 1].x = endX;
+          path[path.length - 1].y = endY;
+          path[path.length - 1].z = this.getTerrainZ(endX, endY, zMap.get(endNode));
         }
         path.hasHazard = hasAnyHazard;
         return path;
@@ -93,7 +93,7 @@ export class PhysicsManager {
       const [cx, cy] = current.split('_').map(Number);
       const cz = zMap.get(current);
 
-      const neighbors = [ [0, -32], [0, 32], [-32, 0], [32, 0], [-32, -32], [32, -32], [-32, 32], [32, 32] ];
+      const neighbors = [[0, -32], [0, 32], [-32, 0], [32, 0], [-32, -32], [32, -32], [-32, 32], [32, 32]];
 
       for (const [dx, dy] of neighbors) {
         const nx = cx + dx; const ny = cy + dy;
@@ -107,18 +107,18 @@ export class PhysicsManager {
         let hazardPenalty = 0;
         let hasHazard = false;
         if (this.engine.mapManager) {
-            const gridZ = Math.round(nz / 32);
-            for (let offset = -1; offset <= 0; offset++) {
-                const v = this.engine.mapManager.getVoxelAt(nx, ny, (gridZ + offset) * 32);
-                if (v && (v.tex === 'lava' || v.tex === 'lava_flow' || v.tex === 'acid')) {
-                    hazardPenalty = 10000;
-                    hasHazard = true;
-                    break;
-                } else if (v && (v.tex === 'water' || v.tex === 'water_flow')) {
-                    hazardPenalty = Math.max(hazardPenalty, 150);
-                    hasHazard = true;
-                }
+          const gridZ = Math.round(nz / 32);
+          for (let offset = -1; offset <= 0; offset++) {
+            const v = this.engine.mapManager.getVoxelAt(nx, ny, (gridZ + offset) * 32);
+            if (v && (v.tex === 'lava' || v.tex === 'lava_flow' || v.tex === 'acid')) {
+              hazardPenalty = 10000;
+              hasHazard = true;
+              break;
+            } else if (v && (v.tex === 'water' || v.tex === 'water_flow')) {
+              hazardPenalty = Math.max(hazardPenalty, 150);
+              hasHazard = true;
             }
+          }
         }
 
         const tentativeG = gScore.get(current) + ((dx !== 0 && dy !== 0) ? 45.2 : 32) + hazardPenalty;
@@ -195,36 +195,36 @@ export class PhysicsManager {
           const checkY = startGridY + dy;
 
           for (let zOffset = 0; zOffset <= 15; zOffset++) {
-             const zDirs = zOffset === 0 ? [0] : [zOffset, -zOffset];
+            const zDirs = zOffset === 0 ? [0] : [zOffset, -zOffset];
 
-             for (let dz of zDirs) {
-                const checkZ = startGridZ + dz;
-                if (checkZ > 15 || checkZ < -10) continue;
+            for (let dz of zDirs) {
+              const checkZ = startGridZ + dz;
+              if (checkZ > 15 || checkZ < -10) continue;
 
-                let hasFloor = false;
-                const floorVoxel = eng.mapManager.getVoxelAt(checkX * 32, checkY * 32, (checkZ - 1) * 32);
-                if (floorVoxel && getBlockProps(floorVoxel.tex).isSolid) {
-                   hasFloor = true;
-                } else if (checkZ <= -3) {
-                   hasFloor = true;
+              let hasFloor = false;
+              const floorVoxel = eng.mapManager.getVoxelAt(checkX * 32, checkY * 32, (checkZ - 1) * 32);
+              if (floorVoxel && getBlockProps(floorVoxel.tex).isSolid) {
+                hasFloor = true;
+              } else if (checkZ <= -3) {
+                hasFloor = true;
+              }
+
+              if (hasFloor) {
+                let isClear = true;
+                for (let clearZ = 0; clearZ < 3; clearZ++) {
+                  const v = eng.mapManager.getVoxelAt(checkX * 32, checkY * 32, (checkZ + clearZ) * 32);
+                  if (v && getBlockProps(v.tex).isSolid) {
+                    isClear = false;
+                    break;
+                  }
                 }
-
-                if (hasFloor) {
-                   let isClear = true;
-                   for (let clearZ = 0; clearZ < 3; clearZ++) {
-                      const v = eng.mapManager.getVoxelAt(checkX * 32, checkY * 32, (checkZ + clearZ) * 32);
-                      if (v && getBlockProps(v.tex).isSolid) {
-                         isClear = false;
-                         break;
-                      }
-                   }
-                   if (isClear) {
-                      safeSpot = { x: checkX * 32, y: checkY * 32, z: checkZ * 32 };
-                      break;
-                   }
+                if (isClear) {
+                  safeSpot = { x: checkX * 32, y: checkY * 32, z: checkZ * 32 };
+                  break;
                 }
-             }
-             if (safeSpot) break;
+              }
+            }
+            if (safeSpot) break;
           }
           if (safeSpot) break;
         }
@@ -234,14 +234,14 @@ export class PhysicsManager {
     }
 
     if (safeSpot) {
-       console.log("[Engine] Found safe 3x3 spawn clearance near", safeSpot);
-       eng.player.x = safeSpot.x;
-       eng.player.y = safeSpot.y;
-       eng.player.z = safeSpot.z;
+      console.log("[Engine] Found safe 3x3 spawn clearance near", safeSpot);
+      eng.player.x = safeSpot.x;
+      eng.player.y = safeSpot.y;
+      eng.player.z = safeSpot.z;
     } else {
-       console.log("[Engine] Could not find 3x3 clearance nearby, moving to absolute top.");
-       const highestZ = this.getTerrainZ(eng.player.x, eng.player.y);
-       eng.player.z = highestZ + 10;
+      console.log("[Engine] Could not find 3x3 clearance nearby, moving to absolute top.");
+      const highestZ = this.getTerrainZ(eng.player.x, eng.player.y);
+      eng.player.z = highestZ + 10;
     }
 
     eng.camera.x = eng.player.x;
@@ -285,12 +285,12 @@ export class PhysicsManager {
                   eng.autoOpenedDoors.set(`${gridX}_${gridY}_${gridZ}`, { x: gridX, y: gridY, z: gridZ, timer: 3000 });
 
                   if (eng.doors) {
-                      const doorObj = eng.doors.find(d => d.x === gridX && d.y === gridY && d.z === gridZ);
-                      if (doorObj) {
-                          doorObj.shape = v.shape;
-                      } else {
-                          eng.doors.push({ x: gridX, y: gridY, z: gridZ, shape: v.shape, tex: v.tex, color: v.color, dir: v.dir });
-                      }
+                    const doorObj = eng.doors.find(d => d.x === gridX && d.y === gridY && d.z === gridZ);
+                    if (doorObj) {
+                      doorObj.shape = v.shape;
+                    } else {
+                      eng.doors.push({ x: gridX, y: gridY, z: gridZ, shape: v.shape, tex: v.tex, color: v.color, dir: v.dir });
+                    }
                   }
                 }
               }
@@ -317,33 +317,33 @@ export class PhysicsManager {
           const vx = cx + dx, vy = cy + dy, vz = cz + dz;
           const voxel = eng.mapManager.getVoxelAt(vx, vy, vz);
           if (voxel && voxel.shape && voxel.shape.includes('door')) {
-             let isSolid = !voxel.shape.includes('_open');
+            let isSolid = !voxel.shape.includes('_open');
 
-             // If it's open, but was opened less than 150ms ago, it's still physically blocking!
-             if (!isSolid && voxel._openedAt) {
-                 const elapsed = performance.now() - voxel._openedAt;
-                 if (elapsed < 150) {
-                     isSolid = true;
-                 }
-             }
+            // If it's open, but was opened less than 150ms ago, it's still physically blocking!
+            if (!isSolid && voxel._openedAt) {
+              const elapsed = performance.now() - voxel._openedAt;
+              if (elapsed < 150) {
+                isSolid = true;
+              }
+            }
 
-             if (isSolid) {
-                 let minX = vx - 16, maxX = vx + 16, minY = vy - 16, maxY = vy + 16;
-                 const baseShape = voxel.shape.replace('_open', '');
-                 const dirE = baseShape.includes('door_e') || voxel.dir === 'e';
-                 const dirN = baseShape.includes('door_n') || voxel.dir === 'n';
-                 const dirW = baseShape.includes('door_w') || voxel.dir === 'w';
+            if (isSolid) {
+              let minX = vx - 16, maxX = vx + 16, minY = vy - 16, maxY = vy + 16;
+              const baseShape = voxel.shape.replace('_open', '');
+              const dirE = baseShape.includes('door_e') || voxel.dir === 'e';
+              const dirN = baseShape.includes('door_n') || voxel.dir === 'n';
+              const dirW = baseShape.includes('door_w') || voxel.dir === 'w';
 
-                 if (dirE) { minX = vx + 8; }
-                 else if (dirN) { maxY = vy - 8; }
-                 else if (dirW) { maxX = vx - 8; }
-                 else { minY = vy + 8; }
+              if (dirE) { minX = vx + 8; }
+              else if (dirN) { maxY = vy - 8; }
+              else if (dirW) { maxX = vx - 8; }
+              else { minY = vy + 8; }
 
-                 if (nextX > minX - 14 && nextX < maxX + 14 && nextY > minY - 14 && nextY < maxY + 14) {
-                    const customHeight = FURNITURE_REGISTRY[baseShape]?.collisionHeight || 1;
-                    if (pZ < vz + (customHeight * 32) && pZ + 48 > vz - 16) return true;
-                 }
-             }
+              if (nextX > minX - 14 && nextX < maxX + 14 && nextY > minY - 14 && nextY < maxY + 14) {
+                const customHeight = FURNITURE_REGISTRY[baseShape]?.collisionHeight || 1;
+                if (pZ < vz + (customHeight * 32) && pZ + 48 > vz - 16) return true;
+              }
+            }
           }
         }
       }
@@ -370,7 +370,15 @@ export class PhysicsManager {
             const dy = Math.abs(ent.y - nextY);
             if (dy >= 55) continue;
 
-            if (dx * dx + dy * dy < 3025) return true;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < 3025) {
+              // Allow players to slide OUT of hitboxes if they get trapped inside
+              const currentDx = ent.x - eng.player.x;
+              const currentDy = ent.y - eng.player.y;
+              const currentDistSq = currentDx * currentDx + currentDy * currentDy;
+
+              if (distSq < currentDistSq) return true;
+            }
           }
         }
       }
@@ -380,6 +388,17 @@ export class PhysicsManager {
 
   applyGravity(entity, dt) {
     const eng = this.engine;
+
+    if (eng.mapManager) {
+      const gridX = Math.round(entity.x / 32);
+      const gridY = Math.round(entity.y / 32);
+      const cx = Math.floor(gridX / 16);
+      const cy = Math.floor(gridY / 16);
+      if (!eng.mapManager.chunks.has(`${cx}_${cy}`)) {
+        return;
+      }
+    }
+
     const blockTop = this.getTerrainZ(entity.x, entity.y, entity.z);
     if (entity.z === undefined) entity.z = blockTop;
     if (entity.vz === undefined) entity.vz = 0;
@@ -424,47 +443,47 @@ export class PhysicsManager {
           currentlyInWater = false;
           const fluidTop = wZ + 16;
           if (entity.z >= fluidTop - 4) {
-             effectiveBlockTop = Math.max(effectiveBlockTop, fluidTop + 20);
+            effectiveBlockTop = Math.max(effectiveBlockTop, fluidTop + 20);
 
-             for (let i = 0; i < 4; i++) {
-                 eng.spawnParticle({
-                    x: entity.x + (Math.random() - 0.5) * 30,
-                    y: entity.y + (Math.random() - 0.5) * 30,
-                    z: fluidTop,
-                    vx: -(entity.momentumX * 0.3) + (Math.random() - 0.5) * 100,
-                    vy: -(entity.momentumY * 0.3) + (Math.random() - 0.5) * 100,
-                    vz: 30 + Math.random() * 80,
-                    life: 0.3 + Math.random() * 0.3,
-                    maxLife: 0.6,
-                    color: '#aaddff',
-                    size: 2 + Math.random() * 4
-                 });
-             }
-             if (Math.random() > 0.3) {
-                 eng.spawnParticle({
-                    x: entity.x + (Math.random() - 0.5) * 20,
-                    y: entity.y + (Math.random() - 0.5) * 20,
-                    z: fluidTop,
-                    vx: -(entity.momentumX * 0.15) + (Math.random() - 0.5) * 50,
-                    vy: -(entity.momentumY * 0.15) + (Math.random() - 0.5) * 50,
-                    vz: 20 + Math.random() * 60,
-                    life: 0.2 + Math.random() * 0.3,
-                    maxLife: 0.5,
-                    color: '#ffffff',
-                    size: 3 + Math.random() * 5
-                 });
-             }
-             if (Math.random() > 0.6) {
-                 eng.debris.push({
-                   x: entity.x + (Math.random() - 0.5) * 16, y: entity.y + (Math.random() - 0.5) * 16, z: fluidTop + 15,
-                   vx: -(entity.momentumX * 0.05), vy: -(entity.momentumY * 0.05), vz: 0, life: 0.4, maxLife: 0.4, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
-                   color: '#aaddff',
-                   flipX: Math.random() > 0.5
-                 });
-             }
+            for (let i = 0; i < 4; i++) {
+              eng.spawnParticle({
+                x: entity.x + (Math.random() - 0.5) * 30,
+                y: entity.y + (Math.random() - 0.5) * 30,
+                z: fluidTop,
+                vx: -(entity.momentumX * 0.3) + (Math.random() - 0.5) * 100,
+                vy: -(entity.momentumY * 0.3) + (Math.random() - 0.5) * 100,
+                vz: 30 + Math.random() * 80,
+                life: 0.3 + Math.random() * 0.3,
+                maxLife: 0.6,
+                color: '#aaddff',
+                size: 2 + Math.random() * 4
+              });
+            }
+            if (Math.random() > 0.3) {
+              eng.spawnParticle({
+                x: entity.x + (Math.random() - 0.5) * 20,
+                y: entity.y + (Math.random() - 0.5) * 20,
+                z: fluidTop,
+                vx: -(entity.momentumX * 0.15) + (Math.random() - 0.5) * 50,
+                vy: -(entity.momentumY * 0.15) + (Math.random() - 0.5) * 50,
+                vz: 20 + Math.random() * 60,
+                life: 0.2 + Math.random() * 0.3,
+                maxLife: 0.5,
+                color: '#ffffff',
+                size: 3 + Math.random() * 5
+              });
+            }
+            if (Math.random() > 0.6) {
+              eng.debris.push({
+                x: entity.x + (Math.random() - 0.5) * 16, y: entity.y + (Math.random() - 0.5) * 16, z: fluidTop + 15,
+                vx: -(entity.momentumX * 0.05), vy: -(entity.momentumY * 0.05), vz: 0, life: 0.4, maxLife: 0.4, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
+                color: '#aaddff',
+                flipX: Math.random() > 0.5
+              });
+            }
           } else {
-             runningOnWater = false;
-             currentlyInWater = true;
+            runningOnWater = false;
+            currentlyInWater = true;
           }
         }
       }
@@ -481,31 +500,29 @@ export class PhysicsManager {
 
       const props = getBlockProps(waterVoxel.tex);
       if (props.damagePerSecond && entity.hp !== undefined && entity.hp > 0 && entity.state !== 'death' && entity.state !== 'dead') {
-          if (Math.random() > 0.4) {
-              const isAcid = waterVoxel.tex === 'acid';
-              eng.spawnParticle({
-                  x: entity.x + (Math.random() - 0.5) * 20,
-                  y: entity.y + (Math.random() - 0.5) * 20,
-                  z: entity.z + 10 + Math.random() * 20,
-                  vx: (Math.random() - 0.5) * 15,
-                  vy: (Math.random() - 0.5) * 15,
-                  vz: 20 + Math.random() * 30,
-                  noGravity: true,
-                  life: 0.4 + Math.random() * 0.4,
-                  maxLife: 0.8,
-                  color: isAcid ? '#2ecc71' : (Math.random() > 0.5 ? '#ff5d00' : 'rgba(100,100,100,0.8)'),
-                  tex: isAcid ? 'bubble' : undefined,
-                  size: isAcid ? 1 + Math.random() * 2 : 3 + Math.random() * 3
-              });
-          }
+        if (Math.random() > 0.4) {
+          const isAcid = waterVoxel.tex === 'acid';
+          eng.spawnParticle({
+            x: entity.x + (Math.random() - 0.5) * 20,
+            y: entity.y + (Math.random() - 0.5) * 20,
+            z: entity.z + 10 + Math.random() * 20,
+            vx: (Math.random() - 0.5) * 15,
+            vy: (Math.random() - 0.5) * 15,
+            vz: 20 + Math.random() * 30,
+            noGravity: true,
+            life: 0.4 + Math.random() * 0.4,
+            maxLife: 0.8,
+            color: isAcid ? '#2ecc71' : (Math.random() > 0.5 ? '#ff5d00' : 'rgba(100,100,100,0.8)'),
+            tex: isAcid ? 'bubble' : undefined,
+            size: isAcid ? 1 + Math.random() * 2 : 3 + Math.random() * 3
+          });
+        }
       }
     } else if (entity.activePowers && entity.activePowers.includes('fly')) {
       if (entity === eng.player) {
-        const kbs = eng.clientSettings.keybinds || {};
-        const flyDownKey = (kbs.flyDown || 'x').toLowerCase();
-        if (eng.keys && eng.keys[' ']) {
+        if (eng.input.isActionDown('jump')) {
           entity.vz = 450;
-        } else if (eng.keys && eng.keys[flyDownKey]) {
+        } else if (eng.input.isActionDown('flyDown')) {
           entity.vz = -450;
         } else {
           entity.vz = 0;

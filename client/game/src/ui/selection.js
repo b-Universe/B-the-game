@@ -18,45 +18,45 @@ export function initSelection(accountData) {
     presetContainer.style.cssText = 'position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000;';
 
     const applyPreset = (preset) => {
-        let settings = {};
-        const savedSettingsStr = localStorage.getItem('b_client_settings');
-        if (savedSettingsStr) {
-            try { settings = JSON.parse(savedSettingsStr); } catch (e) {}
-        }
+      let settings = {};
+      const savedSettingsStr = localStorage.getItem('b_client_settings');
+      if (savedSettingsStr) {
+        try { settings = JSON.parse(savedSettingsStr); } catch (e) {}
+      }
 
-        if (preset === 'potato') {
-            settings.renderDistance = 800;
-            settings.renderScale = 0.5;
-            settings.enableShadows = false;
-            settings.softShadows = false;
-            settings.maxDynamicLights = 0;
-        } else if (preset === 'normal') {
-            settings.renderDistance = 2000;
-            settings.renderScale = 1.0;
-            settings.enableShadows = true;
-            settings.softShadows = true;
-            settings.maxDynamicLights = 48;
-        } else if (preset === 'ultra') {
-            settings.renderDistance = 4000;
-            settings.renderScale = 1.0;
-            settings.enableShadows = true;
-            settings.softShadows = true;
-            settings.maxDynamicLights = 100;
-        }
-        localStorage.setItem('b_client_settings', JSON.stringify(settings));
+      if (preset === 'potato') {
+        settings.renderDistance = 800;
+        settings.renderScale = 0.5;
+        settings.enableShadows = false;
+        settings.softShadows = false;
+        settings.maxDynamicLights = 0;
+      } else if (preset === 'normal') {
+        settings.renderDistance = 2000;
+        settings.renderScale = 1.0;
+        settings.enableShadows = true;
+        settings.softShadows = true;
+        settings.maxDynamicLights = 48;
+      } else if (preset === 'ultra') {
+        settings.renderDistance = 4000;
+        settings.renderScale = 1.0;
+        settings.enableShadows = true;
+        settings.softShadows = true;
+        settings.maxDynamicLights = 100;
+      }
+      localStorage.setItem('b_client_settings', JSON.stringify(settings));
 
         ['potato', 'normal', 'ultra'].forEach(p => {
-           const btn = document.getElementById(`btn-sel-preset-${p}`);
-           if (btn) {
-               if (p === preset) {
-                   btn.style.borderColor = '#3498db';
-                   btn.style.color = '#3498db';
-               } else {
-                   btn.style.borderColor = 'var(--text-dim)';
-                   btn.style.color = 'var(--text-primary)';
-               }
-           }
-        });
+          const btn = document.getElementById(`btn-sel-preset-${p}`);
+          if (btn) {
+            if (p === preset) {
+              btn.style.borderColor = '#3498db';
+              btn.style.color = '#3498db';
+            } else {
+              btn.style.borderColor = 'var(--text-dim)';
+              btn.style.color = 'var(--text-primary)';
+            }
+          }
+      });
     };
 
     ['potato', 'normal', 'ultra'].forEach(preset => {
@@ -71,23 +71,10 @@ export function initSelection(accountData) {
     selectionScreen.appendChild(presetContainer);
   }
 
-  if (accountData.characters.length === 0) {
-    listContainer.innerHTML = `
-      <div class="empty-state">
-        <p>No Players Found</p>
-        <button id="btn-init-creator" class="btn-secondary">Create New Character</button>
-      </div>
-    `;
+  const maxChars = accountData.maxCharacters || 3;
+  const existingChars = accountData.characters.length;
 
-    btnPlay.disabled = true;
-    btnPlay.style.opacity = "0.5";
-    if (btnDelete) btnDelete.disabled = true;
-    if (btnDelete) btnDelete.style.opacity = "0.5";
-
-    document.getElementById('btn-init-creator').onclick = () => {
-      openCharacterCreator(accountData.uuid);
-    };
-  } else {
+  if (existingChars > 0) {
     accountData.characters.forEach((char, index) => {
       const slot = document.createElement('div');
       slot.className = 'char-slot';
@@ -110,9 +97,31 @@ export function initSelection(accountData) {
 
       listContainer.appendChild(slot);
     });
+  }
 
+  if (existingChars < maxChars) {
+    for (let i = existingChars; i < maxChars; i++) {
+      const emptySlot = document.createElement('div');
+      emptySlot.className = 'char-slot empty-slot';
+      emptySlot.innerHTML = `
+          <div class="char-name" style="color: var(--text-dim); font-style: italic;">[ EMPTY SLOT ]</div>
+          <button class="btn-secondary btn-create-in-slot" style="margin-top: 10px;">Create Character</button>
+      `;
+      emptySlot.querySelector('.btn-create-in-slot').onclick = () => {
+        openCharacterCreator(accountData.uuid);
+      };
+      listContainer.appendChild(emptySlot);
+    }
+  }
+
+  if (existingChars === 0) {
+    btnPlay.disabled = true;
+    btnPlay.style.opacity = "0.5";
+    if (btnDelete) btnDelete.disabled = true;
+    if (btnDelete) btnDelete.style.opacity = "0.5";
+  } else {
     // Auto-select the first character slot
-    const firstSlot = listContainer.querySelector('.char-slot');
+    const firstSlot = listContainer.querySelector('.char-slot:not(.empty-slot)');
     if (firstSlot) firstSlot.click();
   }
 

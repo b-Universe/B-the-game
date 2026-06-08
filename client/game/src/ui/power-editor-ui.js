@@ -49,8 +49,12 @@ export class PowerEditorUIManager {
       this.els.btnOpen.style.borderColor = '#e056fd';
       this.els.btnOpen.style.color = '#e056fd';
       this.els.btnOpen.addEventListener('click', () => {
-        this.window.open();
-        this.loadData();
+        if (this.window.element.style.display === 'none') {
+          this.window.open();
+          this.loadData();
+        } else {
+          this.window.close();
+        }
       });
     }
 
@@ -470,6 +474,16 @@ export class PowerEditorUIManager {
             <option value="MaxSynth" ${effect.type === 'MaxSynth' ? 'selected' : ''}>Max Battery Bonus</option>
           </select>
         </div>
+        <div class="pe-input-row" style="flex: 1; margin: 0; display: ${effect.type === 'Status' ? 'flex' : 'none'}; flex-direction: column;">
+          <label style="font-size: 0.75rem;">Status Type</label>
+          <select class="b-select effect-status-type" data-index="${index}">
+            <option value="stun" ${effect.statusType === 'stun' ? 'selected' : ''}>Stun</option>
+            <option value="slow" ${effect.statusType === 'slow' ? 'selected' : ''}>Slow</option>
+            <option value="hold" ${effect.statusType === 'hold' ? 'selected' : ''}>Hold</option>
+            <option value="root" ${effect.statusType === 'root' ? 'selected' : ''}>Root</option>
+            <option value="blind" ${effect.statusType === 'blind' ? 'selected' : ''}>Blind</option>
+          </select>
+        </div>
         <div class="pe-input-row" style="flex: 1; margin: 0;">
           <label style="font-size: 0.75rem;">Magnitude</label>
           <input type="number" class="b-input effect-mag" data-index="${index}" value="${effect.magnitude}">
@@ -493,7 +507,13 @@ export class PowerEditorUIManager {
     });
 
     this.els.effectsList.querySelectorAll('.effect-type').forEach(el => {
-      el.addEventListener('change', (e) => { this.currentEffects[e.target.dataset.index].type = e.target.value; });
+      el.addEventListener('change', (e) => {
+        this.currentEffects[e.target.dataset.index].type = e.target.value;
+        this.renderEffectsList(); // Re-render to show/hide the status column dynamically
+      });
+    });
+    this.els.effectsList.querySelectorAll('.effect-status-type').forEach(el => {
+      el.addEventListener('change', (e) => { this.currentEffects[e.target.dataset.index].statusType = e.target.value; });
     });
     this.els.effectsList.querySelectorAll('.effect-mag').forEach(el => {
       el.addEventListener('input', (e) => { this.currentEffects[e.target.dataset.index].magnitude = parseFloat(e.target.value) || 0; });

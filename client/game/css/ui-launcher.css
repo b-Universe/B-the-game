@@ -65,3 +65,95 @@
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* Power Editor Dynamic Lists */
+.pe-dynamic-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+/* Responsive Home Page Layout */
+.home-layout-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.game-sidebar {
+  background-color: rgba(11, 14, 20, 0.95);
+  border-bottom: 2px solid #3498db;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  max-height: 55vh; /* Prevents it from crushing the screen on mobile portrait */
+  overflow-y: auto;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.game-sidebar > #auth-form,
+.game-sidebar > .patch-notes-container {
+  width: 100%;
+}
+
+.home-main-content {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* PC & Mobile Landscape */
+@media (min-width: 768px), (orientation: landscape) {
+  .home-layout-container { flex-direction: row; }
+  .game-sidebar {
+    width: 350px;
+    max-height: 100vh;
+    height: 100vh;
+    border-bottom: none;
+    border-right: 2px solid #3498db;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+  }
+}
+
+#btn-login-music {
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease, box-shadow 0.2s ease !important;
+}
+#btn-login-music:hover {
+  transform: scale(1.15) !important;
+  background: rgba(52, 152, 219, 0.4) !important;
+  box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4) !important;
+}
+
+.char-slot.empty-slot {
+  background: rgba(5, 7, 10, 0.6);
+  border-style: dashed;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.char-slot.empty-slot:hover {
+  background: rgba(5, 7, 10, 0.8);
+  border-color: var(--text-dim);
+}
+
+.btn-create-in-slot {
+  border-color: #2ecc71 !important;
+  color: #2ecc71 !important;
+  background: rgba(46, 204, 113, 0.1) !important;
+}
+.btn-create-in-slot:hover {
+  background: rgba(46, 204, 113, 0.2) !important;
+}

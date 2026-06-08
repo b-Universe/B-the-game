@@ -130,7 +130,8 @@ export class VoxelManager {
           }
 
           counter++;
-          if (counter % 1200 === 0) yield;
+          const genSpeed = this.renderer.engine.clientSettings.chunkGenSpeed || 3;
+          if (counter % (400 * genSpeed) === 0) yield;
 
           const vz = parseInt(key.substring(secondScore + 1), 10);
           const absX = vx * 32;

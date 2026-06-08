@@ -112,6 +112,10 @@ export class Renderer {
   setupScene() {
     this.scene = new THREE.Scene();
 
+    const dummyCanvas = document.createElement('canvas');
+    dummyCanvas.width = 1; dummyCanvas.height = 1;
+    this.dummyTexture = new THREE.CanvasTexture(dummyCanvas);
+
     this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
     this.hemiLight.layers.enableAll();
     this.scene.add(this.hemiLight);
@@ -133,6 +137,14 @@ export class Renderer {
 
     this.scene.add(this.sunLight);
     this.scene.add(this.sunLight.target);
+
+    const lightningMat = new THREE.LineBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.8, depthWrite: false });
+    const lightningGeo = new THREE.BufferGeometry();
+    lightningGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3000 * 3), 3));
+    lightningGeo.setDrawRange(0, 2); // Force WebGL to compile the shader on frame 1!
+    this.lightningMesh = new THREE.LineSegments(lightningGeo, lightningMat);
+    this.lightningMesh.renderOrder = 999;
+    this.scene.add(this.lightningMesh);
 
     this.spriteBatcher = new SpriteBatcher(this);
 
@@ -156,6 +168,22 @@ export class Renderer {
     this.playerLight.shadow.bias = -0.001; // Prevents ugly shadow striping on flat walls
     this.scene.add(this.playerLight);
     this.scene.add(this.playerLight.target);
+
+    this.spotLightPool = [];
+    const maxSpotLights = 10;
+    for (let i = 0; i < maxSpotLights; i++) {
+      const light = new THREE.SpotLight(0xeef4ff, 0, 2000, Math.PI / 4, 0.5, 1.5);
+      light.castShadow = this.engine.clientSettings.enableShadows !== false;
+      light.shadow.mapSize.width = 1024;
+      light.shadow.mapSize.height = 1024;
+      light.shadow.camera.near = 10;
+      light.shadow.camera.far = 2000;
+      light.shadow.bias = -0.001;
+      light.userData.inUse = false;
+      this.scene.add(light);
+      this.scene.add(light.target);
+      this.spotLightPool.push(light);
+    }
   }
 
   updateChunkColumn(cx, cy, chunkMap, forceRebuild = false) {
@@ -169,13 +197,13 @@ export class Renderer {
     }
     const prefix = `${cx}_${cy}_`;
     for (const meshKey of this.chunkMeshes.keys()) {
-        if (meshKey.startsWith(prefix)) activeCZs.add(parseInt(meshKey.substring(prefix.length), 10));
+      if (meshKey.startsWith(prefix)) activeCZs.add(parseInt(meshKey.substring(prefix.length), 10));
     }
     for (const meshKey of this.chunkTransparentMeshes.keys()) {
-        if (meshKey.startsWith(prefix)) activeCZs.add(parseInt(meshKey.substring(prefix.length), 10));
+      if (meshKey.startsWith(prefix)) activeCZs.add(parseInt(meshKey.substring(prefix.length), 10));
     }
     for (const cz of activeCZs) {
-        this.updateChunkMesh(cx, cy, cz, chunkMap, forceRebuild);
+      this.updateChunkMesh(cx, cy, cz, chunkMap, forceRebuild);
     }
   }
 
@@ -192,7 +220,6 @@ export class Renderer {
     try {
       const geos = await this.chunkMesher.buildChunkMesh(cx, cy, cz, chunkMap, forceRebuild);
 
-      // Ensure this is still the most recent mesh generation request for this chunk!
       if (this.pendingChunkUpdates.get(key) !== updateId) {
           return;
       }
@@ -254,6 +281,7 @@ export class Renderer {
       if (this.engine.ui) this.engine.ui.hideLoadingScreen();
       const hint = document.getElementById('load-hint-msg');
       if (hint) hint.remove();
+      if (this.engine.network) this.engine.network.sendClientReady();
     }
   }
 
@@ -904,15 +932,15 @@ export class Renderer {
     const railE = new THREE.BoxGeometry(12, 4, 24); railE.translate(10, 0, 0);
     const railW = new THREE.BoxGeometry(12, 4, 24); railW.translate(-10, 0, 0);
     for (let i = 0; i < 16; i++) {
-        const parts = [postGeo.clone()];
-        if (i & 1) parts.push(railN.clone());
-        if (i & 2) parts.push(railS.clone());
-        if (i & 4) parts.push(railE.clone());
-        if (i & 8) parts.push(railW.clone());
-        const merged = mergeGeometries(parts, false);
-        merged.computeBoundingBox();
-        merged.computeBoundingSphere();
-        this.blockGeometries.fence[i] = merged;
+      const parts = [postGeo.clone()];
+      if (i & 1) parts.push(railN.clone());
+      if (i & 2) parts.push(railS.clone());
+      if (i & 4) parts.push(railE.clone());
+      if (i & 8) parts.push(railW.clone());
+      const merged = mergeGeometries(parts, false);
+      merged.computeBoundingBox();
+      merged.computeBoundingSphere();
+      this.blockGeometries.fence[i] = merged;
     }
 
     this.previewMaterial = this.instancedMaterial.clone();
@@ -1005,6 +1033,52 @@ export class Renderer {
       );
     };
 
+    // --- Base Materials for Entities, Projectiles, and Debris ---
+    this.baseEntityMaterial = new THREE.MeshPhongMaterial({
+      transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.FrontSide,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1, shininess: 0,
+      map: this.dummyTexture
+    });
+    this.baseEntityMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <defaultnormal_vertex>',
+        `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+      ).replace(
+        '#include <project_vertex>',
+        `
+        vec4 mvPosition = vec4( transformed, 1.0 );
+        #ifdef USE_INSTANCING
+            mvPosition = instanceMatrix * mvPosition;
+        #endif
+        mvPosition = modelViewMatrix * mvPosition;
+        mvPosition.z += (position.y + 0.5) * 60.0;
+        gl_Position = projectionMatrix * mvPosition;
+        `
+      );
+    };
+    this.baseEntityMaterial.customProgramCacheKey = () => 'baseEntityMat';
+
+    this.baseDebrisMaterial = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0, map: this.dummyTexture });
+    this.baseDebrisMaterial.onBeforeCompile = this.baseEntityMaterial.onBeforeCompile;
+    this.baseDebrisMaterial.customProgramCacheKey = () => 'baseDebrisMat';
+
+    this.baseFXMaterial = this.baseDebrisMaterial.clone();
+    this.baseFXMaterial.blending = THREE.AdditiveBlending;
+    this.baseFXMaterial.depthWrite = false;
+    this.baseFXMaterial.emissiveMap = this.dummyTexture; // Prevents mid-frame recompilation when glow maps are applied
+    this.baseFXMaterial.onBeforeCompile = this.baseDebrisMaterial.onBeforeCompile;
+    this.baseFXMaterial.customProgramCacheKey = () => 'baseFXMat';
+
+    this.baseProjectileMaterial = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0, map: this.dummyTexture });
+    this.baseProjectileMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace('#include <defaultnormal_vertex>', `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`);
+    };
+    this.baseProjectileMaterial.customProgramCacheKey = () => 'baseProjMat';
+
+    this.commonShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
+    this.commonShieldMat = new THREE.MeshBasicMaterial({ color: 0x3498db, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.commonHitProxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+
     const decorGeo = new THREE.BufferGeometry();
     const verts = new Float32Array([
       -16, 0, 32,  16, 0, 32,  -16, 0, 0,   16, 0, 32,  16, 0, 0,  -16, 0, 0,
@@ -1019,61 +1093,76 @@ export class Renderer {
     decorGeo.computeVertexNormals();
 
     Object.assign(this.blockGeometries, {
-        cube: cubeGeo,
-        slab: slabGeo,
-        top_slab: topSlabGeo,
-        ramp: rampGeo,
-        half_ramp: halfRampGeo,
-        top_half_ramp: topHalfRampGeo,
-        stair: stairGeo,
-        door: doorGeo,
-        decor: decorGeo,
-        decal: decalGeo
+      cube: cubeGeo,
+      slab: slabGeo,
+      top_slab: topSlabGeo,
+      ramp: rampGeo,
+      half_ramp: halfRampGeo,
+      top_half_ramp: topHalfRampGeo,
+      stair: stairGeo,
+      door: doorGeo,
+      decor: decorGeo,
+      decal: decalGeo
     });
+
+    // Create a dummy object to force shader compilation on the very first frame
+    const compilerDummy = new THREE.Group();
+    compilerDummy.frustumCulled = false;
+    const dGeo = new THREE.PlaneGeometry(1, 1);
+    const d1 = new THREE.Mesh(dGeo, this.baseEntityMaterial); d1.receiveShadow = true;
+    const d2 = new THREE.Mesh(dGeo, this.baseDebrisMaterial); d2.receiveShadow = true;
+    const d3 = new THREE.Mesh(dGeo, this.baseFXMaterial); d3.receiveShadow = true;
+    const d4 = new THREE.Mesh(dGeo, this.baseProjectileMaterial); d4.receiveShadow = true;
+    const d5 = new THREE.Mesh(dGeo, this.commonShadowMat);
+    const d6 = new THREE.Mesh(dGeo, this.commonShieldMat);
+    const d7 = new THREE.Mesh(dGeo, this.commonHitProxyMat);
+    compilerDummy.add(d1, d2, d3, d4, d5, d6, d7);
+    compilerDummy.scale.set(0.0001, 0.0001, 0.0001);
+    this.scene.add(compilerDummy);
   }
 
   getOrCreateDoorMesh(baseShape) {
-      if (!this.dynamicDoorMeshes) this.dynamicDoorMeshes = new Map();
-      if (this.dynamicDoorMeshes.has(baseShape)) return this.dynamicDoorMeshes.get(baseShape);
+    if (!this.dynamicDoorMeshes) this.dynamicDoorMeshes = new Map();
+    if (this.dynamicDoorMeshes.has(baseShape)) return this.dynamicDoorMeshes.get(baseShape);
 
-      let geo;
-      let useMeshUVDefault = 0;
-      if (this.assetManager.modelMeshes[baseShape]) {
-          geo = this.assetManager.modelMeshes[baseShape].geometry.clone();
-          if (FURNITURE_REGISTRY[baseShape] && FURNITURE_REGISTRY[baseShape].useMeshUV) {
-              useMeshUVDefault = 1;
-          }
+    let geo;
+    let useMeshUVDefault = 0;
+    if (this.assetManager.modelMeshes[baseShape]) {
+        geo = this.assetManager.modelMeshes[baseShape].geometry.clone();
+        if (FURNITURE_REGISTRY[baseShape] && FURNITURE_REGISTRY[baseShape].useMeshUV) {
+            useMeshUVDefault = 1;
+        }
+    } else {
+      // Fallback legacy mapping for 'door' to wooden-door-1
+      if (baseShape === 'door' && this.assetManager.modelMeshes['wooden-door-1']) {
+        geo = this.assetManager.modelMeshes['wooden-door-1'].geometry.clone();
+        useMeshUVDefault = 1;
       } else {
-          // Fallback legacy mapping for 'door' to wooden-door-1
-          if (baseShape === 'door' && this.assetManager.modelMeshes['wooden-door-1']) {
-             geo = this.assetManager.modelMeshes['wooden-door-1'].geometry.clone();
-             useMeshUVDefault = 1;
-          } else {
-             return null;
-          }
+        return null;
       }
+    }
 
-      geo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(new Uint32Array(4000 * 3), 3));
-      geo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(new Uint32Array(4000), 1));
+    geo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(new Uint32Array(4000 * 3), 3));
+    geo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(new Uint32Array(4000), 1));
 
-      if (!geo.attributes.useMeshUV) {
-          const useMeshUVDummy = new Float32Array(geo.attributes.position.count).fill(useMeshUVDefault);
-          geo.setAttribute('useMeshUV', new THREE.BufferAttribute(useMeshUVDummy, 1));
-      }
+    if (!geo.attributes.useMeshUV) {
+      const useMeshUVDummy = new Float32Array(geo.attributes.position.count).fill(useMeshUVDefault);
+      geo.setAttribute('useMeshUV', new THREE.BufferAttribute(useMeshUVDummy, 1));
+    }
 
-      const mesh = new THREE.InstancedMesh(geo, this.modelMaterial, 4000);
-      mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
-      mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
-      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      mesh.customDepthMaterial = this.modelDepthMaterial;
-      mesh.customDistanceMaterial = this.modelDistanceMaterial;
-      mesh.frustumCulled = false;
-      mesh.count = 0;
-      mesh.userData.doorMap = {};
-      this.scene.add(mesh);
+    const mesh = new THREE.InstancedMesh(geo, this.modelMaterial, 4000);
+    mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+    mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.customDepthMaterial = this.modelDepthMaterial;
+    mesh.customDistanceMaterial = this.modelDistanceMaterial;
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    mesh.userData.doorMap = {};
+    this.scene.add(mesh);
 
-      this.dynamicDoorMeshes.set(baseShape, mesh);
-      return mesh;
+    this.dynamicDoorMeshes.set(baseShape, mesh);
+    return mesh;
   }
 
   updateDoors() {
@@ -1081,10 +1170,10 @@ export class Renderer {
     const doors = this.engine.doors;
 
     if (this.dynamicDoorMeshes) {
-        for (const mesh of this.dynamicDoorMeshes.values()) {
-            mesh.count = 0;
-            mesh.userData.doorMap = {};
-        }
+      for (const mesh of this.dynamicDoorMeshes.values()) {
+        mesh.count = 0;
+        mesh.userData.doorMap = {};
+      }
     }
 
     if (!this.doorStates) this.doorStates = new Map();
@@ -1093,133 +1182,133 @@ export class Renderer {
 
     const doorsByShape = new Map();
     for (let i = 0; i < doors.length; i++) {
-        const d = doors[i];
-        let actualBaseShape = 'door';
-        if (d.shape.startsWith('door_')) {
-            actualBaseShape = 'door';
-        } else {
-            actualBaseShape = d.shape.replace('_open', '').replace('_flip', '');
-        }
+      const d = doors[i];
+      let actualBaseShape = 'door';
+      if (d.shape.startsWith('door_')) {
+        actualBaseShape = 'door';
+      } else {
+        actualBaseShape = d.shape.replace('_open', '').replace('_flip', '');
+      }
 
-        if (!doorsByShape.has(actualBaseShape)) doorsByShape.set(actualBaseShape, []);
-        doorsByShape.get(actualBaseShape).push(d);
+      if (!doorsByShape.has(actualBaseShape)) doorsByShape.set(actualBaseShape, []);
+      doorsByShape.get(actualBaseShape).push(d);
     }
 
     for (const [baseShape, shapeDoors] of doorsByShape.entries()) {
-        const mesh = this.getOrCreateDoorMesh(baseShape);
-        if (!mesh) continue;
+      const mesh = this.getOrCreateDoorMesh(baseShape);
+      if (!mesh) continue;
 
-        const maxDoors = 4000;
-        const count = Math.min(shapeDoors.length, maxDoors);
+      const maxDoors = 4000;
+      const count = Math.min(shapeDoors.length, maxDoors);
 
-        for (let i = 0; i < count; i++) {
-            const d = shapeDoors[i];
-            let rot = 0;
-            const isOp = d.shape.includes('_open');
-            const isFlip = d.shape.includes('_flip');
+      for (let i = 0; i < count; i++) {
+        const d = shapeDoors[i];
+        let rot = 0;
+        const isOp = d.shape.includes('_open');
+        const isFlip = d.shape.includes('_flip');
 
-            if (baseShape === 'door') {
-                if (d.shape.includes('door_e')) rot = -Math.PI / 2;
-                else if (d.shape.includes('door_n')) rot = Math.PI;
-                else if (d.shape.includes('door_w')) rot = Math.PI / 2;
-                else if (d.shape.includes('door_s')) rot = 0;
-            } else {
-                if (d.dir === 'e') rot = -Math.PI / 2;
-                else if (d.dir === 'n') rot = Math.PI;
-                else if (d.dir === 'w') rot = Math.PI / 2;
-                else if (d.dir === 's') rot = 0;
-            }
-
-            let targetRot = rot;
-            if (isOp) {
-                targetRot += isFlip ? -Math.PI / 2 : Math.PI / 2;
-            }
-
-            const doorKey = `${d.x}_${d.y}_${d.z}`;
-            let state = this.doorStates.get(doorKey);
-            if (!state) {
-                state = {
-                    currentRot: targetRot,
-                    targetRot: targetRot,
-                    startRot: targetRot,
-                    animStartTime: 0,
-                    tex: d.tex,
-                    color: d.color
-                };
-                this.doorStates.set(doorKey, state);
-            }
-
-            if (state.targetRot !== targetRot) {
-                state.startRot = state.currentRot;
-                state.targetRot = targetRot;
-                state.animStartTime = now;
-            }
-
-            if (state.currentRot !== state.targetRot) {
-                const animDuration = 250; // 250ms fast smooth swing
-                const elapsed = now - state.animStartTime;
-                let progress = Math.min(1.0, elapsed / animDuration);
-                progress = -(Math.cos(Math.PI * progress) - 1) / 2;
-
-                let diff = state.targetRot - state.startRot;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-
-                state.currentRot = state.startRot + (diff * progress);
-
-                if (progress >= 1.0) {
-                    state.currentRot = state.targetRot;
-                }
-            }
-
-            const m = new THREE.Matrix4();
-            m.makeTranslation(d.x, d.y, d.z);
-
-            let hingeOffset = new THREE.Vector3(-16, 0, 0);
-            if (isFlip) hingeOffset.set(16, 0, 0);
-            hingeOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), rot);
-
-            m.multiply(new THREE.Matrix4().makeTranslation(hingeOffset.x, hingeOffset.y, 0));
-            m.multiply(new THREE.Matrix4().makeRotationZ(state.currentRot));
-            if (isFlip) {
-                 m.multiply(new THREE.Matrix4().makeTranslation(-16, 0, 0));
-                 m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
-            } else {
-                 m.multiply(new THREE.Matrix4().makeTranslation(16, 0, 0));
-            }
-
-            mesh.setMatrixAt(i, m);
-
-            const color = new THREE.Color();
-            let cHex = d.color;
-            if (!cHex || typeof cHex !== 'string' || !cHex.startsWith('#') || cHex.includes('NaN')) cHex = '#ffffff';
-            color.setStyle(cHex);
-            const pr = Math.max(0, Math.min(255, color.r * 255)) | 0;
-            const pg = Math.max(0, Math.min(255, color.g * 255)) | 0;
-            const pb = Math.max(0, Math.min(255, color.b * 255)) | 0;
-
-            mesh.geometry.attributes.packedColor.setX(i, pr | (pg << 8) | (pb << 16));
-
-            let texName = d.tex;
-            const furn = FURNITURE_REGISTRY[baseShape];
-            if (furn && furn.customTexture) texName = baseShape;
-            else if (baseShape === 'door') texName = 'wooden-door-1'; // Legacy Fallback
-
-            let atlasPos = this.assetManager.atlasMap[texName] || this.assetManager.atlasMap['wooden-door-1'];
-            const ux = Math.round(atlasPos.x * 8);
-            const uy = Math.round(atlasPos.y * 8);
-            const scaleLevel = 0;
-            const flipVal = isFlip ? 1 : 0;
-            const packedUV = (ux & 255) | ((uy & 255) << 8) | (scaleLevel << 16) | (flipVal << 19);
-            mesh.geometry.attributes.packedUVs.setXYZ(i, packedUV, packedUV, packedUV);
-
-            mesh.userData.doorMap[i] = { cx: d.x, cy: d.y, cz: d.z };
+        if (baseShape === 'door') {
+          if (d.shape.includes('door_e')) rot = -Math.PI / 2;
+          else if (d.shape.includes('door_n')) rot = Math.PI;
+          else if (d.shape.includes('door_w')) rot = Math.PI / 2;
+          else if (d.shape.includes('door_s')) rot = 0;
+        } else {
+          if (d.dir === 'e') rot = -Math.PI / 2;
+          else if (d.dir === 'n') rot = Math.PI;
+          else if (d.dir === 'w') rot = Math.PI / 2;
+          else if (d.dir === 's') rot = 0;
         }
 
-        mesh.count = count;
-        mesh.instanceMatrix.needsUpdate = true;
-        mesh.geometry.attributes.packedColor.needsUpdate = true;
-        mesh.geometry.attributes.packedUVs.needsUpdate = true;
+        let targetRot = rot;
+        if (isOp) {
+          targetRot += isFlip ? -Math.PI / 2 : Math.PI / 2;
+        }
+
+        const doorKey = `${d.x}_${d.y}_${d.z}`;
+        let state = this.doorStates.get(doorKey);
+        if (!state) {
+          state = {
+            currentRot: targetRot,
+            targetRot: targetRot,
+            startRot: targetRot,
+            animStartTime: 0,
+            tex: d.tex,
+            color: d.color
+          };
+          this.doorStates.set(doorKey, state);
+        }
+
+        if (state.targetRot !== targetRot) {
+          state.startRot = state.currentRot;
+          state.targetRot = targetRot;
+          state.animStartTime = now;
+        }
+
+        if (state.currentRot !== state.targetRot) {
+          const animDuration = 250; // 250ms fast smooth swing
+          const elapsed = now - state.animStartTime;
+          let progress = Math.min(1.0, elapsed / animDuration);
+          progress = -(Math.cos(Math.PI * progress) - 1) / 2;
+
+          let diff = state.targetRot - state.startRot;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+
+          state.currentRot = state.startRot + (diff * progress);
+
+          if (progress >= 1.0) {
+            state.currentRot = state.targetRot;
+          }
+        }
+
+        const m = new THREE.Matrix4();
+        m.makeTranslation(d.x, d.y, d.z);
+
+        let hingeOffset = new THREE.Vector3(-16, 0, 0);
+        if (isFlip) hingeOffset.set(16, 0, 0);
+        hingeOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), rot);
+
+        m.multiply(new THREE.Matrix4().makeTranslation(hingeOffset.x, hingeOffset.y, 0));
+        m.multiply(new THREE.Matrix4().makeRotationZ(state.currentRot));
+        if (isFlip) {
+          m.multiply(new THREE.Matrix4().makeTranslation(-16, 0, 0));
+          m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
+        } else {
+          m.multiply(new THREE.Matrix4().makeTranslation(16, 0, 0));
+        }
+
+        mesh.setMatrixAt(i, m);
+
+        const color = new THREE.Color();
+        let cHex = d.color;
+        if (!cHex || typeof cHex !== 'string' || !cHex.startsWith('#') || cHex.includes('NaN')) cHex = '#ffffff';
+        color.setStyle(cHex);
+        const pr = Math.max(0, Math.min(255, color.r * 255)) | 0;
+        const pg = Math.max(0, Math.min(255, color.g * 255)) | 0;
+        const pb = Math.max(0, Math.min(255, color.b * 255)) | 0;
+
+        mesh.geometry.attributes.packedColor.setX(i, pr | (pg << 8) | (pb << 16));
+
+        let texName = d.tex;
+        const furn = FURNITURE_REGISTRY[baseShape];
+        if (furn && furn.customTexture) texName = baseShape;
+        else if (baseShape === 'door') texName = 'wooden-door-1'; // Legacy Fallback
+
+        let atlasPos = this.assetManager.atlasMap[texName] || this.assetManager.atlasMap['wooden-door-1'];
+        const ux = Math.round(atlasPos.x * 8);
+        const uy = Math.round(atlasPos.y * 8);
+        const scaleLevel = 0;
+        const flipVal = isFlip ? 1 : 0;
+        const packedUV = (ux & 255) | ((uy & 255) << 8) | (scaleLevel << 16) | (flipVal << 19);
+        mesh.geometry.attributes.packedUVs.setXYZ(i, packedUV, packedUV, packedUV);
+
+        mesh.userData.doorMap[i] = { cx: d.x, cy: d.y, cz: d.z };
+      }
+
+      mesh.count = count;
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.geometry.attributes.packedColor.needsUpdate = true;
+      mesh.geometry.attributes.packedUVs.needsUpdate = true;
     }
   }
 
@@ -1311,7 +1400,7 @@ export class Renderer {
     if (!p) return;
 
     // The camera stays fixed at an isometric angle, but its physical location
-    // must orbit the player based on the current cameraAngle.
+    // must orbit the player based on the current cameraAngle
     const camOffsetDist = 500;
     const zRotOffset = -this.cameraAngle * (Math.PI / 180);
     // Calculate the orbit angle relative to the player
@@ -1386,7 +1475,6 @@ export class Renderer {
     pivot.add(screenMesh);
     screenGroup.add(pivot);
 
-    // Add screen glow lighting!
     const screenLight = new THREE.PointLight(0x00d2ff, 1.5, 150, 1.5);
     screenLight.position.set(-14, -10, 16);
     screenGroup.add(screenLight);
@@ -1433,6 +1521,11 @@ export class Renderer {
         light.castShadow = isEnabled;
       }
     }
+    if (this.spotLightPool) {
+      this.spotLightPool.forEach(light => {
+        light.castShadow = isEnabled;
+      });
+    }
 
     const meshes = [
       this.previewCubeMesh, this.previewSlabMesh, this.previewTopSlabMesh,
@@ -1462,23 +1555,27 @@ export class Renderer {
       }
     }
 
-    const updateSpriteShadows = (map) => {
-      if (map) {
-        for (const [id, group] of map.entries()) {
-          if (group.userData.shadowProxy) {
-            group.userData.shadowProxy.castShadow = isEnabled;
-          }
-          if (group.userData.sprite && group.userData.sprite.isMesh) {
-            group.userData.sprite.receiveShadow = isEnabled;
-            if (group.userData.sprite.material) group.userData.sprite.material.needsUpdate = true;
-          }
+    const updateSpriteShadows = (map, pool) => {
+      const applyShadows = (group) => {
+        if (group.userData.shadowProxy) {
+          group.userData.shadowProxy.castShadow = isEnabled;
         }
+        if (group.userData.sprite && group.userData.sprite.isMesh) {
+          group.userData.sprite.receiveShadow = isEnabled;
+          if (group.userData.sprite.material) group.userData.sprite.material.needsUpdate = true;
+        }
+      };
+      if (map) {
+        for (const [id, group] of map.entries()) applyShadows(group);
+      }
+      if (pool) {
+        pool.forEach(group => applyShadows(group));
       }
     };
 
-    updateSpriteShadows(this.entityMeshes);
-    updateSpriteShadows(this.projectileMeshes);
-    updateSpriteShadows(this.debrisMeshes);
+    updateSpriteShadows(this.entityMeshes, this.engine.entityManager.entityPool);
+    updateSpriteShadows(this.projectileMeshes, this.particleManager.projectilePool);
+    updateSpriteShadows(this.debrisMeshes, this.engine.entityManager.debrisPool);
   }
 
   draw() {
@@ -1528,17 +1625,14 @@ export class Renderer {
       activeLightIds.add(id);
       let opLight = this.otherPlayerLights.get(id);
       if (!opLight) {
-        opLight = new THREE.SpotLight(0xeef4ff, 20000, 2000, Math.PI / 4, 0.5, 1.5);
-        opLight.castShadow = this.engine.clientSettings.enableShadows !== false;
-        opLight.shadow.mapSize.width = 1024;
-        opLight.shadow.mapSize.height = 1024;
-        opLight.shadow.camera.near = 10;
-        opLight.shadow.camera.far = 2000;
-        opLight.shadow.bias = -0.001;
-        this.scene.add(opLight);
-        this.scene.add(opLight.target);
-        this.otherPlayerLights.set(id, opLight);
+        opLight = this.spotLightPool.find(l => !l.userData.inUse);
+        if (opLight) {
+          opLight.userData.inUse = true;
+          opLight.angle = Math.PI / 4;
+          this.otherPlayerLights.set(id, opLight);
+        }
       }
+      if (!opLight) continue;
 
       let flickerMult = 1.0;
       if (op.hurtTimer > 0) {
@@ -1566,20 +1660,46 @@ export class Renderer {
       opLight.target.updateMatrixWorld();
     }
 
+    if (eng.drones) {
+      for (const [id, drone] of Object.entries(eng.drones)) {
+        if (drone.state === 'dead' || drone.state === 'death') continue;
+        activeLightIds.add(`drone_${id}`);
+
+        let dLight = this.otherPlayerLights.get(`drone_${id}`);
+        if (!dLight) {
+          dLight = this.spotLightPool.find(l => !l.userData.inUse);
+          if (dLight) {
+            dLight.userData.inUse = true;
+            dLight.angle = Math.PI / 3;
+            this.otherPlayerLights.set(`drone_${id}`, dLight);
+          }
+        }
+        if (!dLight) continue;
+
+        dLight.intensity = 15000;
+        dLight.position.set(drone.x, drone.y, (drone.z || 0) - 5);
+        dLight.target.position.set(drone.x, drone.y, (drone.z || 0) - 1000);
+        dLight.target.updateMatrixWorld();
+      }
+    }
+
     for (const [id, opLight] of this.otherPlayerLights.entries()) {
       if (!activeLightIds.has(id)) {
-        this.scene.remove(opLight.target);
-        this.scene.remove(opLight);
-        if (opLight.dispose) opLight.dispose();
+        if (id.startsWith('drone_') && opLight.intensity > 0) {
+          opLight.intensity -= 1000; // Smooth 15-frame fade out
+          if (opLight.intensity > 0) continue;
+        }
+        opLight.intensity = 0;
+        opLight.userData.inUse = false;
         this.otherPlayerLights.delete(id);
       }
     }
 
     if (this.instancedMaterial && this.instancedMaterial.userData.time) {
-        this.instancedMaterial.userData.time.value = performance.now() / 1000;
+      this.instancedMaterial.userData.time.value = performance.now() / 1000;
     }
     if (this.chunkMaterial && this.chunkMaterial.userData.time) {
-        this.chunkMaterial.userData.time.value = performance.now() / 1000;
+      this.chunkMaterial.userData.time.value = performance.now() / 1000;
     }
 
     const compassWrapper = document.getElementById('compass-wrapper');
@@ -1617,14 +1737,42 @@ export class Renderer {
     this.particleManager.updateParticles();
     this.updateDoors();
     this.engine.entityManager.updateDebris();
+
+    if (eng.lightnings && this.lightningMesh) {
+      const time = performance.now() * 0.005;
+      this.lightningMesh.material.color.setHSL(0.55 + Math.sin(time) * 0.1, 1.0, 0.6);
+
+      let count = 0;
+      const positions = this.lightningMesh.geometry.attributes.position.array;
+      for (let i = 0; i < eng.lightnings.length; i++) {
+        const l = eng.lightnings[i];
+        const segments = 6;
+        const dx = (l.endX - l.startX) / segments;
+        const dy = (l.endY - l.startY) / segments;
+        const dz = (l.endZ - l.startZ) / segments;
+        let cx = l.startX, cy = l.startY, cz = l.startZ;
+        for (let s = 0; s < segments; s++) {
+          let nx = l.startX + dx * (s+1) + (Math.random() - 0.5) * 30;
+          let ny = l.startY + dy * (s+1) + (Math.random() - 0.5) * 30;
+          let nz = l.startZ + dz * (s+1) + (Math.random() - 0.5) * 30;
+          if (s === segments - 1) { nx = l.endX; ny = l.endY; nz = l.endZ; }
+          positions[count++] = cx; positions[count++] = cy; positions[count++] = cz;
+          positions[count++] = nx; positions[count++] = ny; positions[count++] = nz;
+          cx = nx; cy = ny; cz = nz;
+        }
+      }
+      this.lightningMesh.geometry.setDrawRange(0, count / 3);
+      this.lightningMesh.geometry.attributes.position.needsUpdate = true;
+    }
+
     this.debugRenderer.updateArrowHelper();
     this.debugRenderer.update3DDebug();
     this.debugRenderer.updateTeleportVisuals();
 
     if (this.spriteBatcher) {
-       this.spriteBatcher.begin();
-       this.debugRenderer.updateWebGLUI();
-       this.spriteBatcher.end();
+      this.spriteBatcher.begin();
+      this.debugRenderer.updateWebGLUI();
+      this.spriteBatcher.end();
     }
 
     if (this.debugCtx) {
@@ -1642,6 +1790,7 @@ export class Renderer {
     }
 
     let frustumSize = 1000;
+    const dpr = this.webgl.getPixelRatio();
     if (eng.mapOverlay && eng.mapOverlay.active) {
       const box = eng.getMinimapBox();
       const glY = window.innerHeight - box.y - box.size;

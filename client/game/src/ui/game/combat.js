@@ -31,6 +31,8 @@ export class CombatManager {
         selectedEnt = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
       } else if (eng.selectedTarget.type === 'player') {
         selectedEnt = eng.otherPlayers[eng.selectedTarget.id];
+      } else if (eng.selectedTarget.type === 'drone') {
+        selectedEnt = eng.drones[eng.selectedTarget.id];
       }
       if (selectedEnt && selectedEnt.state !== 'dead' && selectedEnt.state !== 'death') {
         targetEntity = { type: eng.selectedTarget.type, id: eng.selectedTarget.id, entity: selectedEnt };
@@ -42,9 +44,24 @@ export class CombatManager {
         selectedEnt = eng.npcs.find(n => n.uuid === eng.hoveredEntity.id);
       } else if (eng.hoveredEntity.type === 'player') {
         selectedEnt = eng.otherPlayers[eng.hoveredEntity.id];
+      } else if (eng.hoveredEntity.type === 'drone') {
+        selectedEnt = eng.drones[eng.hoveredEntity.id];
       }
       if (selectedEnt && selectedEnt.state !== 'dead' && selectedEnt.state !== 'death') {
         targetEntity = { type: eng.hoveredEntity.type, id: eng.hoveredEntity.id, entity: selectedEnt };
+      }
+    }
+
+    const powerRange = (power.stats?.range || 200) + (power.stats?.aoeRadius || 0) + 50;
+
+    if (targetEntity) {
+      const dist = Math.hypot(targetEntity.entity.x - eng.player.x, targetEntity.entity.y - eng.player.y);
+      if (dist > powerRange) {
+        if (combatStyle === 'target') {
+          return { outOfRange: true };
+        } else {
+          targetEntity = null; // Drop target and fall back to mouse aiming in hybrid mode
+        }
       }
     }
 
@@ -52,9 +69,10 @@ export class CombatManager {
     let maxRange = Infinity;
     if (combatStyle === 'target') {
       findClosest = true;
+      maxRange = powerRange;
     } else if (combatStyle === 'hybrid' && (power.type === 'melee' || powerId === 'brawl')) {
       findClosest = true;
-      maxRange = (power.range || 200) + 50; // Give a 50px leniency to match server-side dropoff limits
+      maxRange = powerRange; // Give a 50px leniency to match server-side dropoff limits
     }
 
     if (!targetEntity && findClosest) {
@@ -67,13 +85,15 @@ export class CombatManager {
       const py = eng.player.y;
       const myAlignment = eng.playerData.alignment || 'hero';
 
-      const checkValidTarget = (ent, isPlayer) => {
+      const checkValidTarget = (ent, isPlayer, isDrone = false) => {
         if (ent.state === 'dead' || ent.state === 'death') return false;
 
         let isEnemy = true;
         if (isPlayer) {
           const opAlignment = ent.alignment || 'hero';
           if (myAlignment === 'hero' && opAlignment === 'hero') isEnemy = false;
+        } else if (isDrone) {
+          if (ent.ownerSocketId === eng.socket?.id) isEnemy = false;
         }
 
         if (isSupport) {
@@ -84,7 +104,7 @@ export class CombatManager {
       };
 
       eng.npcs.forEach(npc => {
-        if (checkValidTarget(npc, false)) {
+        if (checkValidTarget(npc, false, false)) {
           const dist = Math.hypot(npc.x - px, npc.y - py);
           if (dist < closestDist && dist <= maxRange) {
             closestDist = dist;
@@ -95,9 +115,24 @@ export class CombatManager {
         }
       });
 
+      if (eng.drones) {
+        for (let id in eng.drones) {
+          const d = eng.drones[id];
+          if (checkValidTarget(d, false, true)) {
+            const dist = Math.hypot(d.x - px, d.y - py);
+            if (dist < closestDist && dist <= maxRange) {
+              closestDist = dist;
+              closestEnt = d;
+              closestType = 'drone';
+              closestId = id;
+            }
+          }
+        }
+      }
+
       for (let id in eng.otherPlayers) {
         const op = eng.otherPlayers[id];
-        if (checkValidTarget(op, true)) {
+        if (checkValidTarget(op, true, false)) {
           const dist = Math.hypot(op.x - px, op.y - py);
           if (dist < closestDist && dist <= maxRange) {
             closestDist = dist;

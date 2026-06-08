@@ -6,12 +6,8 @@ export class InputRouter {
 
   handleKeyDown(e) {
     const eng = this.engine;
+    if (!e.key) return;
     const key = e.key.toLowerCase();
-    const powerKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-
-    if (e.repeat) {
-      if (!powerKeys.includes(key) || eng.editMode) return;
-    }
 
     const chatInput = document.getElementById('chat-input');
 
@@ -65,48 +61,51 @@ export class InputRouter {
     }
     if (chatInput && activeEl === chatInput) return;
 
-    const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' };
+    this.input.keys[key] = true;
+    if (e.ctrlKey) this.input.keys['control'] = true;
+    if (e.shiftKey) this.input.keys['shift'] = true;
+    if (e.altKey) this.input.keys['alt'] = true;
 
-    if (e.ctrlKey) {
-      if (key === kbs.undo) {
+    let powerActionFired = false;
+    for (let i = 1; i <= 10; i++) {
+      if (eng.input.isActionDown(`power${i}`)) {
         e.preventDefault();
-        if (eng.editMode && eng.undo) eng.undo();
-        return;
-      }
-      if (key === kbs.redo) {
-        e.preventDefault();
-        if (eng.editMode && eng.redo) eng.redo();
-        return;
+        if (eng.editMode) {
+          if (e.repeat) return; // Prevent spamming tool selection
+          const slotIndex = i === 10 ? 9 : i - 1;
+          const slots = document.querySelectorAll('#builder-hotbar .hotbar-slot');
+          if (slots[slotIndex]) slots[slotIndex].click();
+        } else {
+          const slotIndex = i - 1;
+          const tray = eng.playerData.powerTray || [];
+          const powerName = tray[slotIndex];
+          if (powerName) eng.combat?.usePower(powerName, e.repeat);
+        }
+        powerActionFired = true;
+        break;
       }
     }
+    if (powerActionFired) return;
 
-    if (!e.ctrlKey && !e.altKey && !e.shiftKey && kbs.picker && key === kbs.picker) {
+    if (e.repeat) return; // Prevent rapid-fire menus and tools
+
+    if (eng.input.isActionDown('undo')) {
+      e.preventDefault();
+      if (eng.editMode && eng.undo) eng.undo();
+      return;
+    }
+    if (eng.input.isActionDown('redo')) {
+      e.preventDefault();
+      if (eng.editMode && eng.redo) eng.redo();
+      return;
+    }
+    if (eng.input.isActionDown('picker')) {
       e.preventDefault();
       if (eng.editMode) {
         const pickerSlot = document.querySelector('#builder-hotbar .hotbar-slot[data-tex="picker"]');
         if (pickerSlot) pickerSlot.click();
       }
       return;
-    }
-
-    this.input.keys[key] = true;
-
-    if (powerKeys.includes(key)) {
-      e.preventDefault();
-      if (eng.editMode) {
-        const slotIndex = key === '0' ? 9 : parseInt(key) - 1;
-        const slots = document.querySelectorAll('#builder-hotbar .hotbar-slot');
-        if (slots[slotIndex]) {
-          slots[slotIndex].click();
-        }
-      } else {
-        const slotIndex = powerKeys.indexOf(key);
-        const tray = eng.playerData.powerTray || [];
-        const powerName = tray[slotIndex];
-        if (powerName) {
-           eng.combat?.usePower(powerName, e.repeat);
-        }
-      }
     }
 
     if (key === 'p') {

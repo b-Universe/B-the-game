@@ -23,9 +23,18 @@ export class NetworkManager {
 
     this.socket.on('connect', () => {
       console.log(`%c[Network] Securely connected to game server! (Session ID: ${this.socket.id})`, 'color: #2ecc71; font-weight: bold; font-size: 1.1em;');
-      if (eng.chat) eng.chat.addMessage('system', 'System', 'Network connection established.');
+
+      const sysDialog = document.getElementById('system-message-dialog');
+      const sysMsgText = document.getElementById('sys-msg-text');
+      if (sysDialog && sysDialog.style.display !== 'none' && sysMsgText && sysMsgText.innerText.includes('Lost connection')) {
+          sysDialog.style.display = 'none';
+      }
+
       this.sendRequestFullMap();
       if (eng.ui && eng.ui.showReconnecting) eng.ui.showReconnecting(false);
+
+      const powerbar = document.getElementById('powerbar-container');
+      if (powerbar && powerbar.style.display === 'none') powerbar.style.display = 'flex';
 
       if (eng.playerData && eng.accountUuid) {
         this.sendJoinGame({
@@ -51,13 +60,27 @@ export class NetworkManager {
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log(`%c[Network] Connection to the server was lost! Reason: ${reason}`, 'color: #ff4757; font-weight: bold; font-size: 1.1em;');
-      if (eng.chat) eng.chat.addMessage('system', 'System', `Lost connection to the server. (${reason})`);
+      console.log(`%c[Network] Server is undergoing maintenance briefly. Reason: ${reason}`, 'color: #f1c40f; font-weight: bold; font-size: 1.1em;');
 
       if (reason === 'io server disconnect') {
         eng.stop();
         document.getElementById('game-screen').style.display = 'none';
-        document.getElementById('selection-screen').style.display = 'flex';
+
+        const selScreen = document.getElementById('selection-screen');
+        if (selScreen) selScreen.style.display = 'none';
+        const creScreen = document.getElementById('creation-screen');
+        if (creScreen) creScreen.style.display = 'block';
+
+        ['username', 'password', 'email', 'btn-main', 'no-email'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.disabled = true;
+                el.style.opacity = '0.5';
+                el.style.cursor = 'not-allowed';
+            }
+        });
+        const toggleAuth = document.getElementById('toggle-auth');
+        if (toggleAuth) toggleAuth.style.pointerEvents = 'none';
 
         const trainerModal = document.getElementById('trainer-dialog-modal');
         if (trainerModal) trainerModal.style.display = 'none';
@@ -72,10 +95,13 @@ export class NetworkManager {
         const customModal = document.getElementById('custom-modal');
         if (modalTitle && modalBody && customModal) {
           modalTitle.innerText = 'Disconnected';
-          modalBody.innerText = 'You have been disconnected from the server. (Logged in from another location?)';
+          modalBody.innerText = 'You have been disconnected from the server.';
           customModal.style.display = 'flex';
         }
-      } else {
+      } else if (reason !== 'io client disconnect') {
+        if (eng.ui && eng.ui.showSystemMessage) {
+          eng.ui.showSystemMessage(`Lost connection to the server. (${reason})<br><br>Attempting to reconnect...`);
+        }
         if (eng.ui && eng.ui.showReconnecting) eng.ui.showReconnecting(true);
       }
     });
@@ -127,7 +153,7 @@ export class NetworkManager {
 
     this.socket.on('dev_load_world_broadcast', async (payload) => {
       if (eng.worldSerializer) {
-         eng.ui.setupLoadingScreen();
+         if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
          eng.currentZone = payload.filename;
          await eng.worldSerializer.deserialize(payload.data);
          eng.mapManager.update(16);
@@ -139,16 +165,9 @@ export class NetworkManager {
     this.socket.on('full_map_data_received', async (payload) => {
       if (!payload) return;
       if (payload.currentZone) eng.currentZone = payload.currentZone;
-      const data = payload.data ? payload.data : payload;
-      let flatData = {};
-      if (Array.isArray(data)) {
-         data.forEach(entry => flatData[entry[0]] = entry[1]);
-      } else {
-         flatData = data;
-      }
 
       if (eng.worldSerializer) {
-         await eng.worldSerializer.deserialize(flatData);
+         await eng.worldSerializer.deserialize(payload);
       }
 
       if (eng.mapManager && eng.player) {
@@ -187,7 +206,7 @@ export class NetworkManager {
 
     this.socket.on('force_teleport', (data) => {
       if (data.zone && data.zone !== eng.currentZone) {
-         eng.ui.setupLoadingScreen();
+         if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
          eng.currentZone = data.zone;
          this.socket.emit('join_zone', { zone: data.zone });
       }
@@ -212,10 +231,61 @@ export class NetworkManager {
       eng.npcs.push({ ...npc, hurtTimer: 0, frame: 0, frameTimer: 0 });
     });
 
+    this.socket.on('current_spawners', (spawners) => {
+      eng.spawners = spawners;
+    });
+
+    this.socket.on('current_neighborhoods', (neighborhoods) => {
+      eng.neighborhoods = neighborhoods;
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.neighborhoodManagerWindow.element.style.display === 'flex') {
+         eng.ui.devTools.renderNeighborhoodManager();
+      }
+    });
+
+    this.socket.on('current_mob_packs', (mobPacks) => {
+      eng.mobPacks = mobPacks;
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.mobPackManagerWindow.element.style.display === 'flex') {
+         eng.ui.devTools.renderMobPacks();
+      }
+    });
+
+    this.socket.on('current_npc_templates', (templates) => {
+      eng.npcTemplates = templates;
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.npcTemplateManagerWindow && eng.ui.devTools.npcTemplateManagerWindow.element.style.display === 'flex') {
+         eng.ui.devTools.renderNpcTemplates();
+      }
+    });
+
+    this.socket.on('current_entity_types', (types) => {
+      eng.entityTypes = types;
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.entityTypeManagerWindow && eng.ui.devTools.entityTypeManagerWindow.element.style.display === 'flex') {
+         eng.ui.devTools.renderEntityTypes();
+      }
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.npcTemplateManagerWindow && eng.ui.devTools.npcTemplateManagerWindow.element.style.display === 'flex') {
+         eng.ui.devTools.renderNpcTemplates();
+      }
+    });
+
+    this.socket.on('npcs_moved', (npcsMap) => {
+      for (const id in npcsMap) {
+        const incoming = npcsMap[id];
+        const existing = eng.npcs.find(n => n.uuid === id);
+        if (existing) {
+          existing.serverX = incoming.x;
+          existing.serverY = incoming.y;
+          existing.state = incoming.state;
+          existing.dir = incoming.dir;
+          existing.serverPath = incoming.path;
+          if (incoming.activeEffects) existing.activeEffects = incoming.activeEffects;
+        }
+      }
+    });
+
     this.socket.on('npc_took_damage', (data) => {
       const npc = eng.npcs.find(n => n.uuid === data.targetUuid);
       if (npc) {
         npc.hp = data.hp;
+        if (data.activeEffects) npc.activeEffects = data.activeEffects;
         if (data.damage > 0) {
           npc.hurtTimer = 300;
           const isCrit = data.isCrit || (!data.isDoT && ((data.damage >= 6 && data.damage <= 10) || data.damage >= 300 || data.damage === 35 || data.damage === 3));
@@ -223,14 +293,12 @@ export class NetworkManager {
           const textStr = data.damage.toString() + (isCrit ? '!' : '');
           const life = data.isDoT ? 0.6 : 1.0;
           const offsetY = data.isDoT ? 110 : 130;
-          eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
+          eng.floatingTexts.push({ x: npc.x, y: npc.y, z: npc.z, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
+        } else if (data.isDeflect) {
+          eng.floatingTexts.push({ x: npc.x, y: npc.y, z: npc.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
         }
         if (data.isDead) { npc.state = 'dead'; npc.frame = 0; }
-        eng.ui.update();
-        if (data.attackerName === eng.playerData.name && !data.isDoT) {
-          eng.chat.addMessage('combat', 'Combat', `You hit ${npc.name} for ${data.damage} damage!`);
-          if (data.isDead) eng.chat.addMessage('combat', 'Combat', `You defeated ${npc.name}!`);
-        }
+        if (eng.ui) eng.ui.update();
       }
     });
 
@@ -245,10 +313,10 @@ export class NetworkManager {
           const textStr = data.damage.toString() + (isCrit ? '!' : '');
           const life = data.isDoT ? 0.6 : 1.0;
           const offsetY = data.isDoT ? 110 : 130;
-          eng.floatingTexts.push({ x: drone.x, y: drone.y, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
+          eng.floatingTexts.push({ x: drone.x, y: drone.y, z: drone.z, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
         }
         if (data.isDead) { drone.state = 'dead'; drone.frame = 0; }
-        eng.ui.update();
+        if (eng.ui) eng.ui.update();
       }
     });
 
@@ -261,12 +329,30 @@ export class NetworkManager {
 
     this.socket.on('drones_moved', (drones) => {
       for (const id in drones) {
-        if (eng.drones[id]) Object.assign(eng.drones[id], drones[id]);
+        if (eng.drones[id]) {
+            const existing = eng.drones[id];
+            const incoming = drones[id];
+            // Preserve client-side simulated coordinates for smooth lerping
+            const tempX = existing.x;
+            const tempY = existing.y;
+            const tempZ = existing.z;
+            Object.assign(existing, incoming);
+            existing.x = tempX;
+            existing.y = tempY;
+            existing.z = tempZ;
+        }
         else eng.drones[id] = drones[id];
       }
     });
 
     this.socket.on('drone_spawned', (drone) => {
+      drone.deployTimer = 1.5;
+      if (eng.playerData.name === drone.ownerName) {
+         drone.z = (eng.player.z || 0) + 1000;
+      } else {
+         const op = eng.otherPlayers[drone.ownerSocketId];
+         if (op) drone.z = (op.z || 0) + 1000;
+      }
       eng.drones[drone.uuid] = drone;
     });
 
@@ -299,28 +385,13 @@ export class NetworkManager {
     });
 
     this.socket.on('trade_request_received', (data) => {
-      const chatMsgs = document.getElementById('chat-messages');
-      if (!chatMsgs) return;
-      const msgDiv = eng.chat.createMessageBase('system', 'System');
-      const textNode = document.createTextNode(`: ${data.senderName} has requested a trade. `);
-      const link = document.createElement('span');
-      link.className = 'chat-action-link';
-      link.innerText = '[Accept]';
-      link.onclick = () => {
-        eng.network.sendTradeAccept(data.senderId);
-        link.innerText = '[Accepted]';
-        link.style.pointerEvents = 'none';
-        link.style.color = '#aaa';
-      };
-      msgDiv.appendChild(textNode);
-      msgDiv.appendChild(link);
-      chatMsgs.appendChild(msgDiv);
-      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+      if (eng.ui && eng.ui.showSystemMessage) {
+        eng.ui.showSystemMessage(`${data.senderName} has requested a trade. <br><br><button class="b-btn btn-primary" onclick="window.currentGameEngine.network.sendTradeAccept('${data.senderId}'); this.disabled=true; this.innerText='Accepted!';">Accept Trade</button>`);
+      }
     });
 
     this.socket.on('trade_started', (data) => {
-       eng.chat.addMessage('system', 'System', `Trade started with ${data.partnerName}!`);
-       eng.ui.inventory.openTrade(data.partnerName);
+       if (eng.ui && eng.ui.inventory) eng.ui.inventory.openTrade(data.partnerName);
     });
 
     this.socket.on('player_data_updated', (newCharData) => {
@@ -348,14 +419,14 @@ export class NetworkManager {
       }
 
       const powersPanel = document.getElementById('powers-panel');
-      if (powersPanel && powersPanel.style.display === 'flex') {
+      if (powersPanel && powersPanel.style.display === 'flex' && eng.ui && eng.ui.powerbar) {
           eng.ui.powerbar.renderPowersUI();
       }
       const trainerModal = document.getElementById('trainer-dialog-modal');
-      if (trainerModal && trainerModal.style.display === 'flex') {
+      if (trainerModal && trainerModal.style.display === 'flex' && eng.ui && eng.ui.trainer) {
           eng.ui.trainer.openTrainerUI(eng.activeTrainer);
       }
-      if (eng.ui.powerbar && eng.ui.powerbar.updatePowerbar) eng.ui.powerbar.updatePowerbar();
+      if (eng.ui && eng.ui.powerbar && eng.ui.powerbar.updatePowerbar) eng.ui.powerbar.updatePowerbar();
     });
 
     this.socket.on('player_took_damage', (data) => {
@@ -368,13 +439,13 @@ export class NetworkManager {
           const textStr = data.damage.toString() + (isCrit ? '!' : '');
           const life = data.isDoT ? 0.6 : 1.0;
           const offsetY = data.isDoT ? 110 : 130;
-          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
-          if (!data.isDoT) eng.chat.addMessage('combat', 'Combat', `${data.attackerName} hit you for ${data.damage} damage!`);
-          eng.ui.update();
+          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, z: eng.player.z, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
+          if (eng.ui) eng.ui.update();
+        } else if (data.isDeflect) {
+           eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, z: eng.player.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
         }
         if (data.isDead) {
           eng.player.state = 'death'; eng.player.frame = 0; eng.player.respawnTimer = 10000;
-          eng.chat.addMessage('combat', 'Combat', `You were defeated by ${data.attackerName}!`);
         }
       } else if (eng.otherPlayers[data.targetId]) {
         const op = eng.otherPlayers[data.targetId];
@@ -386,14 +457,12 @@ export class NetworkManager {
           const textStr = data.damage.toString() + (isCrit ? '!' : '');
           const life = data.isDoT ? 0.6 : 1.0;
           const offsetY = data.isDoT ? 110 : 130;
-          eng.floatingTexts.push({ x: op.x, y: op.y, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
+          eng.floatingTexts.push({ x: op.x, y: op.y, z: op.z, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
+        } else if (data.isDeflect) {
+           eng.floatingTexts.push({ x: op.x, y: op.y, z: op.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
         }
         if (data.isDead) { op.state = 'death'; op.frame = 0; }
-        eng.ui.update();
-        if (data.attackerName === eng.playerData.name && !data.isDoT) {
-          eng.chat.addMessage('combat', 'Combat', `You hit ${op.name} for ${data.damage} damage!`);
-          if (data.isDead) eng.chat.addMessage('combat', 'Combat', `You defeated ${op.name}!`);
-        }
+        if (eng.ui) eng.ui.update();
       }
     });
 
@@ -409,12 +478,15 @@ export class NetworkManager {
       const maxDist = Math.max(1, Math.hypot(targetX - startX, targetY - startY));
 
       const isAirplane = data.isAirplane !== undefined ? data.isAirplane : (speed === 400);
+      const isLaser = data.isLaser !== undefined ? data.isLaser : false;
       const isCrit = data.isCrit !== undefined ? data.isCrit : false;
       const isCritLoop = data.isCritLoop !== undefined ? data.isCritLoop : (isAirplane && isCrit);
       const damage = data.damage !== undefined ? data.damage : (isAirplane ? (isCrit ? 3 : 1) : 1);
 
       eng.projectiles.push({
+        uuid: data.uuid,
         isAirplane: isAirplane,
+        isLaser: isLaser,
         isCritLoop: isCritLoop,
         startX: startX, startY: startY, startZ: startZ,
         x: startX, y: startY, z: startZ,
@@ -427,7 +499,8 @@ export class NetworkManager {
         damage: damage,
         isCrit: isCrit,
         trail: true,
-        trailColor: 'rgba(200, 230, 255, 0.6)',
+        trailColor: '#c8e6ff',
+        trailColor: '#c8e6ff',
         trailSize: 2.5,
         onHit: () => {
           let hasCustom = false;
@@ -454,12 +527,21 @@ export class NetworkManager {
           }
 
           if (!hasCustom) {
-             eng.debris.push({
-                x: data.targetX, y: data.targetY, z: data.targetZ,
-                vx: (Math.random() - 0.5) * 150, vy: (Math.random() - 0.5) * 150, vz: 100 + Math.random() * 150,
-                life: 5.0, maxLife: 5.0, crumpleTimer: 0.3,
-                wasteTex: Math.random() > 0.5 ? 'waste_1' : 'waste_2', rotation: Math.random() * Math.PI * 2
-             });
+             if (!isAirplane) {
+                 eng.debris.push({
+                     x: data.targetX, y: data.targetY, z: data.targetZ,
+                     vx: 0, vy: 0, vz: 0, life: 0.48, maxLife: 0.48, crumpleTimer: 0,
+                     wasteTex: 'fx_sparks', isFX: true, color: data.trailColor || '#f39c12',
+                     rotation: Math.random() * Math.PI * 2
+                 });
+             } else {
+                 eng.debris.push({
+                    x: data.targetX, y: data.targetY, z: data.targetZ,
+                    vx: (Math.random() - 0.5) * 150, vy: (Math.random() - 0.5) * 150, vz: 100 + Math.random() * 150,
+                    life: 5.0, maxLife: 5.0, crumpleTimer: 0.3,
+                    wasteTex: Math.random() > 0.5 ? 'waste_1' : 'waste_2', rotation: Math.random() * Math.PI * 2
+                 });
+             }
           }
         }
       });
@@ -470,8 +552,6 @@ export class NetworkManager {
     });
 
     this.socket.on('force_refresh', () => {
-      eng.chat.addMessage('system', 'System', 'Reloading!');
-
       setTimeout(() => {
         localStorage.setItem('b_auto_relog_char', eng.playerData.name);
         window.location.reload();
@@ -501,7 +581,7 @@ export class NetworkManager {
         if (eng.ui && eng.ui.powerbar) eng.ui.powerbar.updatePowerbar();
       }
       if (data.activeEffects !== undefined) eng.player.activeEffects = data.activeEffects;
-      eng.ui.update();
+      if (eng.ui) eng.ui.update();
     });
 
     this.socket.on('patch_notes_data', (notes) => {
@@ -541,17 +621,9 @@ export class NetworkManager {
     });
 
     this.socket.on('friend_request_received', (data) => {
-      const chatMsgs = document.getElementById('chat-messages');
-      if (!chatMsgs) return;
-      const msgDiv = eng.chat.createMessageBase('system', 'System');
-      const textNode = document.createTextNode(`: ${data.senderName} wants to be your friend. `);
-      const link = document.createElement('span');
-      link.className = 'chat-action-link';
-      link.innerText = '[Accept]';
-      link.onclick = () => { eng.network.sendAcceptFriendRequest(data.senderName); link.innerText = '[Accepted]'; link.style.pointerEvents = 'none'; link.style.color = '#aaa'; };
-      msgDiv.appendChild(textNode);
-      msgDiv.appendChild(link);
-      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+      if (eng.ui && eng.ui.showSystemMessage) {
+        eng.ui.showSystemMessage(`${data.senderName} wants to be your friend. <br><br><button class="b-btn btn-primary" onclick="window.currentGameEngine.network.sendAcceptFriendRequest('${data.senderName}'); this.disabled=true; this.innerText='Accepted!';">Accept</button>`);
+      }
     });
 
     this.socket.on('all_players_received', (list) => {
@@ -561,8 +633,46 @@ export class NetworkManager {
       }
     });
 
+    this.socket.on('all_accounts_received', (list) => {
+      if (eng.ui && eng.ui.playerModifier) {
+        eng.ui.playerModifier.allAccountsList = list;
+        eng.ui.playerModifier.renderAccountManagerList();
+      }
+    });
+
     this.socket.on('player_data_received', (data) => {
       if (eng.ui && eng.ui.playerModifier) eng.ui.playerModifier.open(data);
+    });
+
+    this.socket.on('admin_account_data_received', (data) => {
+      if (eng.ui && eng.ui.playerModifier) eng.ui.playerModifier.openAccountManager(data);
+    });
+
+    this.socket.on('entity_groups_data', (data) => {
+      if (eng.ui && eng.ui.devTools) {
+         eng.ui.devTools.renderEntityGroupManager(data);
+      }
+    });
+
+    this.socket.on('map_ping', (data) => {
+      if (eng.mapPings) {
+        eng.mapPings.push({ x: data.x, y: data.y, life: 1.0, color: data.color || '#3498db' });
+      }
+    });
+
+    this.socket.on('draw_lightning', (data) => {
+      if (!eng.lightnings) eng.lightnings = [];
+      eng.lightnings.push({ ...data, life: data.duration, maxLife: data.duration });
+
+      if (eng.drones) {
+          for (let id in eng.drones) {
+              let d = eng.drones[id];
+              if (d.isCombatDrone && Math.abs(d.x - data.startX) < 10 && Math.abs(d.y - data.startY) < 10) {
+                  d.stunAnimTimer = 960; // 8 frames * 120ms
+                  d.frame = 0; // Force sync to frame 1!
+              }
+          }
+      }
     });
 
     this.socket.on('system_dialog', (text) => {
@@ -573,7 +683,6 @@ export class NetworkManager {
       if (eng.showFloatingText) {
         eng.showFloatingText(data.reason, data.color);
       }
-      eng.chat.addMessage('combat', 'Combat', `Your ${window.POWER_REGISTRY[data.powerId]?.name || data.powerId} toggled off: ${data.reason}.`);
     });
 
     this.socket.on('arcade_match_found', (data) => {
@@ -636,6 +745,10 @@ export class NetworkManager {
     if (this.socket) this.socket.emit('request_full_map');
   }
 
+  sendMapPing(data) {
+    if (this.socket) this.socket.emit('map_ping', data);
+  }
+
   sendRequestPatchNotes(forceShow = false) {
     if (this.socket) {
       this.forceNextPatchNotes = forceShow;
@@ -683,6 +796,14 @@ export class NetworkManager {
     if (this.socket) this.socket.emit('admin_teleport', data);
   }
 
+  sendRequestEntityGroups() {
+    if (this.socket) this.socket.emit('request_entity_groups');
+  }
+
+  sendSaveEntityGroup(group, settings) {
+    if (this.socket) this.socket.emit('save_entity_group', { group, settings });
+  }
+
   sendCreateNpc(data) {
     if (this.socket) this.socket.emit('create_npc', data);
   }
@@ -701,6 +822,18 @@ export class NetworkManager {
 
   sendDeleteNpc(uuid) {
     if (this.socket) this.socket.emit('delete_npc', uuid);
+  }
+
+  sendCreateSpawner(data) {
+    if (this.socket) this.socket.emit('create_spawner', data);
+  }
+
+  sendEditSpawner(uuid, updates) {
+    if (this.socket) this.socket.emit('edit_spawner', { uuid, updates });
+  }
+
+  sendDeleteSpawner(uuid) {
+    if (this.socket) this.socket.emit('delete_spawner', uuid);
   }
 
   sendProjectile(data) {
@@ -733,6 +866,10 @@ export class NetworkManager {
 
   sendAdminRequestAccountByUsername(username) {
     if (this.socket) this.socket.emit('admin_request_account', { username });
+  }
+
+  sendAdminRequestAllAccounts() {
+    if (this.socket) this.socket.emit('admin_request_all_accounts');
   }
 
   sendAdminUpdateAccount(uuid, updates) {

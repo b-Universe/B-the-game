@@ -93,16 +93,30 @@ export class PlayerModifierWindow extends BaseWindow {
 
 export class AccountManagerWindow extends BaseWindow {
   constructor() {
-    super('account-manager-modal', 'Account Manager', { width: 500, x: window.innerWidth / 2 - 250, y: 120 });
+    super('account-manager-panel', 'Account Manager', { width: 850, height: 600, x: window.innerWidth / 2 - 425, y: 100 });
 
     this.setContent(`
-      <div class="b-input-row" style="margin-bottom: var(--spacing-2);">
-        <input type="text" id="am-search-input" class="b-input" placeholder="Search by Account Username..." style="flex: 1;">
-        <button id="btn-am-search" class="b-btn">Search</button>
-      </div>
+        <div class="b-input-group" style="margin-bottom: 0; flex-shrink: 0;">
+            <input type="text" id="am-search-input" class="b-input" placeholder="Search accounts...">
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; background: rgba(52, 152, 219, 0.2); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: #3498db; margin-top: 10px;">
+            <div style="flex: 1.5;">Username</div>
+            <div style="flex: 1.5;">Email</div>
+            <div style="flex: 1;">Last IP</div>
+            <div style="flex: 1.2;">Created</div>
+            <div style="flex: 0.8;">Characters</div>
+            <div style="width: 42px;"></div>
+        </div>
+        <div id="account-manager-list" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 5px; margin-top: 5px;"></div>
+    `);
+  }
+}
 
-      <div style="border-top: 1px solid var(--text-dim); margin-bottom: var(--spacing-1);"></div>
+export class AccountEditWindow extends BaseWindow {
+  constructor() {
+    super('account-edit-modal', 'Edit Account', { width: 500, x: window.innerWidth / 2 - 250, y: 120 });
 
+    this.setContent(`
       <input type="hidden" id="am-uuid">
 
       <div class="b-input-row">
@@ -111,8 +125,9 @@ export class AccountManagerWindow extends BaseWindow {
       </div>
 
       <div style="background: rgba(231, 76, 60, 0.1); padding: var(--spacing-2); border: 1px solid var(--rainbow-red); border-radius: var(--border-radius); margin-bottom: var(--spacing-1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="row-am-ban">
-          <span style="color: #fff; font-family: var(--font-header);">Account Banned</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;" id="row-am-ban">
+          <span style="color: #fff; font-family: var(--font-header); flex: 1;">Account Banned</span>
+          <button id="btn-am-unban" class="b-btn btn-secondary" style="display: none; padding: 2px 10px; margin-right: 10px;">Instant Unban</button>
           <button id="btn-am-ban-toggle" class="b-btn" style="width: 60px;">No</button>
         </div>
         <div class="b-input-group" style="margin-top: var(--spacing-1);">
@@ -139,7 +154,16 @@ export class PlayerManagerWindow extends BaseWindow {
         <div class="b-input-group" style="margin-bottom: 0; flex-shrink: 0;">
             <input type="text" id="pm-search-input" class="b-input" placeholder="Search characters...">
         </div>
-        <div id="player-manager-list" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 5px;"></div>
+        <div style="display: flex; align-items: center; gap: 10px; background: rgba(155, 89, 182, 0.2); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: #9b59b6; margin-top: 10px;">
+            <div style="flex: 1.2;">Player</div>
+            <div style="flex: 1.5;">Location</div>
+            <div style="flex: 0.8;">Alignment</div>
+            <div style="flex: 0.8;">Race</div>
+            <div style="flex: 0.8;">Integrity</div>
+            <div style="flex: 1;">Health</div>
+            <div style="width: 115px;"></div>
+        </div>
+        <div id="player-manager-list" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 5px; margin-top: 5px;"></div>
     `);
   }
 }

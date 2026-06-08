@@ -72,17 +72,35 @@ export class DebugRenderer {
     this.renderer.losCone.visible = false;
     this.renderer.debugMeshes.add(this.renderer.losCone);
 
+    this.renderer.aggroLineGroup = new THREE.Group();
+    this.renderer.debugMeshes.add(this.renderer.aggroLineGroup);
+    this.renderer.aggroLinePool = [];
+
     this.renderer.debugTileMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(32, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff4757, wireframe: true, depthTest: false }), 100);
     this.renderer.debugTileMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.renderer.debugTileMesh.frustumCulled = false;
     this.renderer.debugTileMesh.visible = false;
     this.renderer.debugMeshes.add(this.renderer.debugTileMesh);
 
+    const spawnerBoxGeo = new THREE.BoxGeometry(2, 2, 2);
+    const spawnerBoxMat = new THREE.MeshBasicMaterial({ color: 0x2ecc71, wireframe: true, depthTest: false, transparent: true, opacity: 0.5 });
+    this.renderer.spawnerBoxMesh = new THREE.InstancedMesh(spawnerBoxGeo, spawnerBoxMat, 100);
+    this.renderer.spawnerBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.spawnerBoxMesh.visible = false;
+    this.renderer.debugMeshes.add(this.renderer.spawnerBoxMesh);
+
     const chunkBoxGeo = new THREE.BoxGeometry(1024, 1024, 2048);
     const chunkBoxMat = new THREE.LineBasicMaterial({ color: 0x9b59b6, depthTest: false, transparent: true, opacity: 0.5, linewidth: 2 });
     this.renderer.chunkBox = new THREE.LineSegments(new THREE.EdgesGeometry(chunkBoxGeo), chunkBoxMat);
     this.renderer.chunkBox.visible = false;
     this.renderer.debugMeshes.add(this.renderer.chunkBox);
+
+    const nhBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const nhBoxMat = new THREE.MeshBasicMaterial({ color: 0xe056fd, wireframe: true, depthTest: false, transparent: true, opacity: 0.3 });
+    this.renderer.neighborhoodBoxMesh = new THREE.InstancedMesh(nhBoxGeo, nhBoxMat, 50);
+    this.renderer.neighborhoodBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.neighborhoodBoxMesh.visible = false;
+    this.renderer.debugMeshes.add(this.renderer.neighborhoodBoxMesh);
 
     this.renderer.arrowHelper = new THREE.ArrowHelper(
       new THREE.Vector3(1, 0, 0),
@@ -148,6 +166,14 @@ export class DebugRenderer {
     this.renderer.clickMovePathLine.renderOrder = 998;
     this.renderer.scene.add(this.renderer.clickMovePathLine);
 
+    const npcPathLineMat = new THREE.LineBasicMaterial({ color: 0x9b59b6, transparent: true, opacity: 0.8, depthTest: false, linewidth: 2 });
+    const npcPathLineGeo = new THREE.BufferGeometry();
+    npcPathLineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(5000 * 3), 3));
+    this.renderer.npcPathLineMesh = new THREE.LineSegments(npcPathLineGeo, npcPathLineMat);
+    this.renderer.npcPathLineMesh.visible = false;
+    this.renderer.npcPathLineMesh.renderOrder = 998;
+    this.renderer.scene.add(this.renderer.npcPathLineMesh);
+
     const arcadeBoxGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(32.5, 32.5, 96.5));
     const arcadeBoxMat = new THREE.LineBasicMaterial({ color: 0xe056fd, depthTest: false, linewidth: 2 });
     this.renderer.arcadeHighlightBox = new THREE.LineSegments(arcadeBoxGeo, arcadeBoxMat);
@@ -190,6 +216,7 @@ export class DebugRenderer {
       this.renderer.meleeHitLineMesh.visible = false;
       this.renderer.debugTileMesh.visible = false;
       this.renderer.chunkBox.visible = false;
+      if (this.renderer.neighborhoodBoxMesh) this.renderer.neighborhoodBoxMesh.visible = false;
       if (this.renderer.arcadeHighlightBox) this.renderer.arcadeHighlightBox.visible = false;
       return;
     }
@@ -202,6 +229,9 @@ export class DebugRenderer {
       } else if (eng.selectedTarget.type === 'player') {
         const op = eng.otherPlayers[eng.selectedTarget.id];
         if (op && op.state !== 'death') { tx = op.x; ty = op.y; tz = op.z; }
+      } else if (eng.selectedTarget.type === 'drone') {
+        const drone = eng.drones[eng.selectedTarget.id];
+        if (drone && drone.state !== 'dead') { tx = drone.x; ty = drone.y; tz = drone.z; }
       } else if (eng.selectedTarget.type === 'self' && eng.player.state !== 'death') {
         tx = eng.player.x; ty = eng.player.y; tz = eng.player.z;
       }
@@ -251,6 +281,85 @@ export class DebugRenderer {
     if (this.renderer.arcadeHighlightBox) {
         this.renderer.arcadeHighlightBox.visible = highlightVisible;
     }
+
+    if (eng.devOptions.showNeighborhoods && eng.neighborhoods) {
+        let hitCount = 0;
+        const dummy = new THREE.Object3D();
+
+        let nhList = eng.neighborhoods;
+        if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
+
+        nhList.forEach(nh => {
+            if (hitCount < 50 && nh.bounds) {
+                const width = nh.bounds.maxX - nh.bounds.minX;
+                const depth = nh.bounds.maxY - nh.bounds.minY;
+                const height = nh.bounds.maxZ - nh.bounds.minZ;
+                const cx = nh.bounds.minX + width / 2;
+                const cy = nh.bounds.minY + depth / 2;
+                const cz = nh.bounds.minZ + height / 2;
+
+                dummy.position.set(cx, cy, cz);
+                dummy.scale.set(width, depth, height);
+                dummy.updateMatrix();
+                this.renderer.neighborhoodBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+            }
+        });
+        this.renderer.neighborhoodBoxMesh.count = hitCount;
+        this.renderer.neighborhoodBoxMesh.instanceMatrix.needsUpdate = true;
+        this.renderer.neighborhoodBoxMesh.visible = hitCount > 0;
+    } else if (this.renderer.neighborhoodBoxMesh) { this.renderer.neighborhoodBoxMesh.visible = false; }
+
+    if (eng.devOptions.showAggro) {
+        let hitCount = 0;
+        eng.npcs.forEach(npc => {
+            if (npc.state !== 'dead' && hitCount < 100) {
+                let ring;
+                if (hitCount < this.renderer.aggroLinePool.length) {
+                    ring = this.renderer.aggroLinePool[hitCount];
+                } else {
+                    const points = [];
+                    for (let i = 0; i <= 64; i++) {
+                        const theta = (i / 64) * Math.PI * 2;
+                        points.push(new THREE.Vector3(Math.cos(theta), Math.sin(theta), 0));
+                    }
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const material = new THREE.LineDashedMaterial({ color: 0xe67e22, linewidth: 1, dashSize: 10, gapSize: 10, transparent: true, opacity: 0.6 });
+                    ring = new THREE.Line(geometry, material);
+                    ring.computeLineDistances();
+                    this.renderer.aggroLineGroup.add(ring);
+                    this.renderer.aggroLinePool.push(ring);
+                }
+
+                const r = npc.aggroRadius !== undefined ? npc.aggroRadius : 200;
+                ring.scale.set(r, r, 1);
+                ring.position.set(npc.x, npc.y, (npc.z || 0) + 2);
+                ring.material.scale = r;
+                ring.visible = true;
+                hitCount++;
+            }
+        });
+        for (let i = hitCount; i < this.renderer.aggroLinePool.length; i++) {
+            this.renderer.aggroLinePool[i].visible = false;
+        }
+    } else {
+        if (this.renderer.aggroLinePool) this.renderer.aggroLinePool.forEach(ring => ring.visible = false);
+    }
+
+    if (eng.devOptions.showSpawners && eng.spawners) {
+        let hitCount = 0;
+        const dummy = new THREE.Object3D();
+        eng.spawners.forEach(s => {
+            if (hitCount < 100) {
+                dummy.position.set(s.x, s.y, s.z || 0);
+                dummy.scale.set(s.radius || 300, s.radius || 300, s.radius || 300);
+                dummy.updateMatrix();
+                this.renderer.spawnerBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+            }
+        });
+        this.renderer.spawnerBoxMesh.count = hitCount;
+        this.renderer.spawnerBoxMesh.instanceMatrix.needsUpdate = true;
+        this.renderer.spawnerBoxMesh.visible = hitCount > 0;
+    } else if (this.renderer.spawnerBoxMesh) { this.renderer.spawnerBoxMesh.visible = false; }
 
     if (eng.devOptions.showMelee) {
       this.renderer.meleeCircle.visible = true;
@@ -366,6 +475,38 @@ export class DebugRenderer {
       this.renderer.losMesh.visible = false;
     }
 
+    if (eng.devOptions.showNpcPaths) {
+        let count = 0;
+        const positions = this.renderer.npcPathLineMesh.geometry.attributes.position.array;
+
+        eng.npcs.forEach(npc => {
+            if (npc.state !== 'dead' && npc.serverPath && npc.serverPath.length > 0) {
+                let lastPt = { x: npc.x, y: npc.y, z: npc.z || 0 };
+                for (let i = 0; i < npc.serverPath.length; i++) {
+                    if (count >= 5000 * 3) break;
+                    const pt = npc.serverPath[i];
+                    const pz = pt.z !== undefined ? pt.z : eng.getTerrainZ(pt.x, pt.y);
+
+                    positions[count++] = lastPt.x;
+                    positions[count++] = lastPt.y;
+                    positions[count++] = lastPt.z + 2;
+
+                    positions[count++] = pt.x;
+                    positions[count++] = pt.y;
+                    positions[count++] = pz + 2;
+
+                    lastPt = { x: pt.x, y: pt.y, z: pz };
+                }
+            }
+        });
+
+        this.renderer.npcPathLineMesh.geometry.setDrawRange(0, count / 3);
+        this.renderer.npcPathLineMesh.geometry.attributes.position.needsUpdate = true;
+        this.renderer.npcPathLineMesh.visible = count > 0;
+    } else {
+        if (this.renderer.npcPathLineMesh) this.renderer.npcPathLineMesh.visible = false;
+    }
+
     let tileHitCount = 0;
     const dummy = new THREE.Object3D();
     const addTileBox = (entity) => {
@@ -422,7 +563,28 @@ export class DebugRenderer {
         const dots = entity.isTyping ? '.'.repeat(Math.floor(performance.now() / 400) % 4) : '';
         const textToShow = showName ? afkTag + name + dots : dots;
         if (textToShow) {
-          const tColor = isPlayer ? (entity.isAFK ? '#95a5a6' : '#2ecc71') : (entity.uuid ? '#ff4757' : '#3498db');
+          let tColor = '#3498db';
+          if (isPlayer) {
+              tColor = entity.isAFK ? '#95a5a6' : '#2ecc71';
+          } else if (entity.uuid) {
+              if (entity.type === 'trainer') {
+                  tColor = '#3498db';
+              } else if (entity.type === 'civilian') {
+                  tColor = '#bdc3c7';
+              } else {
+                 const playerLvl = window.currentGameEngine.playerData.level || 1;
+                 const targetLvl = entity.level || 1;
+                 const diff = targetLvl - playerLvl;
+                 if (diff >= 4) tColor = '#ff4757';
+                 else if (diff === 3) tColor = '#e67e22';
+                 else if (diff === 2) tColor = '#f39c12';
+                 else if (diff === 1) tColor = '#f1c40f';
+                 else if (diff === 0) tColor = '#ffffff';
+                 else if (diff === -1) tColor = '#bdc3c7';
+                 else if (diff === -2) tColor = '#7f8c8d';
+                 else tColor = '#444444';
+              }
+          }
           batcher.drawText(textToShow, entity.x, entity.y, (entity.z || 0) + currentOffset, 18, tColor);
         }
         currentOffset += 16;
@@ -560,14 +722,14 @@ export class DebugRenderer {
 
     if (eng.devOptions.showHitboxes) {
       ctx.lineWidth = 2;
-      const drawRect = (entity, color) => {
+      const drawRect = (entity, color, customHeight) => {
         const p3d = new THREE.Vector3(entity.x, entity.y, entity.z || 0).project(this.renderer.camera);
         const sx = (p3d.x + 1) / 2 * window.innerWidth;
         const sy = -(p3d.y - 1) / 2 * window.innerHeight;
 
             const zoom = this.renderer.camera.zoom;
         const width = 48 * zoom;
-        const height = 104 * zoom;
+        const height = (customHeight || 104) * zoom;
 
         ctx.strokeStyle = color;
         ctx.strokeRect(sx - (width / 2), sy - height, width, height);
@@ -576,14 +738,19 @@ export class DebugRenderer {
       drawRect(eng.player, '#2ecc71');
       Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') drawRect(op, '#3498db'); });
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') drawRect(npc, '#ff4757'); });
+      if (eng.drones) Object.values(eng.drones).forEach(d => { if (d.state !== 'dead') drawRect(d, '#00d2ff', 48); });
     }
 
     // --- Drag Selection Indicators ---
-    if (eng.editMode && eng.input.keys['control'] && eng.cursorGridPos) {
+    if (eng.editMode && eng.cursorGridPos) {
       const activeSlot = document.querySelector('.hotbar-slot.active');
       const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-      const isDeleting = eng.input.keys['shift'] || tex === 'erase';
-      const color = isDeleting ? 'rgba(255, 71, 87, 0.6)' : 'rgba(52, 152, 219, 0.6)';
+      const isDeleting = eng.input.isActionDown('buildDelete') || tex === 'erase';
+      const isPicker = tex === 'picker' || eng.input.isActionDown('picker');
+
+      let color = 'rgba(52, 152, 219, 0.6)';
+      if (isDeleting) color = 'rgba(255, 71, 87, 0.6)';
+      else if (isPicker) color = 'rgba(155, 89, 182, 0.6)';
 
       ctx.save();
       const drawIsoArrow = (ox, oy, oz, dx, dy) => {
@@ -612,16 +779,45 @@ export class DebugRenderer {
         ctx.fill();
       };
 
+        const drawVerticalArrow = (ox, oy, oz, dir) => {
+          const p1 = new THREE.Vector3(ox, oy, oz + dir*16).project(this.renderer.camera);
+          const p2 = new THREE.Vector3(ox, oy, oz + dir*48).project(this.renderer.camera);
+          const sx1 = (p1.x + 1) / 2 * window.innerWidth;
+          const sy1 = -(p1.y - 1) / 2 * window.innerHeight;
+          const sx2 = (p2.x + 1) / 2 * window.innerWidth;
+          const sy2 = -(p2.y - 1) / 2 * window.innerHeight;
+
+          ctx.beginPath();
+          ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
+          ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+
+          const angle = Math.atan2(sy2 - sy1, sx2 - sx1);
+          ctx.beginPath();
+          ctx.moveTo(sx2, sy2);
+          ctx.lineTo(sx2 - 12 * Math.cos(angle - Math.PI/6), sy2 - 12 * Math.sin(angle - Math.PI/6));
+          ctx.lineTo(sx2 - 12 * Math.cos(angle + Math.PI/6), sy2 - 12 * Math.sin(angle + Math.PI/6));
+          ctx.closePath();
+          ctx.fillStyle = color; ctx.fill();
+        };
+
       if (eng.isDraggingSelection && eng.selectionStart && eng.selectionEnd) {
         const minX = Math.min(eng.selectionStart.x, eng.selectionEnd.x);
         const maxX = Math.max(eng.selectionStart.x, eng.selectionEnd.x);
         const minY = Math.min(eng.selectionStart.y, eng.selectionEnd.y);
         const maxY = Math.max(eng.selectionStart.y, eng.selectionEnd.y);
+          const minZ = Math.min(eng.selectionStart.z, eng.selectionEnd.z);
+          const maxZ = Math.max(eng.selectionStart.z, eng.selectionEnd.z);
         const cz = eng.selectionStart.z + 16;
         const midX = (minX + maxX) / 2;
         const midY = (minY + maxY) / 2;
-        drawIsoArrow(maxX, midY, cz, 1, 0); drawIsoArrow(minX, midY, cz, -1, 0);
-        drawIsoArrow(midX, maxY, cz, 0, 1); drawIsoArrow(midX, minY, cz, 0, -1);
+
+          if (eng.input.isActionDown('buildDragSelect')) {
+              drawVerticalArrow(midX, midY, maxZ + 32, 1);
+              drawVerticalArrow(midX, midY, minZ, -1);
+          } else {
+              drawIsoArrow(maxX, midY, cz, 1, 0); drawIsoArrow(minX, midY, cz, -1, 0);
+              drawIsoArrow(midX, maxY, cz, 0, 1); drawIsoArrow(midX, minY, cz, 0, -1);
+          }
       } else {
         const cz = eng.cursorGridPos.z + 16;
         drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, 1, 0); drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, -1, 0);
@@ -635,7 +831,7 @@ export class DebugRenderer {
     ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'right';
     ctx.strokeStyle = '#000';
-    let textY = window.innerHeight - 80;
+    let textY = window.innerHeight - (eng.clientSettings.snapIndicators ? ((eng.hudIndicatorBottomOffset || 80) * (eng.clientSettings.uiScale || 1.0)) : 80);
 
     if ((eng.clientSettings.showCoords || eng.clientSettings.showYawPitch) && eng.player) {
       let text = "";
@@ -724,7 +920,7 @@ export class DebugRenderer {
 
     eng.cursorGridPos = null;
 
-    if (eng.editMode && eng.isDraggingSelection && eng.editDragAxis === 'vertical' && eng.selectionStart) {
+    if (eng.editMode && eng.isDraggingSelection && eng.input.isActionDown('buildDragSelect') && eng.selectionStart) {
       const camPos = this.renderer.camera.position;
       const startPt = new THREE.Vector3(eng.selectionStart.x, eng.selectionStart.y, eng.selectionStart.z);
       const normal = new THREE.Vector3(camPos.x - startPt.x, camPos.y - startPt.y, 0).normalize();
@@ -830,8 +1026,8 @@ export class DebugRenderer {
 
         const activeSlot = document.querySelector('.hotbar-slot.active');
         const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-        const isDeleting = eng.input.keys['shift'] || tex === 'erase';
-        const isPicker = tex === 'picker' || eng.input.keys['alt'];
+        const isDeleting = eng.input.isActionDown('buildDelete') || tex === 'erase';
+        const isPicker = tex === 'picker' || eng.input.isActionDown('picker');
 
         if (isDeleting) {
           this.renderer.selectionBox.material.color.setHex(0xff4757); // Red for deleting
@@ -867,8 +1063,8 @@ export class DebugRenderer {
       if (eng.editMode && eng.devOptions.useBlockPreview) {
         const activeSlot = document.querySelector('.hotbar-slot.active');
         const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-        const isDeleting = eng.input.keys['shift'] || tex === 'erase';
-        const isPicker = tex === 'picker' || eng.input.keys['alt'];
+        const isDeleting = eng.input.isActionDown('buildDelete') || tex === 'erase';
+        const isPicker = tex === 'picker' || eng.input.isActionDown('picker');
 
         if (isPicker) {
            this.renderer.highlightBox.scale.set(1, 1, 1);
@@ -1292,7 +1488,7 @@ export class DebugRenderer {
 
     if (this.renderer.gridHelper) {
         if (eng.editMode && eng.devOptions.showGrid && eng.cursorGridPos) {
-            this.renderer.gridHelper.position.set(eng.cursorGridPos.x, eng.cursorGridPos.y, eng.cursorGridPos.z + 16);
+            this.renderer.gridHelper.position.set(eng.cursorGridPos.x + 16, eng.cursorGridPos.y + 16, eng.cursorGridPos.z + 16);
             this.renderer.gridHelper.visible = true;
         } else {
             this.renderer.gridHelper.visible = false;
@@ -1358,7 +1554,36 @@ export class DebugRenderer {
       if (this.renderer.tpRing) this.renderer.tpRing.visible = false;
     }
 
-    if (eng.clientSettings.clickToMove && eng.player && eng.player.moveTarget && eng.player.moveTarget.timer > 0 && eng.clientSettings.showClickMovePath !== false) {
+    if (eng.pathEditMode && eng.pathEditInputId) {
+        const inputEl = document.getElementById(eng.pathEditInputId);
+        if (inputEl && inputEl.value) {
+            const parts = inputEl.value.split(';');
+            const points = [];
+            parts.forEach(p => {
+                const s = p.trim();
+                if (s && !s.startsWith('wait')) {
+                    const coords = s.split(',');
+                    if (coords.length === 2) points.push({ x: parseFloat(coords[0]), y: parseFloat(coords[1]) });
+                }
+            });
+            if (points.length > 0) {
+                this.renderer.clickMovePathLine.material.color.setHex(0xe056fd);
+                const positions = this.renderer.clickMovePathLine.geometry.attributes.position.array;
+                let count = 0;
+                for (let i = 0; i < points.length; i++) {
+                    positions[count++] = points[i].x;
+                    positions[count++] = points[i].y;
+                    positions[count++] = eng.getTerrainZ(points[i].x, points[i].y) + 16;
+                    if (count >= 800 * 3) break;
+                }
+                this.renderer.clickMovePathLine.geometry.setDrawRange(0, count / 3);
+                this.renderer.clickMovePathLine.geometry.attributes.position.needsUpdate = true;
+                this.renderer.clickMovePathLine.visible = true;
+            } else {
+                this.renderer.clickMovePathLine.visible = false;
+            }
+        }
+    } else if (eng.clientSettings.clickToMove && eng.player && eng.player.moveTarget && eng.player.moveTarget.timer > 0 && eng.clientSettings.showClickMovePath !== false) {
       const cmZ = eng.getTerrainZ(eng.player.moveTarget.x, eng.player.moveTarget.y);
       this.renderer.clickMoveRing.position.set(eng.player.moveTarget.x, eng.player.moveTarget.y, cmZ + 2);
       this.renderer.clickMoveRing.scale.set(1.0 + Math.sin(performance.now() / 150) * 0.2, 1.0 + Math.sin(performance.now() / 150) * 0.2, 1);

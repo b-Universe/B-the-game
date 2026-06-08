@@ -1,8 +1,11 @@
 export const GAME_TIPS = [
-  "Hold Shift to sprint and cover ground faster.",
+  "Hold {sprint} to sprint and cover ground faster.",
   "Use the scroll wheel to zoom the map in and out on the main screen, the minimap, or the full-screen map (M)!",
   "Type /editmode in chat to access the builder tools.",
-  "Hold Ctrl + Left Click to drag and place or select multiple blocks.",
+  "Left-Click and drag in Edit Mode to rapidly draw multi-block walls and floors.",
+  "Hold {buildDragSelect} while dragging in Edit Mode to expand your building selection vertically along the Z-Axis.",
+  "Hold {buildDelete} while dragging in Edit Mode to mass delete large areas of blocks.",
+  "Right-Click while in Edit Mode to rapidly rotate the shape you are placing.",
   "Click the Compass needle to snap your camera orientation.",
   "Paper airplanes are great for bonking your friends.",
   "Press 'N' to quickly toggle Player and Entity Nameplates and Health bars.",
@@ -11,12 +14,9 @@ export const GAME_TIPS = [
   "Passive abilities (blue) and Active Toggles (green) are displayed below your Energy bar.",
   "You can merge the Battery Charge and Energy bars in the Settings menu under Powers & Combat.",
   "Taking too long to load? A 'Potato Mode' button will appear to help you load in faster!",
-  "Hold SHIFT while dragging in Edit Mode to instantly build vertical walls and pillars.",
-  "Hold CTRL while dragging in Edit Mode to build perfectly straight lines and snap fences together.",
-  "Right-Click while in Edit Mode to quickly delete blocks.",
   "Press 'C' in Edit Mode to toggle Cutout transparency for windows and grates.",
   "Press 'M' in Edit Mode to toggle Mesh UV mapping for precise Blockbench textures.",
   "Did you know you can play fully networked arcade games like Bepis and Operius? Just interact with an Arcade Cabinet!",
   "Type /tpz <zoneName> to instantly warp to a different dimension or zone.",
-  "Press 'K' or use the top right menu to open your Settings and tweak your Render Distance for better performance."
+  "Open your Settings to tweak your Render Distance and custom Action Binds."
 ];

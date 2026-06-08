@@ -1,4 +1,6 @@
 export class BaseWindow {
+  static currentZIndex = 1000;
+
   /**
    * @param {string} id - The DOM ID for the window wrapper
    * @param {string} title - The display text in the header
@@ -20,6 +22,9 @@ export class BaseWindow {
   }
 
   build() {
+    const existing = document.getElementById(this.id);
+    if (existing) existing.remove();
+
     this.element = document.createElement('div');
     this.element.id = this.id;
     this.element.className = 'b-window';
@@ -65,6 +70,8 @@ export class BaseWindow {
     this.element.appendChild(header);
     this.element.appendChild(this.body);
 
+    this.element.addEventListener('mousedown', () => this.bringToFront());
+
     // Append to game screen if available, otherwise document body
     const container = document.getElementById('game-screen') || document.body;
     container.appendChild(this.element);
@@ -85,6 +92,7 @@ export class BaseWindow {
 
   open() {
     this.element.style.display = 'flex';
+    this.bringToFront();
     this.onOpen();
   }
 
@@ -101,6 +109,11 @@ export class BaseWindow {
       this.body.style.display = 'none';
       this.element.style.height = '32px'; // Snap to header height
     }
+  }
+
+  bringToFront() {
+    BaseWindow.currentZIndex++;
+    this.element.style.zIndex = BaseWindow.currentZIndex;
   }
 
   // Lifecycle hooks for subclasses to implement
@@ -131,8 +144,25 @@ export class BaseWindow {
         if (!isDragging) return;
         const dx = (moveEvent.clientX - startX) / scale;
         const dy = (moveEvent.clientY - startY) / scale;
-        this.element.style.left = `${initialLeft + dx}px`;
-        this.element.style.top = `${initialTop + dy}px`;
+
+        // Determine UI constraints based on current settings
+        let isEnergyMerged = false;
+        let isAlternativeUI = false;
+        try {
+          const settings = JSON.parse(localStorage.getItem('b_client_settings') || '{}');
+          isEnergyMerged = settings.mergeSynthBar === true;
+          isAlternativeUI = settings.uiMode === 'alternative';
+        } catch(e) {}
+
+        // Calculate reserved bottom space (e.g., 60px if merged, 95px if split, 0 if alt UI)
+        const bottomReservedSpace = isAlternativeUI ? 0 : (isEnergyMerged ? 60 : 95);
+        const maxAllowedY = window.innerHeight - this.element.offsetHeight - bottomReservedSpace;
+
+        const clampedY = Math.max(0, Math.min(initialTop + dy, maxAllowedY));
+        const clampedX = Math.max(0, Math.min(initialLeft + dx, window.innerWidth - this.element.offsetWidth));
+
+        this.element.style.left = `${clampedX}px`;
+        this.element.style.top = `${clampedY}px`;
       };
 
       const onMouseUp = () => {

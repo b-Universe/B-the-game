@@ -924,7 +924,7 @@ export class CharacterCreatorUIManager {
               potatoBtn.onclick = () => {
                 const saved = localStorage.getItem('b_client_settings');
                 const settings = saved ? JSON.parse(saved) : {};
-                Object.assign(settings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0 });
+                Object.assign(settings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0, chunkGenSpeed: 1 });
                 localStorage.setItem('b_client_settings', JSON.stringify(settings));
                 window.location.reload();
               };

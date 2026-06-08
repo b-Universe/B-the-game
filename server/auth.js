@@ -11,6 +11,7 @@ module.exports = function(app, helpers) {
 
   app.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const index = getIndex();
     const lowerUser = username.toLowerCase();
 
@@ -67,7 +68,7 @@ module.exports = function(app, helpers) {
         index[lowerUser] = { username: lowerUser, email: email ? email.toLowerCase() : null, passwordHash: passwordHash, uuid: uuid };
         saveIndex(index);
 
-        const playerData = { uuid: uuid, username: lowerUser, friends: [], characters: [], clientSettings: {}, created: Date.now() };
+        const playerData = { uuid: uuid, username: lowerUser, friends: [], characters: [], clientSettings: {}, created: Date.now(), lastIp: ip };
         fs.writeFileSync(path.join(PLAYER_DATA_DIR, `${uuid}.json`), JSON.stringify(playerData, null, 2));
         logSystem(`ACCOUNT CREATED: ${lowerUser} [${uuid}]`);
         res.status(201).json(playerData);
@@ -77,8 +78,67 @@ module.exports = function(app, helpers) {
     }
   });
 
+  app.post('/guest', (req, res) => {
+    const { charName } = req.body;
+    if (!charName) return res.status(400).json({ error: 'Character name required.' });
+
+    const lowerName = charName.toLowerCase();
+    const index = getIndex();
+
+    if (fs.existsSync(path.join(CHAR_DATA_DIR, `${lowerName}.json`))) {
+        return res.status(400).json({ error: 'That name is already in use.' });
+    }
+
+    let nameTaken = false;
+    for (const file of fs.readdirSync(PLAYER_DATA_DIR)) {
+      if (file.endsWith('.json')) {
+        try {
+          const pd = JSON.parse(fs.readFileSync(path.join(PLAYER_DATA_DIR, file), 'utf8'));
+          if (pd.characters && pd.characters.some(c => (typeof c === 'object' ? c.name : c).toLowerCase() === lowerName)) {
+             nameTaken = true; break;
+          }
+        } catch(e) {}
+      }
+    }
+    if (nameTaken) return res.status(400).json({ error: 'That name is already in use.' });
+
+    try {
+        const uuid = randomUUID();
+        const username = `guest_${randomUUID().substring(0,8)}`;
+
+        index[username] = { username, uuid, isGuest: true };
+        saveIndex(index);
+
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const playerData = { uuid, username, isGuest: true, friends: [], characters: [lowerName], created: Date.now(), lastIp: ip };
+        fs.writeFileSync(path.join(PLAYER_DATA_DIR, `${uuid}.json`), JSON.stringify(playerData, null, 2));
+
+        const newChar = {
+            name: charName,
+            race: 'Human', alignment: 'Neutral', city: 'Atlas', bio: 'A temporary guest.',
+            integrity: 0, archetype: 'Civilian',
+            powers: ['brawl', 'throw-airplane', 'flashlight', 'teleport', 'stamina'],
+            activePowers: ['stamina'],
+            powerTray: ['brawl', 'throw-airplane', 'flashlight', 'teleport'],
+            powersets: ['inherited'],
+            unspentPowerPicks: 0, unspentPowersetPicks: 0, level: 1,
+            created: Date.now(), stats: { hp: 1000, energy: 1000, synthEnergy: 1000 },
+            position: { x: 0, y: 0 }, zone: 'atlas-city',
+            inventory: [], currency: 0, isGuest: true
+        };
+        fs.writeFileSync(path.join(CHAR_DATA_DIR, `${lowerName}.json`), JSON.stringify(newChar, null, 2));
+
+        logSystem(`GUEST CREATED: ${charName} [${uuid}]`);
+        res.status(201).json(populateAccountCharacters(playerData));
+    } catch (error) {
+        logSystem(`GUEST ERROR: ${error.message}`, "ERROR");
+        return res.status(500).json({ error: `Failed to create guest. Error: ${error.message}` });
+    }
+  });
+
   app.post('/login', (req, res) => {
     const { identifier, password } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const index = getIndex();
     const lowerId = identifier.toLowerCase();
     const indexEntry = Object.values(index).find(acc => acc.username === lowerId || acc.email === lowerId);
@@ -128,6 +188,12 @@ module.exports = function(app, helpers) {
             if (!charObj.powers.includes('throw-airplane')) { charObj.powers.push('throw-airplane'); needsSave = true; }
             if (!charObj.powers.includes('flashlight')) { charObj.powers.push('flashlight'); needsSave = true; }
             if (!charObj.powers.includes('teleport')) { charObj.powers.push('teleport'); needsSave = true; }
+            if (!charObj.powers.includes('stamina')) { charObj.powers.push('stamina'); needsSave = true; }
+
+            if (charObj.powersets && charObj.powersets.includes('developer')) {
+                if (!charObj.powers.includes('satelite-support')) { charObj.powers.push('satelite-support'); needsSave = true; }
+                if (!charObj.powers.includes('equip-robot')) { charObj.powers.push('equip-robot'); needsSave = true; }
+            }
             if (!charObj.powersets) { charObj.powersets = []; needsSave = true; }
             if (charObj.stats && charObj.stats.synthEnergy === undefined) { charObj.stats.synthEnergy = 1000; needsSave = true; }
             if (!charObj.powersets.includes('inherited')) { charObj.powersets.unshift('inherited'); needsSave = true; }
@@ -150,15 +216,25 @@ module.exports = function(app, helpers) {
             if (!charObj.powerTray && charObj.powers) {
               charObj.powerTray = charObj.powers.filter(powId => {
                 const pDef = SERVER_POWER_REGISTRY[powId];
-                return pDef ? pDef.type !== 'Passive' : true;
+                return pDef ? pDef.type?.toLowerCase() !== 'passive' : true;
               });
               needsSave = true;
+            }
+
+            if (charObj.powerTray) {
+                const originalLength = charObj.powerTray.length;
+                charObj.powerTray = charObj.powerTray.filter(powId => {
+                    if (!powId) return true; // keep empty slots
+                    const pDef = SERVER_POWER_REGISTRY[powId];
+                    return pDef ? pDef.type?.toLowerCase() !== 'passive' : true;
+                });
+                if (charObj.powerTray.length !== originalLength) needsSave = true;
             }
 
             if (charObj.powers) {
               charObj.powers.forEach(powId => {
                 const pDef = SERVER_POWER_REGISTRY[powId];
-                if (pDef && pDef.type === 'Passive' && !charObj.activePowers.includes(powId)) { charObj.activePowers.push(powId); needsSave = true; }
+                if (pDef && pDef.type?.toLowerCase() === 'passive' && !charObj.activePowers.includes(powId)) { charObj.activePowers.push(powId); needsSave = true; }
               });
             }
 
@@ -166,7 +242,7 @@ module.exports = function(app, helpers) {
             if (charObj.powers) {
               charObj.powers.forEach(powId => {
                 const pDef = SERVER_POWER_REGISTRY[powId];
-                if (pDef && pDef.type === 'Passive' && pDef.effects) {
+                if (pDef && pDef.type?.toLowerCase() === 'passive' && pDef.effects) {
                   pDef.effects.forEach(eff => {
                     if (eff.type === 'MaxHP') maxHp += (eff.magnitude || 0);
                     if (eff.type === 'MaxEnergy') maxEnergy += (eff.magnitude || 0);
@@ -187,6 +263,10 @@ module.exports = function(app, helpers) {
             migratedNames.push(charNameStr.toLowerCase());
           }
         });
+      }
+      if (playerData.lastIp !== ip) {
+        playerData.lastIp = ip;
+        accountNeedsSave = true;
       }
       if (accountNeedsSave) {
         playerData.characters = migratedNames;
@@ -223,7 +303,7 @@ module.exports = function(app, helpers) {
     let requestedPowersets = charData.powersets || [];
     let requestedPowers = charData.powers || [];
     const validatedPowersets = ['inherited'];
-    const validatedPowers = ['brawl', 'throw-airplane', 'flashlight', 'teleport'];
+    const validatedPowers = ['brawl', 'throw-airplane', 'flashlight', 'teleport', 'stamina'];
     const isDev = permissionsCatalog['dev'] && (permissionsCatalog['dev'].includes('*') || permissionsCatalog['dev'].includes(lowerName));
     const bypassLimits = isDev && requestedPowersets.includes('developer');
 
@@ -232,8 +312,8 @@ module.exports = function(app, helpers) {
         unspentPowersetPicks = []; requestedPowersets = ['inherited'];
     }
     let unspentPowerPicks = charData.unspentPowerPicks !== undefined ? parseInt(charData.unspentPowerPicks, 10) : (parseInt(charData.unspentSlots, 10) || 0);
-    if (!bypassLimits && unspentPowerPicks + (requestedPowers.length - 4) > 4) {
-        unspentPowerPicks = 0; requestedPowers = ['brawl', 'throw-airplane', 'flashlight', 'teleport'];
+    if (!bypassLimits && unspentPowerPicks + (requestedPowers.length - 5) > 4) {
+        unspentPowerPicks = 0; requestedPowers = ['brawl', 'throw-airplane', 'flashlight', 'teleport', 'stamina'];
     }
 
     const integrity = parseInt(charData.integrity, 10) || 0;
@@ -261,7 +341,7 @@ module.exports = function(app, helpers) {
         if (found) validatedPowers.push(powerName);
     });
 
-    const newChar = { name: charData.name, race: charData.race || 'Human', alignment: charData.alignment || 'Neutral', city: charData.city || 'Atlas', bio: charData.bio || '', integrity: integrity, archetype: charData.archetype || 'Civilian', powers: validatedPowers, powerTray: validatedPowers.filter(p => SERVER_POWER_REGISTRY[p] ? SERVER_POWER_REGISTRY[p].type !== 'Passive' : true), powersets: validatedPowersets, unspentPowerPicks: unspentPowerPicks, unspentPowersetPicks: unspentPowersetPicks, level: 1, created: Date.now(), stats: { hp: 1000, energy: 1000, synthEnergy: 1000 }, position: { x: 0, y: 0 }, zone: 'untitled', inventory: charData.inventory || [{ id: 'rubber_chicken', name: 'Rubber Chicken', qty: 1, icon: '🍗' }, { id: 'buttons', name: 'Buttons', qty: 5, icon: '🔘' }, { id: 'slinky', name: 'Slinky', qty: 1, icon: '🌀' }], currency: charData.name.toLowerCase() === 'tim' ? 50000 : 0 };
+    const newChar = { name: charData.name, race: charData.race || 'Human', alignment: charData.alignment || 'Neutral', city: charData.city || 'Atlas', bio: charData.bio || '', integrity: integrity, archetype: charData.archetype || 'Civilian', powers: validatedPowers, activePowers: validatedPowers.filter(p => SERVER_POWER_REGISTRY[p] ? SERVER_POWER_REGISTRY[p].type?.toLowerCase() === 'passive' : false), powerTray: validatedPowers.filter(p => SERVER_POWER_REGISTRY[p] ? SERVER_POWER_REGISTRY[p].type?.toLowerCase() !== 'passive' : true), powersets: validatedPowersets, unspentPowerPicks: unspentPowerPicks, unspentPowersetPicks: unspentPowersetPicks, level: 1, created: Date.now(), stats: { hp: 1000, energy: 1000, synthEnergy: 1000 }, position: { x: 0, y: 0 }, zone: 'atlas-city', inventory: charData.inventory || [{ id: 'rubber_chicken', name: 'Rubber Chicken', qty: 1, icon: '🍗' }, { id: 'buttons', name: 'Buttons', qty: 5, icon: '🔘' }, { id: 'slinky', name: 'Slinky', qty: 1, icon: '🌀' }], currency: charData.name.toLowerCase() === 'tim' ? 50000 : 0 };
     fs.writeFileSync(charFile, JSON.stringify(newChar, null, 2));
     playerData.characters = playerData.characters.map(c => typeof c === 'object' ? c.name.toLowerCase() : c);
     playerData.characters.push(lowerName);

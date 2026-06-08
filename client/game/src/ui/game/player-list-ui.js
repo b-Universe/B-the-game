@@ -138,7 +138,6 @@ export class PlayerListUIManager {
 
         document.getElementById('pl-ctx-trade').onclick = () => {
           this.engine.network.sendTradeRequest(p.id);
-          this.engine.chat.addMessage('system', 'System', 'Trade request sent to ' + p.name + '.');
         };
 
         document.getElementById('pl-ctx-pm').onclick = () => {

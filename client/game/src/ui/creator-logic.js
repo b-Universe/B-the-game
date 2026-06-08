@@ -6,13 +6,13 @@ export class AuthLogic {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password })
     });
-    
+
     const data = await response.json();
 
     if (!response.ok) {
       throw new Error(data.error || data.message || 'An unknown registration error occurred.');
     }
-    
+
     return data;
   }
 

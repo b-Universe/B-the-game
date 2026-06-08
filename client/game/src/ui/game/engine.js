@@ -42,9 +42,37 @@ export class GameEngine {
       this.playerData.powerTray = this.playerData.powers.filter(p => window.POWER_REGISTRY && window.POWER_REGISTRY[p] && window.POWER_REGISTRY[p].type?.toLowerCase() !== 'passive');
     }
 
-    const defaultSettings = { combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
+    const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
+
+    // If this is the player's first time loading the client, perform a hardware bottleneck check
+    if (!savedSettingsStr) {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(any-pointer: coarse)").matches);
+      const isLowEnd = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+      let isSoftwareRenderer = false;
+      try {
+        const testCanvas = document.createElement('canvas');
+        const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
+            if (renderer.includes('swiftshader') || renderer.includes('llvmpipe') || renderer.includes('software')) isSoftwareRenderer = true;
+          }
+        }
+      } catch (e) {}
+
+      if (isMobile || isLowEnd || isSoftwareRenderer) {
+        Object.assign(defaultSettings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0, chunkGenSpeed: 1 });
+        this.autoPotatoApplied = true;
+      }
+    }
+
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
+    if (!this.clientSettings.actionBinds) this.clientSettings.actionBinds = defaultSettings.actionBinds;
+    for (let key in defaultSettings.actionBinds) {
+      if (!this.clientSettings.actionBinds[key]) this.clientSettings.actionBinds[key] = defaultSettings.actionBinds[key];
+    }
     this.tilt = 0.5;
     this.selectedTarget = null;
     this.selectedTiles = [];
@@ -59,6 +87,7 @@ export class GameEngine {
     this.permissions = {};
 
     this.waypoints = [];
+    this.mapPings = [];
     this.fps = 0;
     this.framesThisSecond = 0;
     this.lastFpsTime = performance.now();
@@ -144,6 +173,7 @@ export class GameEngine {
     window.addEventListener('keydown', (e) => {
       const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
 
+      if (!e.key) return;
       if (!isInput && this.arcadeSystem && this.arcadeSystem.handleInput(e, true)) {
         e.stopImmediatePropagation();
         return;
@@ -196,6 +226,50 @@ export class GameEngine {
 
     this.network = new NetworkManager(this);
     this.socket = this.network.socket;
+
+    if (this.socket) {
+      this.socket.on('disconnect', (reason) => {
+        if (reason === 'io server disconnect' || reason === 'io client disconnect') return;
+        let overlay = document.getElementById('server-update-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'server-update-overlay';
+          overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 14, 20, 0.85); z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: monospace; text-align: center; backdrop-filter: blur(4px); pointer-events: auto; opacity: 0; transition: opacity 0.5s ease-in-out;';
+          overlay.innerHTML = `
+            <h1 style="font-size: 3rem; margin-bottom: 10px; text-shadow: 0 0 10px #f1c40f;">SERVER UNDERGOING MAINTENANCE</h1>
+            <p style="font-size: 1.2rem; color: #fff; max-width: 600px; margin-bottom: 10px;">The server is briefly updating or undergoing maintenance and will be right back.</p>
+            <p style="font-size: 0.9rem; color: #aaa; max-width: 600px; margin-bottom: 30px;">Your client will automatically reconnect when the server is ready.</p>
+            <div style="border: 4px solid rgba(52, 152, 219, 0.3); border-radius: 50%; width: 50px; height: 50px; border-top-color: #3498db; animation: spin 1s linear infinite;"></div>
+            <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+          `;
+          document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'flex';
+        void overlay.offsetWidth;
+        overlay.style.opacity = '1';
+
+        // Throttle Socket.io's aggressive reconnection polling to prevent 502 Console Spam
+        if (this.socket.io && this.socket.io.opts) {
+          this.socket.io.opts.reconnectionDelay = 5000;
+          this.socket.io.opts.reconnectionDelayMax = 15000;
+        }
+      });
+
+      this.socket.on('connect', () => {
+        const overlay = document.getElementById('server-update-overlay');
+        if (overlay) {
+          overlay.style.opacity = '0';
+          setTimeout(() => { if (overlay.style.opacity === '0') overlay.style.display = 'none'; }, 500);
+        }
+
+        // Restore normal fast-reconnect for brief drops/lag
+        if (this.socket.io && this.socket.io.opts) {
+          this.socket.io.opts.reconnectionDelay = 1000;
+          this.socket.io.opts.reconnectionDelayMax = 5000;
+        }
+      });
+    }
+
     this.chat = new ChatManager(this);
     this.ui = new UIManager(this);
     this.minimap = new MinimapManager(this);
@@ -254,12 +328,21 @@ export class GameEngine {
         document.body.appendChild(hint);
       }
     }, 8000);
+
+    if (this.autoPotatoApplied) {
+      setTimeout(() => {
+        if (this.ui && this.ui.showSystemMessage) {
+          this.ui.showSystemMessage("Potato Mode was automatically applied to optimize performance on your device. Shadows and extra effects have been disabled.<br><br>You can re-enable them in the Settings menu (K).");
+        }
+      }, 5000);
+    }
   }
 
   showFloatingText(text, color) {
     this.floatingTexts.push({
       x: this.player.x,
       y: this.player.y,
+      z: this.player.z,
       offsetY: 130,
       rndX: (Math.random() - 0.5) * 40,
       rndY: (Math.random() - 0.5) * 40,
@@ -588,6 +671,20 @@ export class GameEngine {
       if (ft.life <= 0) this.floatingTexts.splice(i, 1);
     }
 
+    for (let i = this.mapPings.length - 1; i >= 0; i--) {
+      let p = this.mapPings[i];
+      p.life -= dt / 1000;
+      if (p.life <= 0) this.mapPings.splice(i, 1);
+    }
+
+    if (this.lightnings) {
+      for (let i = this.lightnings.length - 1; i >= 0; i--) {
+        let l = this.lightnings[i];
+        l.life -= dt / 1000;
+        if (l.life <= 0) this.lightnings.splice(i, 1);
+      }
+    }
+
     let nearestTrainer = null;
     let minTrainerDist = 150;
     this.npcs.forEach(npc => {
@@ -894,6 +991,7 @@ export class GameEngine {
 
       if (!hitTarget) {
         for (let id in this.otherPlayers) {
+          if (id === proj.senderId) continue;
           let op = this.otherPlayers[id];
           if (op.state !== 'death' && Math.hypot(proj.x - op.x, proj.y - op.y) < hitRadius && Math.abs(proj.z - (op.z || 0)) < 48) {
             hitTarget = { type: 'player', id: id, entity: op };
@@ -912,6 +1010,7 @@ export class GameEngine {
             this.floatingTexts.push({
               x: hitTarget.entity.x,
               y: hitTarget.entity.y,
+              z: hitTarget.entity.z,
               offsetY: 90,
               rndX: (Math.random() - 0.5) * 50,
               rndY: (Math.random() - 0.5) * 40,

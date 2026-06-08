@@ -1,0 +1,83 @@
+{
+  "Civilian": {
+    "hostileTo": []
+  },
+  "hero": {
+    "hostileTo": [
+      "villain"
+    ]
+  },
+  "vigilante": {
+    "hostileTo": [
+      "villain",
+      "APD"
+    ]
+  },
+  "villain": {
+    "hostileTo": [
+      "hero",
+      "vigilante",
+      "APD",
+      "Corporate Extractors",
+      "Astro-Enforcers"
+    ]
+  },
+  "APD": {
+    "hostileTo": [
+      "villain",
+      "vigilante",
+      "Cyber-Syndicate",
+      "Maple Gang"
+    ]
+  },
+  "Cyber-Syndicate": {
+    "hostileTo": [
+      "APD",
+      "hero",
+      "Corporate Extractors"
+    ]
+  },
+  "Corporate Extractors": {
+    "hostileTo": [
+      "Cyber-Syndicate",
+      "villain"
+    ]
+  },
+  "Astro-Enforcers": {
+    "hostileTo": [
+      "villain",
+      "Prism Zealots"
+    ]
+  },
+  "Prism Zealots": {
+    "hostileTo": [
+      "Astro-Enforcers",
+      "hero",
+      "Civilian"
+    ]
+  },
+  "Swarm": {
+    "hostileTo": [
+      "hero",
+      "vigilante",
+      "villain",
+      "Civilian",
+      "APD"
+    ]
+  },
+  "Rodent": {
+    "hostileTo": [
+      "hero",
+      "vigilante",
+      "villain",
+      "Civilian"
+    ]
+  },
+  "Maple Gang": {
+    "hostileTo": [
+      "APD",
+      "hero",
+      "Corporate Extractors"
+    ]
+  }
+}

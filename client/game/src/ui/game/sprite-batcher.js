@@ -110,7 +110,6 @@ export class SpriteBatcher {
 
   initMesh() {
     const geo = new THREE.PlaneGeometry(1, 1);
-    this.dummy = new THREE.Object3D();
     this.mesh = new THREE.InstancedMesh(geo, this.material, this.maxInstances);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
@@ -125,10 +124,17 @@ export class SpriteBatcher {
     this.scene.add(this.mesh);
 
     this.tempColor = new THREE.Color();
+    this.matrix = new THREE.Matrix4();
+    this.position = new THREE.Vector3();
+    this.scale = new THREE.Vector3();
+    this.right = new THREE.Vector3();
+    this.up = new THREE.Vector3();
   }
 
   begin() {
     this.instanceCount = 0;
+    this.right.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    this.up.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
   }
 
   drawText(text, x, y, z, size, colorHex, opacity = 1.0, align = 'center') {
@@ -138,28 +144,32 @@ export class SpriteBatcher {
       else if (align === 'right') offsetX = -(text.length * charWidth);
 
       this.tempColor.set(colorHex);
+      const r = this.tempColor.r;
+      const g = this.tempColor.g;
+      const b = this.tempColor.b;
+
+      this.scale.set(size, size, 1);
 
       for (let i = 0; i < text.length; i++) {
+          if (this.instanceCount >= this.maxInstances) return;
           const uv = this.charMap[text[i]] || this.charMap[' '];
 
-          this.dummy.position.set(x, y, z);
-          this.dummy.quaternion.copy(this.camera.quaternion);
-          this.dummy.translateX(offsetX + i * charWidth + charWidth/2);
-          this.dummy.scale.set(size, size, 1);
-          this.dummy.updateMatrix();
+          const charOffset = offsetX + i * charWidth + charWidth / 2;
+          this.position.set(x, y, z).addScaledVector(this.right, charOffset);
 
-          if (this.instanceCount >= this.maxInstances) return;
-          this.mesh.setMatrixAt(this.instanceCount, this.dummy.matrix);
+          this.matrix.compose(this.position, this.camera.quaternion, this.scale);
+          this.mesh.setMatrixAt(this.instanceCount, this.matrix);
 
-          this.colors[this.instanceCount * 4] = this.tempColor.r;
-          this.colors[this.instanceCount * 4 + 1] = this.tempColor.g;
-          this.colors[this.instanceCount * 4 + 2] = this.tempColor.b;
-          this.colors[this.instanceCount * 4 + 3] = opacity;
+          const cIdx = this.instanceCount * 4;
+          this.colors[cIdx] = r;
+          this.colors[cIdx + 1] = g;
+          this.colors[cIdx + 2] = b;
+          this.colors[cIdx + 3] = opacity;
 
-          this.uvs[this.instanceCount * 4] = uv.u;
-          this.uvs[this.instanceCount * 4 + 1] = uv.v;
-          this.uvs[this.instanceCount * 4 + 2] = uv.w;
-          this.uvs[this.instanceCount * 4 + 3] = uv.h;
+          this.uvs[cIdx] = uv.u;
+          this.uvs[cIdx + 1] = uv.v;
+          this.uvs[cIdx + 2] = uv.w;
+          this.uvs[cIdx + 3] = uv.h;
 
           this.instanceCount++;
       }
@@ -169,25 +179,26 @@ export class SpriteBatcher {
       if (this.instanceCount >= this.maxInstances) return;
 
       const uv = this.charMap['solid'];
-      this.dummy.position.set(x, y, z);
-      this.dummy.quaternion.copy(this.camera.quaternion);
-      this.dummy.translateX(offsetX);
-      this.dummy.translateY(offsetY);
-      this.dummy.scale.set(width, height, 1);
-      this.dummy.updateMatrix();
+      this.scale.set(width, height, 1);
 
-      this.mesh.setMatrixAt(this.instanceCount, this.dummy.matrix);
+      this.position.set(x, y, z)
+          .addScaledVector(this.right, offsetX)
+          .addScaledVector(this.up, offsetY);
+
+      this.matrix.compose(this.position, this.camera.quaternion, this.scale);
+      this.mesh.setMatrixAt(this.instanceCount, this.matrix);
 
       this.tempColor.set(colorHex);
-      this.colors[this.instanceCount * 4] = this.tempColor.r;
-      this.colors[this.instanceCount * 4 + 1] = this.tempColor.g;
-      this.colors[this.instanceCount * 4 + 2] = this.tempColor.b;
-      this.colors[this.instanceCount * 4 + 3] = opacity;
+      const cIdx = this.instanceCount * 4;
+      this.colors[cIdx] = this.tempColor.r;
+      this.colors[cIdx + 1] = this.tempColor.g;
+      this.colors[cIdx + 2] = this.tempColor.b;
+      this.colors[cIdx + 3] = opacity;
 
-      this.uvs[this.instanceCount * 4] = uv.u;
-      this.uvs[this.instanceCount * 4 + 1] = uv.v;
-      this.uvs[this.instanceCount * 4 + 2] = uv.w;
-      this.uvs[this.instanceCount * 4 + 3] = uv.h;
+      this.uvs[cIdx] = uv.u;
+      this.uvs[cIdx + 1] = uv.v;
+      this.uvs[cIdx + 2] = uv.w;
+      this.uvs[cIdx + 3] = uv.h;
 
       this.instanceCount++;
   }

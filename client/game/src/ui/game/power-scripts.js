@@ -1,12 +1,41 @@
 import { POWER_REGISTRY } from './registry.js?v=cache-bust-005';
 import { TravelPowerScripts, TravelPowerExecutors } from './powers/travel.js?v=cache-bust-005';
+import { AssaultRifleScripts } from './powers/assault-rifle.js?v=cache-bust-005';
 
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
 
 const baseScripts = {
   ...TravelPowerScripts,
+  ...AssaultRifleScripts,
   'satelite-support': (eng, powerId = 'satelite-support') => {
-    eng.combat.toggleTravelPower(powerId);
+    const powerDef = POWER_REGISTRY[powerId];
+    if (!powerDef) return;
+
+    if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump')) return;
+
+    const energyCost = powerDef.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 50;
+    if (eng.player.energy < energyCost) {
+      if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
+      return;
+    }
+
+    eng.player.lastAttackTimes = eng.player.lastAttackTimes || {};
+    const now = Date.now();
+    const cooldownMs = (powerDef.stats?.rechargeRate || 60) * 1000;
+    if (now - (eng.player.lastAttackTimes[powerId] || 0) < cooldownMs) return;
+
+    eng.player.energy -= energyCost;
+    eng.player.lastAttackTimes[powerId] = now;
+    eng.ui.update();
+
+    eng.player.state = powerDef.visuals?.animation || 'throw-attack1';
+    eng.player.frame = 0;
+    eng.player.frameTimer = 0;
+    eng.player.actionTimer = 500;
+
+    if (eng.network && eng.network.socket) {
+      eng.network.socket.emit('summon_entity', { powerId });
+    }
   },
   'teleport': (eng, powerId = 'teleport') => {
     eng.targetingPower = powerId;
@@ -17,9 +46,18 @@ const baseScripts = {
     if (
       eng.player.state === 'dash' ||
       eng.player.state === 'death' ||
-      (eng.player.actionTimer > 0 && eng.player.state !== 'jump') ||
-      eng.player.isSitting
+      (eng.player.actionTimer > 0 && eng.player.state !== 'jump')
     ) return;
+
+    const combatParams = eng.combat.getCombatTargetParams(powerId);
+    if (combatParams.outOfRange) {
+      if (eng.showFloatingText) eng.showFloatingText('Target out of range', '#e74c3c');
+      return;
+    }
+    if (eng.clientSettings.combatStyle === 'target' && !combatParams.targetEntity) {
+      if (eng.showFloatingText) eng.showFloatingText('Requires a Target', '#e74c3c');
+      return;
+    }
 
     const powerDef = POWER_REGISTRY[powerId];
     const energyCost = powerDef?.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 10;
@@ -73,7 +111,6 @@ const baseScripts = {
 
     eng.combat.closeNearbyDoors(px, py, pz);
 
-    const combatParams = eng.combat.getCombatTargetParams('brawl');
     let targetX = combatParams.targetX;
     let targetY = combatParams.targetY;
 
@@ -166,6 +203,16 @@ const baseScripts = {
       eng.player.isSitting
     ) return;
 
+    const combatParams = eng.combat.getCombatTargetParams(powerId);
+    if (combatParams.outOfRange) {
+      if (eng.showFloatingText) eng.showFloatingText('Target out of range', '#e74c3c');
+      return;
+    }
+    if (eng.clientSettings.combatStyle === 'target' && !combatParams.targetEntity) {
+      if (eng.showFloatingText) eng.showFloatingText('Requires a Target', '#e74c3c');
+      return;
+    }
+
     const powerDef = POWER_REGISTRY[powerId];
     const energyCost = powerDef?.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 10;
     const batteryCost = powerDef?.stats?.batteryCost || 0;
@@ -217,10 +264,33 @@ const baseScripts = {
 
     eng.combat.closeNearbyDoors(px, py, pz);
 
-    const combatParams = eng.combat.getCombatTargetParams('throw-airplane');
     let targetX = combatParams.targetX;
     let targetY = combatParams.targetY;
     let directTargetId = combatParams.targetEntity ? combatParams.targetEntity.id : null;
+
+    if (targetX === px && targetY === py) {
+      if (eng.mouseWorldPos) {
+        const dx2 = eng.mouseWorldPos.x - px;
+        const dy2 = eng.mouseWorldPos.y - py;
+        const dist2 = Math.hypot(dx2, dy2) || 1;
+        targetX = px + (dx2 / dist2) * 1000;
+        targetY = py + (dy2 / dist2) * 1000;
+      } else {
+        const dirAngleMap = {
+          'down-left': Math.PI * 0.75, 'down': Math.PI / 2, 'down-right': Math.PI / 4, 'right': 0,
+          'up-right': -Math.PI / 4, 'up': -Math.PI / 2, 'up-left': -Math.PI * 0.75, 'left': Math.PI
+        };
+        const angle = dirAngleMap[eng.player.dir] || Math.PI / 2;
+        targetX = px + Math.cos(angle) * 1000;
+        targetY = py + Math.sin(angle) * 1000;
+      }
+    } else if (directTargetId === null) {
+      const dx2 = targetX - px;
+      const dy2 = targetY - py;
+      const dist2 = Math.hypot(dx2, dy2) || 1;
+      targetX = px + (dx2 / dist2) * 1000;
+      targetY = py + (dy2 / dist2) * 1000;
+    }
 
     const dx = targetX - px;
     const dy = targetY - py;
@@ -229,10 +299,15 @@ const baseScripts = {
     if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
     eng.player.dir = DIRECTIONS[Math.floor(normalizedAngle / (Math.PI / 4)) % 8];
 
+    let finalTargetZ = (eng.getTerrainZ(targetX, targetY) || 0) + 10;
+    if (directTargetId !== null && combatParams.targetEntity) {
+      finalTargetZ = (combatParams.targetEntity.entity.z || 0) + 16;
+    }
+
     eng.network.sendProjectile({
       powerId: powerId,
       targetId: directTargetId,
-      targetX: targetX, targetY: targetY, targetZ: (eng.getTerrainZ(targetX, targetY) || 0) + 10,
+      targetX: targetX, targetY: targetY, targetZ: finalTargetZ,
     });
   }
 };
@@ -246,9 +321,16 @@ export const PowerScripts = new Proxy(baseScripts, {
        const powerDef = POWER_REGISTRY[prop];
        if (!powerDef) return;
 
-       if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump') || eng.player.isSitting) return;
+       if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump')) return;
        const energyCost = powerDef.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 10;
        const batteryCost = powerDef.stats?.batteryCost || 0;
+
+       const combatParams = eng.combat.getCombatTargetParams(prop);
+       if (combatParams.outOfRange) {
+         if (eng.showFloatingText) eng.showFloatingText('Target out of range', '#e74c3c');
+         return;
+       }
+
        if (eng.player.energy < energyCost) {
          if (eng.showFloatingText) eng.showFloatingText('Not Enough Energy', '#3498db');
          return;
@@ -302,7 +384,6 @@ export const PowerScripts = new Proxy(baseScripts, {
        }
 
        eng.combat.closeNearbyDoors(px, py, pz);
-       const combatParams = eng.combat.getCombatTargetParams(prop);
 
        let targetX = combatParams.targetX;
        let targetY = combatParams.targetY;
@@ -320,10 +401,39 @@ export const PowerScripts = new Proxy(baseScripts, {
        const isPBAoE = powerDef.type === 'PBAoE';
 
        if (isProjectile) {
+         if (targetX === px && targetY === py) {
+           if (eng.mouseWorldPos) {
+             const dx2 = eng.mouseWorldPos.x - px;
+             const dy2 = eng.mouseWorldPos.y - py;
+             const dist2 = Math.hypot(dx2, dy2) || 1;
+             targetX = px + (dx2 / dist2) * 1000;
+             targetY = py + (dy2 / dist2) * 1000;
+           } else {
+             const dirAngleMap = {
+               'down-left': Math.PI * 0.75, 'down': Math.PI / 2, 'down-right': Math.PI / 4, 'right': 0,
+               'up-right': -Math.PI / 4, 'up': -Math.PI / 2, 'up-left': -Math.PI * 0.75, 'left': Math.PI
+             };
+             const angle = dirAngleMap[eng.player.dir] || Math.PI / 2;
+             targetX = px + Math.cos(angle) * 1000;
+             targetY = py + Math.sin(angle) * 1000;
+           }
+         } else if (directTargetId === null) {
+           const dx2 = targetX - px;
+           const dy2 = targetY - py;
+           const dist2 = Math.hypot(dx2, dy2) || 1;
+           targetX = px + (dx2 / dist2) * 1000;
+           targetY = py + (dy2 / dist2) * 1000;
+         }
+
+         let finalTargetZ = (eng.getTerrainZ(targetX, targetY) || 0) + 10;
+         if (directTargetId !== null && combatParams.targetEntity) {
+           finalTargetZ = (combatParams.targetEntity.entity.z || 0) + 16;
+         }
+
           eng.network.sendProjectile({
             powerId: prop,
             targetId: directTargetId,
-            targetX: targetX, targetY: targetY, targetZ: (eng.getTerrainZ(targetX, targetY) || 0) + 10,
+            targetX: targetX, targetY: targetY, targetZ: finalTargetZ,
             damage: powerDef.stats?.damage || 0,
             speed: 500
           });
@@ -356,7 +466,14 @@ export const PowerExecutors = {
     const powerDef = POWER_REGISTRY[powerId];
     if (!powerDef) return;
 
-    if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump') || eng.player.isSitting) return;
+    if (eng.player.state === 'dash' || eng.player.state === 'death' || (eng.player.actionTimer > 0 && eng.player.state !== 'jump')) return;
+
+    const dist = Math.hypot(targetX - eng.player.x, targetY - eng.player.y);
+    const maxRange = (powerDef.stats?.range || 2000) + 50;
+    if (dist > maxRange) {
+      if (eng.showFloatingText) eng.showFloatingText('Target out of range', '#e74c3c');
+      return;
+    }
 
     const energyCost = powerDef.stats?.energyCost !== undefined ? powerDef.stats.energyCost : 30;
     const batteryCost = powerDef.stats?.batteryCost || 0;

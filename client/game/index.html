@@ -22,67 +22,9 @@
       }
     }
   </script>
-  <style>
-    /* Power Editor Dynamic Lists */
-    .pe-dynamic-list-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 150px;
-      overflow-y: auto;
-      padding-right: 5px;
-    }
-    /* Responsive Home Page Layout */
-    .home-layout-container {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-    }
-
-    .game-sidebar {
-      background-color: rgba(11, 14, 20, 0.95);
-      border-bottom: 2px solid #3498db;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex-shrink: 0;
-      max-height: 55vh; /* Prevents it from crushing the screen on mobile portrait */
-      overflow-y: auto;
-      box-sizing: border-box;
-      z-index: 10;
-    }
-
-    .game-sidebar > #auth-form,
-    .game-sidebar > .patch-notes-container {
-      width: 100%;
-    }
-
-    .home-main-content {
-      flex-grow: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* PC & Mobile Landscape */
-    @media (min-width: 768px), (orientation: landscape) {
-      .home-layout-container { flex-direction: row; }
-      .game-sidebar {
-        width: 350px;
-        max-height: 100vh;
-        height: 100vh;
-        border-bottom: none;
-        border-right: 2px solid #3498db;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-      }
-    }
-  </style>
 </head>
 <body>
+  <button id="btn-login-music" class="btn-secondary" style="position: fixed; bottom: 20px; right: 20px; font-size: 1.5rem; padding: 8px 12px; background: rgba(5,7,10,0.8); border: 2px solid #3498db; border-radius: 6px; color: #fff; cursor: pointer; z-index: 100000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" title="Music Volume">🔉</button>
   <div id="game-container">
     <section id="creation-screen" class="ui-screen">
       <div class="home-layout-container">
@@ -116,7 +58,7 @@
 
           <button id="btn-main" class="btn-primary">Login</button>
           <p class="toggle-text">Don't Have An Account? <span id="toggle-auth">Sign Up!</span></p>
-          <p class="toggle-text">(No Email Needed)</p>
+          <button id="btn-guest" class="btn-secondary" style="margin-top: 10px;">Continue as Guest</button>
         </div>
 
           <div class="patch-notes-container" style="margin-top: 25px; background: rgba(5, 7, 10, 0.6); border: 1px solid #333; border-radius: 6px; display: flex; flex-direction: column; flex: 1; min-height: 150px; overflow: hidden; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);">
@@ -662,6 +604,13 @@
                   <input type="range" id="slider-pre-dynamic-lights" min="0" max="100" step="4" style="width: 150px; cursor: pointer;">
                 </div>
               </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--text-dim); padding-top: 12px; margin-top: 5px;">
+                <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Menu Music Volume</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span id="val-pre-menu-volume" style="color: #3498db; font-family: var(--font-mono); font-size: 0.8rem; font-weight: bold;">50%</span>
+                  <input type="range" id="slider-pre-menu-volume" min="0" max="100" step="1" style="width: 150px; cursor: pointer;">
+                </div>
+              </div>
             </div>
           </div>
           <button id="btn-close-main-settings" class="btn-primary" style="margin-top: 25px;">Close</button>
@@ -712,6 +661,39 @@
           <button id="confirm-delete-no" class="btn-secondary" style="flex: 1;">Cancel</button>
         </div>
       </div>
+      </div>
+    </div>
+
+    <div id="hardware-warning-modal" class="modal-overlay" style="display: none; z-index: 5000000;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+        <div class="modal-content" style="width: 500px; max-width: 90vw; background: #0b0e14; border: 2px solid #e74c3c; box-shadow: 0 0 30px rgba(231, 76, 60, 0.4);">
+          <h3 style="font-family: var(--font-header); color: #e74c3c; margin-top: 0; text-align: center;">Performance Warning</h3>
+          <p style="font-family: var(--font-mono); font-size: 0.95rem; color: #fff; margin-top: 10px; line-height: 1.5; text-align: center;">We detected that your device or browser is missing hardware acceleration or running on limited resources.</p>
+          <div id="hardware-warning-instructions" style="background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c; padding: 15px; border-radius: 6px; margin-top: 15px; font-family: var(--font-mono); font-size: 0.85rem; color: #ccc; line-height: 1.5;">
+          </div>
+          <div style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <input type="checkbox" id="skip-hardware-warning" style="cursor: pointer; width: 16px; height: 16px;">
+            <label for="skip-hardware-warning" style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem; cursor: pointer;">Don't show this warning again</label>
+          </div>
+          <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+            <button id="btn-hardware-potato" class="btn-primary" style="flex: 1; border-color: #f1c40f; color: #f1c40f; background: rgba(241, 196, 15, 0.1);">Potato Mode</button>
+            <button id="btn-hardware-normal" class="btn-secondary" style="flex: 1;">Continue Normally</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="guest-modal" class="modal-overlay" style="display: none; z-index: 4000000;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+        <div class="modal-content">
+          <h3 style="font-family: var(--font-header); color: #3498db; margin-top: 0;">Continue as Guest</h3>
+          <p style="font-family: var(--font-mono); font-size: 0.9rem;">Enter a temporary character name. It will be permanently released when you log out.</p>
+          <input type="text" id="guest-name-input" placeholder="Guest Name" maxlength="16" style="width: 100%; box-sizing: border-box; margin-top: 10px; text-align: center;">
+          <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+            <button id="confirm-guest-login" class="btn-primary" style="flex: 1; border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1);">Play</button>
+            <button id="cancel-guest-login" class="btn-secondary" style="flex: 1;">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -949,135 +931,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-  <script>
-    // Handle Pre-Game Settings Modal directly in index.html to avoid bloating creator.js
-    document.addEventListener('DOMContentLoaded', () => {
-      const btnSettings = document.getElementById('btn-main-settings');
-      const modalSettings = document.getElementById('main-settings-modal');
-      const btnCloseSettings = document.getElementById('btn-close-main-settings');
-      const rowPerfMode = document.getElementById('row-toggle-perf-mode');
-      const btnPerfMode = document.getElementById('btn-toggle-perf-mode');
-      const rowPreWeather = document.getElementById('row-toggle-pre-weather');
-      const btnPreWeather = document.getElementById('btn-toggle-pre-weather');
-      const sliderPreRenderDist = document.getElementById('slider-pre-render-distance');
-      const sliderPreRenderScale = document.getElementById('slider-pre-render-scale');
-      const sliderPreDynamicLights = document.getElementById('slider-pre-dynamic-lights');
-
-      const updatePerfButtonUI = (isPerfMode) => {
-        if (isPerfMode) {
-          btnPerfMode.innerText = 'On';
-          btnPerfMode.className = 'btn-primary';
-          btnPerfMode.style.borderColor = '#2ecc71';
-          btnPerfMode.style.color = '#2ecc71';
-        } else {
-          btnPerfMode.innerText = 'Off';
-          btnPerfMode.className = 'btn-secondary';
-          btnPerfMode.style.borderColor = 'var(--text-dim)';
-          btnPerfMode.style.color = 'var(--text-primary)';
-        }
-      };
-
-      const updateWeatherButtonUI = (isWeatherOn) => {
-        if (isWeatherOn) {
-          btnPreWeather.innerText = 'On';
-          btnPreWeather.className = 'btn-primary';
-          btnPreWeather.style.borderColor = '#2ecc71';
-          btnPreWeather.style.color = '#2ecc71';
-        } else {
-          btnPreWeather.innerText = 'Off';
-          btnPreWeather.className = 'btn-secondary';
-          btnPreWeather.style.borderColor = 'var(--text-dim)';
-          btnPreWeather.style.color = 'var(--text-primary)';
-        }
-      };
-
-      if (btnSettings && modalSettings) {
-        btnSettings.addEventListener('click', () => {
-          modalSettings.style.display = 'block';
-          const saved = localStorage.getItem('b_client_settings');
-          const settings = saved ? JSON.parse(saved) : {};
-          updatePerfButtonUI(settings.enableShadows === false && settings.enableDayNightCycle === false);
-          updateWeatherButtonUI(settings.enableWeatherParticles !== false);
-
-          if (sliderPreRenderDist) {
-            sliderPreRenderDist.value = settings.renderDistance !== undefined ? settings.renderDistance : 2000;
-            if (document.getElementById('val-pre-render-distance')) document.getElementById('val-pre-render-distance').innerText = sliderPreRenderDist.value;
-          }
-          if (sliderPreRenderScale) {
-            sliderPreRenderScale.value = settings.renderScale !== undefined ? settings.renderScale * 100 : 100;
-            if (document.getElementById('val-pre-render-scale')) document.getElementById('val-pre-render-scale').innerText = `${sliderPreRenderScale.value}%`;
-          }
-          if (sliderPreDynamicLights) {
-            sliderPreDynamicLights.value = settings.maxDynamicLights !== undefined ? settings.maxDynamicLights : 48;
-            if (document.getElementById('val-pre-dynamic-lights')) document.getElementById('val-pre-dynamic-lights').innerText = sliderPreDynamicLights.value;
-          }
-        });
-        btnCloseSettings.addEventListener('click', () => modalSettings.style.display = 'none');
-        rowPerfMode.addEventListener('click', () => {
-          const saved = localStorage.getItem('b_client_settings');
-          const settings = saved ? JSON.parse(saved) : { enableShadows: true, enableDayNightCycle: true };
-          const newPerfState = !(settings.enableShadows === false && settings.enableDayNightCycle === false);
-          settings.enableShadows = !newPerfState;
-          settings.enableDayNightCycle = !newPerfState;
-          localStorage.setItem('b_client_settings', JSON.stringify(settings));
-          updatePerfButtonUI(newPerfState);
-        });
-        rowPreWeather.addEventListener('click', () => {
-          const saved = localStorage.getItem('b_client_settings');
-          const settings = saved ? JSON.parse(saved) : { enableWeatherParticles: true };
-          const newWeatherState = settings.enableWeatherParticles === false;
-          settings.enableWeatherParticles = newWeatherState;
-          localStorage.setItem('b_client_settings', JSON.stringify(settings));
-          updateWeatherButtonUI(newWeatherState);
-        });
-
-        if (sliderPreRenderDist) {
-          sliderPreRenderDist.addEventListener('input', (e) => {
-            if (document.getElementById('val-pre-render-distance')) document.getElementById('val-pre-render-distance').innerText = e.target.value;
-            const saved = localStorage.getItem('b_client_settings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.renderDistance = parseInt(e.target.value, 10);
-            localStorage.setItem('b_client_settings', JSON.stringify(settings));
-          });
-        }
-        if (sliderPreRenderScale) {
-          sliderPreRenderScale.addEventListener('input', (e) => {
-            if (document.getElementById('val-pre-render-scale')) document.getElementById('val-pre-render-scale').innerText = `${e.target.value}%`;
-          });
-          sliderPreRenderScale.addEventListener('change', (e) => {
-            const saved = localStorage.getItem('b_client_settings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.renderScale = parseInt(e.target.value, 10) / 100;
-            localStorage.setItem('b_client_settings', JSON.stringify(settings));
-          });
-        }
-        if (sliderPreDynamicLights) {
-          sliderPreDynamicLights.addEventListener('input', (e) => {
-            if (document.getElementById('val-pre-dynamic-lights')) document.getElementById('val-pre-dynamic-lights').innerText = e.target.value;
-            const saved = localStorage.getItem('b_client_settings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.maxDynamicLights = parseInt(e.target.value, 10);
-            localStorage.setItem('b_client_settings', JSON.stringify(settings));
-          });
-        }
-
-        // Builder Help Toggle Logic
-        const helpBtn = document.getElementById('help-toggle-btn');
-        const helpContent = document.getElementById('help-menu-content');
-        if (helpBtn && helpContent) {
-          helpBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            helpContent.classList.toggle('hidden');
-          });
-          document.addEventListener('click', (e) => {
-            if (!helpBtn.contains(e.target) && !helpContent.contains(e.target)) {
-              helpContent.classList.add('hidden');
-            }
-          });
-        }
-      }
-    });
-  </script>
   <script type="module" src="src/ui/creator.js?v=2"></script>
 </body>
 </html>

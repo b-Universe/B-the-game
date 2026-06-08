@@ -1,8 +1,103 @@
 [
   {
+    "version": "v2.5.0",
+    "color": "#00d2ff",
+    "changes": [
+      { "type": "Engine", "text": "Massive AI Overhaul: NPCs now utilize an intelligent pathfinding leash, randomly varying movement speeds, and will gracefully walk back to their spawner if pulled too far." },
+      { "type": "Design", "text": "Replaced the global waypoint system with a local Visual Path Editor! You can now Right-Click directly on the map to draw custom patrol routes for specific Civilians and Spawners." },
+      { "type": "UI", "text": "Completely revamped the Builder Tools! You can now Left-Click and drag to rapidly draw multi-block structures, hold Shift to mass-delete, and hold Ctrl to extrude vertically along the Z-Axis." },
+      { "type": "Engine", "text": "Entity Groups and Spawners can now be assigned specific powers (e.g., flight, ranged attacks) which are dynamically inherited by all their active NPCs." },
+      { "type": "Content", "text": "Introduced the 'Assault Rifle' powerset alongside the new 'Slug' ranged ability, replacing legacy paper airplanes for armed NPCs." },
+      { "type": "Gameplay", "text": "Trainer NPCs are now fully immune to all damage and status effects, actively deflecting incoming attacks with a new visual indicator." },
+      { "type": "UI", "text": "Action Keybinds now fully support modifier combinations (Ctrl/Alt/Shift), and dynamic tooltips accurately display your personalized keybinds in-game and on loading screens." },
+      { "type": "Design", "text": "Upgraded the visual debugger with tactical dashed lines for NPC Aggro boundaries, and Z-Axis specific extrusion arrows for the Builder." }
+    ]
+  },
+  {
+    "version": "v2.4.14",
+    "color": "#f1c40f",
+    "changes": [
+      { "type": "UI", "text": "Added a new 'Interface Mode' setting allowing players to swap between Classic and Alternative layouts." },
+      { "type": "UI", "text": "Added a new slim Experience Bar to the Classic UI." },
+      { "type": "UI", "text": "Implemented the Alternative UI mode, completely overhauling the bottom bars into a unified, draggable top-right status window inspired by classic superhero MMOs." }
+    ]
+  },
+  {
+    "version": "v2.4.13",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "Engine", "text": "Implemented Object Pooling for Debris and Entity meshes. Recurring visual effects like stuns and explosions no longer cause mid-combat frame drops." }
+    ]
+  },
+  {
+    "version": "v2.4.12",
+    "color": "#1abc9c",
+    "changes": [
+      { "type": "Design", "text": "Added a global audio manager to the login and character selection menus, featuring looping background music (metallic-crackers)." },
+      { "type": "UI", "text": "Added a new Sound Settings widget (Volume & Mute) to the main login screens that persists via your local browser cache." },
+      { "type": "Engine", "text": "Menu music intelligently fades out when deploying into the world, and seamlessly resumes when logging off." }
+    ]
+  },
+  {
+    "version": "v2.4.11",
+    "color": "#9b59b6",
+    "changes": [
+      { "type": "Engine", "text": "Eliminated massive mid-combat frame drops by replacing dynamic shadow-casting spotlights with a pre-compiled WebGL GPU object pool." },
+      { "type": "Design", "text": "Enhanced Stun and Lightning abilities with an animated cyan-to-purple electrical color gradient." }
+    ]
+  },
+  {
+    "version": "v2.4.10",
+    "color": "#f1c40f",
+    "changes": [
+      { "type": "Design", "text": "Enhanced the Stun visual effect! Stunned entities now receive a dynamic lightning arc and a high-FPS electrical discharge animation upon impact." },
+      { "type": "Engine", "text": "New visual effects are preloaded into the WebGL memory pool to prevent mid-combat frame drops." }
+    ]
+  },
+  {
+    "version": "v2.4.9",
+    "color": "#e67e22",
+    "changes": [
+      { "type": "Engine", "text": "Began scaffolding the new Entity Controllers modular system. Drone physics and AI have been safely moved to their own dedicated script." },
+      { "type": "Design", "text": "Added a new glowing teleport ring and particle deployment effect when Satellite Drones arrive in the world." }
+    ]
+  },
+  {
+    "version": "v2.4.8",
+    "color": "#e74c3c",
+    "changes": [
+      { "type": "Fix", "text": "Removed remaining legacy duplicate code for Satellite Support that caused unintended crashes and duplicates." },
+      { "type": "Fix", "text": "Resolved an issue where being disconnected by the server would permanently hide your Powerbar until manually refreshed." }
+    ]
+  },
+  {
+    "version": "v2.4.7",
+    "color": "#3498db",
+    "changes": [
+      { "type": "Engine", "text": "Implemented the new Summon Entity network events to handle server-side AI spawns such as Satellite Support drones." },
+      { "type": "Gameplay", "text": "Satellite Support is now a proper Summon power instead of a Toggle. Drones are spawned intelligently with delays." },
+      { "type": "Fix", "text": "Resolved an issue where learning Drone Upgrades would not instantly deploy new drones if Satellite Support was already active." },
+      { "type": "Fix", "text": "Cleaned up the server index file, resolving remnant Toggle logic for Drones causing console errors and duplications." }
+    ]
+  },
+  {
+    "version": "v2.4.6",
+    "color": "#ff4757",
+    "changes": [
+      { "type": "Engine", "text": "Completely overhauled the Input System to support customizable Action Binds with Primary, Alternate, and Modifier (Ctrl/Shift/Alt) keys." },
+      { "type": "Design", "text": "Replaced the legacy Settings Keybinds menu with a new Dual-Column Action Binding interface inspired by classic MMOs." },
+      { "type": "Design", "text": "All game windows now automatically remember their dragged positions and intelligently stack on top of each other when clicked." },
+      { "type": "Gameplay", "text": "Added an interactive Map Ping system! Right-clicking the map now creates a glowing ripple effect that is instantly broadcast to your friends in the same zone." },
+      { "type": "Gameplay", "text": "Opening the Fullscreen Map now automatically streams and renders distant terrain chunks without stalling the 3D engine." },
+      { "type": "Fix", "text": "Stripped repetitive connection, disconnection, and zone-transfer spam from the chat window to keep the focus on player communication." },
+      { "type": "Fix", "text": "Pressing Escape, Backspace, or Delete while mapping a keybind will now properly unbind the action." }
+    ]
+  },
+  {
     "version": "v2.4.5",
     "color": "#00d2ff",
     "changes": [
+      { "type": "Engine", "text": "Added a 'Chunk Generation Speed' setting to the Graphics Menu to give players more control over world loading performance. Integrated into all graphic presets." },
       { "type": "Engine", "text": "Implemented a Global UI Component Library to standardize all developer and player interfaces, drastically reducing HTML DOM bloat." },
       { "type": "Design", "text": "Overhauled the entire UI theme with a cohesive dark panel design, vibrant gradient headers, and a strict 8px spacing grid." },
       { "type": "UI", "text": "Refactored over a dozen legacy windows (Power Editor, Trade, Inventory, Trainers, Player/NPC Managers) to the new unified component standard." },

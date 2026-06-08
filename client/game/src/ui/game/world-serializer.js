@@ -47,61 +47,76 @@ export class WorldSerializer {
     }
   }
 
-  async deserialize(flatData) {
+  async deserialize(payload) {
     this.engine.mapManager.chunks.clear();
     this.engine.mapManager.generatedChunks.clear();
     this.engine.mapManager.chunkQueue.clear();
 
     if (this.engine.mapManager.mapCacheCtx) {
-        this.engine.mapManager.mapCacheCtx.clearRect(0, 0, this.engine.mapManager.mapWidth, this.engine.mapManager.mapHeight);
-    }
-
-    const entries = Object.keys(flatData);
-    console.log(`[WorldSerializer] Switched zone to ${this.engine.currentZone}. Loaded ${entries.length} voxels.`);
-
-    if (this.engine.renderer) {
-        this.engine.renderer.initialLoadComplete = false;
-
-        for (const key of this.engine.renderer.chunkMeshes.keys()) {
-            const mesh = this.engine.renderer.chunkMeshes.get(key);
-            this.engine.renderer.scene.remove(mesh);
-            mesh.geometry.dispose();
-        }
-        this.engine.renderer.chunkMeshes.clear();
-        for (const key of this.engine.renderer.chunkTransparentMeshes.keys()) {
-            const mesh = this.engine.renderer.chunkTransparentMeshes.get(key);
-            this.engine.renderer.scene.remove(mesh);
-            mesh.geometry.dispose();
-        }
-        this.engine.renderer.chunkTransparentMeshes.clear();
-    }
-
-    for (const key in flatData) {
-        const voxel = flatData[key];
-        if (voxel === undefined) continue;
-
-        const parts = key.split('_');
-        const x = parseInt(parts[0], 10);
-        const y = parseInt(parts[1], 10);
-        const cx = Math.floor(x / 16);
-        const cy = Math.floor(y / 16);
-        const chunkKey = `${cx}_${cy}`;
-
-        let chunk = this.engine.mapManager.chunks.get(chunkKey);
-        if (!chunk) {
-            chunk = new Map();
-            chunk.isModified = true;
-            this.engine.mapManager.chunks.set(chunkKey, chunk);
-        }
-        chunk.set(key, voxel);
+      this.engine.mapManager.mapCacheCtx.clearRect(0, 0, this.engine.mapManager.mapWidth, this.engine.mapManager.mapHeight);
     }
 
     if (this.engine.renderer) {
-        for (const [chunkKey, chunkMap] of this.engine.mapManager.chunks.entries()) {
-            const parts = chunkKey.split('_');
-            this.engine.mapManager.updateChunkMinimap(parseInt(parts[0], 10), parseInt(parts[1], 10), chunkMap);
-        }
-        this.engine.renderer.needsVoxelUpdate = true;
+      this.engine.renderer.initialLoadComplete = false;
+
+      for (const key of this.engine.renderer.chunkMeshes.keys()) {
+        const mesh = this.engine.renderer.chunkMeshes.get(key);
+        this.engine.renderer.scene.remove(mesh);
+        mesh.geometry.dispose();
+      }
+      this.engine.renderer.chunkMeshes.clear();
+      for (const key of this.engine.renderer.chunkTransparentMeshes.keys()) {
+        const mesh = this.engine.renderer.chunkTransparentMeshes.get(key);
+        this.engine.renderer.scene.remove(mesh);
+        mesh.geometry.dispose();
+      }
+      this.engine.renderer.chunkTransparentMeshes.clear();
+    }
+
+    let voxelCount = 0;
+    const processVoxel = (key, voxel) => {
+      if (voxel === undefined) return;
+
+      const parts = key.split('_');
+      const x = parseInt(parts[0], 10);
+      const y = parseInt(parts[1], 10);
+      const cx = Math.floor(x / 16);
+      const cy = Math.floor(y / 16);
+      const chunkKey = `${cx}_${cy}`;
+
+      let chunk = this.engine.mapManager.chunks.get(chunkKey);
+      if (!chunk) {
+          chunk = new Map();
+          chunk.isModified = true;
+          this.engine.mapManager.chunks.set(chunkKey, chunk);
+      }
+      chunk.set(key, voxel);
+      voxelCount++;
+    };
+
+    const data = payload.data ? payload.data : payload;
+
+    if (payload.compressed) {
+      for (const valStr in data) {
+        const voxel = JSON.parse(valStr);
+        data[valStr].forEach(key => processVoxel(key, voxel));
+      }
+    } else if (Array.isArray(data)) {
+      data.forEach(entry => processVoxel(entry[0], entry[1]));
+    } else {
+      for (const key in data) {
+        processVoxel(key, data[key]);
+      }
+    }
+
+    console.log(`[WorldSerializer] Switched zone to ${this.engine.currentZone}. Loaded ${voxelCount} voxels.`);
+
+    if (this.engine.renderer) {
+      for (const [chunkKey, chunkMap] of this.engine.mapManager.chunks.entries()) {
+        const parts = chunkKey.split('_');
+        this.engine.mapManager.updateChunkMinimap(parseInt(parts[0], 10), parseInt(parts[1], 10), chunkMap);
+      }
+      this.engine.renderer.needsVoxelUpdate = true;
     }
     this.engine.mapManager.mapCacheDirty = true;
   }

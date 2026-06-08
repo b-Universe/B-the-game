@@ -89,6 +89,27 @@ export class MinimapManager {
       ctx.stroke();
     });
 
+    if (eng.mapPings) {
+      eng.mapPings.forEach(ping => {
+        const pDrawX = (ping.x / 32 - pFracX) * mmTileSize;
+        const pDrawY = (ping.y / 32 - pFracY) * mmTileSize;
+        const maxRadius = mmTileSize * 4;
+        const currentRadius = maxRadius * (1.0 - ping.life);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pDrawX, pDrawY, currentRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = ping.color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = Math.max(0, ping.life);
+        ctx.stroke();
+        if (currentRadius > mmTileSize) {
+          ctx.beginPath(); ctx.arc(pDrawX, pDrawY, currentRadius - mmTileSize, 0, Math.PI * 2);
+          ctx.lineWidth = 1; ctx.globalAlpha = Math.max(0, ping.life * 0.5); ctx.stroke();
+        }
+        ctx.restore();
+      });
+    }
+
         const drawMinimapDot = (worldX, worldY, dotColor, size) => {
       const drawX = (worldX / 32 - pFracX) * mmTileSize;
       const drawY = (worldY / 32 - pFracY) * mmTileSize;

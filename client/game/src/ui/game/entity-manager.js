@@ -1,6 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { getBlockProps } from './blocks.js?v=cache-bust-005';
 import { POWER_REGISTRY } from './registry.js?v=cache-bust-005';
+import { updateDrones, getRoboticsFrameCount } from './entities/robotics.js?v=cache-bust-005';
 
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
 
@@ -11,7 +12,9 @@ export class EntityManager {
 
   getFrameCount(state) {
     if (!state) return 8;
-    if (state === 'idle' || state === 'fly-idle') return 12;
+    const roboticsCount = getRoboticsFrameCount(state);
+    if (roboticsCount) return roboticsCount;
+    if (state === 'idle' || state === 'fly-idle' || state === 'hurt' || state === 'death' || state === 'dead') return 12;
     if (state.startsWith('attack') || state.startsWith('throw-attack')) return 7;
     if (state.startsWith('cast:')) {
       const powerId = state.split(':')[1];
@@ -67,7 +70,7 @@ export class EntityManager {
     this.updatePlayer(dt);
     this.updateNpcs(dt);
     this.updateOtherPlayers(dt);
-    this.updateDrones(dt);
+    updateDrones(this.engine, dt, this);
   }
 
   updatePlayer(dt) {
@@ -100,7 +103,8 @@ export class EntityManager {
           eng.cameraShake = Math.max(eng.cameraShake, 6);
           const targetX = player.teleportTarget.x;
           const targetY = player.teleportTarget.y;
-          const targetZ = eng.getTerrainZ(targetX, targetY);
+          let targetZ = eng.getTerrainZ(targetX, targetY);
+          if (targetZ <= -96) targetZ = 1000; // Drop from sky if chunk isn't loaded locally yet!
 
           eng.network.sendPlayerTeleported();
 
@@ -280,45 +284,24 @@ export class EntityManager {
     } else {
       if (eng.screenFade > 0) eng.screenFade = Math.max(0, eng.screenFade - (dt / 2000));
 
-      if (player.isSitting && (eng.keys['w'] || eng.keys['s'] || eng.keys['a'] || eng.keys['d'] || eng.keys[' '])) {
-         player.isSitting = false;
-         if (player.preSitPos) {
-           player.x = player.preSitPos.x;
-           player.y = player.preSitPos.y;
-           player.z = player.preSitPos.z;
-           if (eng.checkCollision(player.x, player.y, player.z)) {
-              eng.findSafeSpawn();
-           }
-           eng.camera.x = player.x;
-           eng.camera.y = player.y;
-           player.preSitPos = null;
-         }
-      }
-
       const camSens = eng.clientSettings.cameraSensitivity !== undefined ? eng.clientSettings.cameraSensitivity : 120;
       const invertX = eng.clientSettings.invertCameraX ? -1 : 1;
       const invertY = eng.clientSettings.invertCameraY ? -1 : 1;
 
-      const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' };
-      const camLeftKey = (kbs.camLeft || 'q').toLowerCase();
-      const camRightKey = (kbs.camRight || 'e').toLowerCase();
-      const camUpKey = (kbs.camUp || 'pageup').toLowerCase();
-      const camDownKey = (kbs.camDown || 'pagedown').toLowerCase();
-
-      if (eng.keys[camLeftKey]) {
+      if (eng.input.isActionDown('camLeft')) {
         if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(camSens * invertX * (dt / 1000), 0);
       }
-      if (eng.keys[camRightKey]) {
+      if (eng.input.isActionDown('camRight')) {
         if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(-camSens * invertX * (dt / 1000), 0);
       }
-      if (eng.keys[camUpKey]) {
+      if (eng.input.isActionDown('camUp')) {
         if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(0, -camSens * 1.5 * invertY * (dt / 1000));
       }
-      if (eng.keys[camDownKey]) {
+      if (eng.input.isActionDown('camDown')) {
         if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(0, camSens * 1.5 * invertY * (dt / 1000));
       }
 
-      if (player.isSitting || player.teleportTarget || (eng.arcadeSystem && eng.arcadeSystem.isActive)) {
+      if (player.teleportTarget || (eng.arcadeSystem && eng.arcadeSystem.isActive)) {
          screenDx = 0; screenDy = 0;
          isPressingShift = false; isPressingSpace = false;
          player.vx = 0; player.vy = 0;
@@ -326,12 +309,13 @@ export class EntityManager {
          player.state = player.teleportTarget ? player.state : 'idle';
          player.frame = player.teleportTarget ? player.frame : 0;
       } else {
-         if (eng.keys['w']) screenDy -= 1;
-         if (eng.keys['s']) screenDy += 1;
-         if (eng.keys['a']) screenDx -= 1;
-         if (eng.keys['d']) screenDx += 1;
-         isPressingShift = eng.clientSettings.alwaysSprint ? !eng.keys['shift'] : !!eng.keys['shift'];
-         isPressingSpace = eng.keys[' '];
+         if (eng.input.isActionDown('moveForward')) screenDy -= 1;
+         if (eng.input.isActionDown('moveBackward')) screenDy += 1;
+         if (eng.input.isActionDown('moveLeft')) screenDx -= 1;
+         if (eng.input.isActionDown('moveRight')) screenDx += 1;
+         const isSprintDown = eng.input.isActionDown('sprint');
+         isPressingShift = eng.clientSettings.alwaysSprint ? !isSprintDown : isSprintDown;
+         isPressingSpace = eng.input.isActionDown('jump');
       }
     }
 
@@ -511,6 +495,11 @@ export class EntityManager {
           player.superSpeedMult = 1.0;
         }
 
+    if (player.activeEffects && player.activeEffects.some(e => e.id === 'status_stun')) {
+        speed *= 0.2;
+        player.superSpeedMult = 1.0;
+    }
+
         if (player.wasInWater) speed *= 0.4; // Wading/swimming penalty
         else if (eng.mapManager) {
           const currentGridZ = Math.round((player.z || 0) / 32);
@@ -536,9 +525,7 @@ export class EntityManager {
           if (player.wasInWater) speed *= 0.4;
         }
       } else {
-        if (player.isSitting) {
-          player.state = 'idle';
-        } else if (player.activePowers && player.activePowers.includes('fly')) {
+        if (player.activePowers && player.activePowers.includes('fly')) {
           player.state = isMoving ? 'fly' : 'fly-idle';
         } else {
           player.state = isMoving ? (isPressingShift ? 'run' : 'walk') : 'idle';
@@ -820,6 +807,11 @@ export class EntityManager {
 
   updateNpcs(dt) {
     this.engine.npcs.forEach(npc => {
+      if (npc.serverX !== undefined && npc.serverY !== undefined) {
+         npc.x += (npc.serverX - npc.x) * 10 * (dt / 1000);
+         npc.y += (npc.serverY - npc.y) * 10 * (dt / 1000);
+      }
+
       if (npc.hurtTimer > 0) npc.hurtTimer -= dt;
       npc.frameTimer += dt;
       let npcInterval = this.engine.player.frameInterval;
@@ -882,31 +874,9 @@ export class EntityManager {
     });
   }
 
-  updateDrones(dt) {
-    const eng = this.engine;
-    for (const id in eng.drones) {
-        const drone = eng.drones[id];
-        drone.frameTimer = (drone.frameTimer || 0) + dt;
-
-        let state = 'idle';
-        if (drone.dir) {
-            if (drone.dir.includes('up')) state = 'forward';
-            else if (drone.dir.includes('down')) state = 'backward';
-        }
-        drone.state = state;
-
-        const maxFrames = 1; // Drones are single-frame for now
-        const animSpeed = 120;
-
-        if (drone.frameTimer >= animSpeed) {
-            drone.frameTimer -= animSpeed;
-            drone.frame = ((drone.frame || 0) + 1) % maxFrames;
-        }
-    }
-  }
-
   updateEntities() {
     const activeEntities = new Set();
+    if (!this.entityPool) this.entityPool = [];
     const renderer = this.engine.renderer;
     const camUp = new THREE.Vector3(0, 1, 0).applyQuaternion(renderer.camera.quaternion);
 
@@ -915,77 +885,61 @@ export class EntityManager {
       let group = renderer.entityMeshes.get(id);
 
       if (!group) {
-        group = new THREE.Group();
+        if (this.entityPool.length > 0) {
+          group = this.entityPool.pop();
+          group.visible = true;
+        } else {
+          group = new THREE.Group();
 
-        if (!renderer.baseEntityMaterial) {
-            renderer.baseEntityMaterial = new THREE.MeshPhongMaterial({
-              transparent: true,
-              alphaTest: 0.5,
-              depthWrite: true,
-              side: THREE.FrontSide,
-              polygonOffset: true,
-              polygonOffsetFactor: -1,
-              polygonOffsetUnits: -1,
-              shininess: 0
-            });
-            // Force the sprite normal to always point UP in world space so the daylight hits it uniformly!
-            renderer.baseEntityMaterial.onBeforeCompile = (shader) => {
-              shader.vertexShader = shader.vertexShader.replace(
-                '#include <defaultnormal_vertex>',
-                `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
-              ).replace(
-                '#include <project_vertex>',
-                `
-                vec4 mvPosition = vec4( transformed, 1.0 );
-                #ifdef USE_INSTANCING
-                    mvPosition = instanceMatrix * mvPosition;
-                #endif
-                mvPosition = modelViewMatrix * mvPosition;
-                mvPosition.z += (position.y + 0.5) * 60.0;
-                gl_Position = projectionMatrix * mvPosition;
-                `
-              );
-            };
-            renderer.baseEntityMaterial.customProgramCacheKey = () => 'baseEntityMat';
+          const mat = renderer.baseEntityMaterial.clone();
+          mat.onBeforeCompile = renderer.baseEntityMaterial.onBeforeCompile;
+          mat.customProgramCacheKey = renderer.baseEntityMaterial.customProgramCacheKey;
+
+          const geo = new THREE.PlaneGeometry(1, 1);
+          const sprite = new THREE.Mesh(geo, mat);
+          sprite.castShadow = false;
+          sprite.receiveShadow = true;
+          sprite.frustumCulled = false;
+
+          group.add(sprite);
+          group.userData.sprite = sprite;
+
+          const proxyGeo = new THREE.CylinderGeometry(8, 8, 38, 8);
+          proxyGeo.rotateX(Math.PI / 2);
+          proxyGeo.translate(0, 0, 19);
+          const shadowProxy = new THREE.Mesh(proxyGeo, renderer.commonHitProxyMat);
+          shadowProxy.castShadow = this.engine.clientSettings.enableShadows !== false;
+          shadowProxy.receiveShadow = false;
+          group.add(shadowProxy);
+          group.userData.shadowProxy = shadowProxy;
+
+          const hitGeo = new THREE.BoxGeometry(1, 1, 1);
+          const hitProxy = new THREE.Mesh(hitGeo, renderer.commonHitProxyMat);
+          group.add(hitProxy);
+          group.userData.hitProxy = hitProxy;
+
+          const shieldGeo = new THREE.SphereGeometry(26, 16, 16);
+          const shield = new THREE.Mesh(shieldGeo, renderer.commonShieldMat);
+          shield.visible = false;
+          group.add(shield);
+          group.userData.shield = shield;
+
+          if (!id.startsWith('proj_')) {
+            const shadowGeo = new THREE.CircleGeometry(10, 16);
+            const shadow = new THREE.Mesh(shadowGeo, renderer.commonShadowMat);
+            group.add(shadow);
+            group.userData.shadow = shadow;
+          }
+
+          renderer.scene.add(group);
         }
-
-        const mat = renderer.baseEntityMaterial.clone();
-        mat.onBeforeCompile = renderer.baseEntityMaterial.onBeforeCompile;
-        mat.customProgramCacheKey = renderer.baseEntityMaterial.customProgramCacheKey;
-
-        const geo = new THREE.PlaneGeometry(1, 1);
-        const sprite = new THREE.Mesh(geo, mat);
-        sprite.castShadow = false;
-        sprite.receiveShadow = true;
-        sprite.frustumCulled = false;
-
-        group.add(sprite);
-        group.userData.sprite = sprite;
-
-        const proxyGeo = new THREE.CylinderGeometry(8, 8, 38, 8);
-        proxyGeo.rotateX(Math.PI / 2);
-        proxyGeo.translate(0, 0, 19);
-        const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
-        const shadowProxy = new THREE.Mesh(proxyGeo, proxyMat);
-        shadowProxy.castShadow = this.engine.clientSettings.enableShadows !== false;
-        shadowProxy.receiveShadow = false;
-        group.add(shadowProxy);
-        group.userData.shadowProxy = shadowProxy;
-
-        if (!id.startsWith('proj_')) {
-          const shadowGeo = new THREE.CircleGeometry(10, 16);
-          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
-          const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-          group.add(shadow);
-          group.userData.shadow = shadow;
-        }
-
-        renderer.scene.add(group);
         renderer.entityMeshes.set(id, group);
       }
 
       const sprite = group.userData.sprite;
       const shadow = group.userData.shadow;
+      const hitBox = group.userData.hitProxy;
+      const shield = group.userData.shield;
 
       let state = entity.state || 'idle';
       if (state === 'dead') state = 'death';
@@ -995,13 +949,19 @@ export class EntityManager {
       let height = 154;
 
       if (entity.type === 'drone') {
-        state = `drone_${state}`;
-        width = 64;
-        height = 64;
-        sprite.position.copy(camUp).multiplyScalar(0); // Drones are centered
+            width = 32;
+            height = 32;
+            hitBox.scale.set(48, 48, 48);
+            hitBox.position.set(0, 0, 16);
+            sprite.position.copy(camUp).multiplyScalar(16);
+
+        if (entity.isUpgraded) sprite.material.color.setHex(0xf1c40f); // Tint gold if upgraded!
+        else sprite.material.color.setHex(0xffffff);
       } else if (state === 'attack1' || state === 'attack2' || state === 'throw-attack1') {
         width = 230;
         height = 230;
+        hitBox.scale.set(48, 48, 80);
+        hitBox.position.set(0, 0, 40);
       }
 
       sprite.scale.set(width, height, 1);
@@ -1015,6 +975,34 @@ export class EntityManager {
 
       group.position.set(entity.x, entity.y, entity.z || 0);
 
+      const hasStun = entity.activeEffects && entity.activeEffects.some(e => e.type === 'Status' && e.statusType === 'stun');
+      let stunSprite = group.userData.stunSprite;
+      if (hasStun) {
+          if (!stunSprite) {
+              const tex = renderer.assetManager.textures['fx_stun'];
+              if (tex) {
+                  const mat = new THREE.SpriteMaterial({ map: tex.clone(), color: 0xffffff, transparent: true });
+                  stunSprite = new THREE.Sprite(mat);
+                  stunSprite.scale.set(48, 48, 1);
+                  stunSprite.position.set(0, 0, 60); // Above head
+                  group.add(stunSprite);
+                  group.userData.stunSprite = stunSprite;
+              }
+          }
+          if (stunSprite && stunSprite.material.map) {
+              const seqData = renderer.assetManager.sequenceLibrary['fx_stun'];
+              if (seqData) {
+                  const frames = seqData.frames;
+                  stunSprite.material.map.repeat.set(1 / frames, 1);
+                  const frameIdx = Math.floor(performance.now() / (seqData.speed || 100)) % frames;
+                  stunSprite.material.map.offset.set(frameIdx / frames, 0);
+              }
+              stunSprite.visible = true;
+          }
+      } else if (stunSprite) {
+          stunSprite.visible = false;
+      }
+
       if (shadow) {
         shadow.visible = !!this.engine.clientSettings.showBaseplates && !this.engine.clientSettings.enableDayNightCycle;
         const terrainZ = this.engine.getTerrainZ(entity.x, entity.y, entity.z || 0);
@@ -1025,21 +1013,41 @@ export class EntityManager {
         shadow.scale.set(shadowScale, shadowScale, 1);
       }
 
+      if (shield) {
+          if (entity.activeEffects && entity.activeEffects.some(e => e.id === 'spawn_protection')) {
+              shield.visible = true;
+              shield.position.copy(camUp).multiplyScalar(32);
+              const scale = 1.0 + Math.sin(performance.now() / 150) * 0.05;
+              shield.scale.set(scale, scale, scale);
+              shield.material.opacity = 0.2 + Math.sin(performance.now() / 150) * 0.1;
+          } else {
+              shield.visible = false;
+          }
+      }
+
       const relDir = renderer.getRelativeSpriteDirection(entity.dir || 'down');
-      const tex = renderer.assetManager.textures[state] || renderer.assetManager.textures['idle'];
+      const fallbackTex = entity.type === 'drone' ? 'drone-1-idle' : 'idle';
+      const tex = renderer.assetManager.textures[state] || renderer.assetManager.textures[fallbackTex];
 
       if (tex) {
 
         if (sprite.userData.mapUuid !== tex.uuid) {
+          if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+              sprite.material.map.dispose();
+          }
           sprite.material.map = tex.clone();
+          if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
           sprite.userData.mapUuid = tex.uuid;
           sprite.userData.state = state;
-          sprite.material.needsUpdate = true;
         }
 
         if (entity.type === 'drone') {
-            sprite.material.map.repeat.set(1, 1);
-            sprite.material.map.offset.set(0, 0);
+            const dFrames = this.getFrameCount(state);
+            const isFlipped = !!entity.isFlipped;
+            sprite.material.map.repeat.set((isFlipped ? -1 : 1) / dFrames, 1);
+            let frameIdx = (entity.frame || 0) / dFrames;
+            if (isFlipped) frameIdx += (1 / dFrames);
+            sprite.material.map.offset.set(frameIdx, 0);
         } else {
             let dirCols = {
               'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
@@ -1051,8 +1059,8 @@ export class EntityManager {
             sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);
         }
 
-        const maxFrames = this.getFrameCount(entity.state || 'idle');
-        if (state === 'death' && (entity.frame || 0) >= maxFrames - 1) {
+        const maxFrames = this.getFrameCount(state);
+        if ((state === 'death' || state.endsWith('-death')) && (entity.frame || 0) >= maxFrames - 1) {
           group.visible = false;
         } else {
           group.visible = true;
@@ -1065,13 +1073,10 @@ export class EntityManager {
     for (const id in this.engine.drones) updateEntityMesh(this.engine.drones[id], `drone_${id}`);
 
     for (const [id, group] of renderer.entityMeshes.entries()) {
-      if (!activeEntities.has(id) && !id.startsWith('proj_') && !id.startsWith('drone_')) {
-        renderer.scene.remove(group);
-        if (group.userData.sprite) group.userData.sprite.material.dispose();
-        if (group.userData.shadow) {
-          group.userData.shadow.material.dispose();
-          group.userData.shadow.geometry.dispose();
-        }
+      if (!activeEntities.has(id) && !id.startsWith('proj_')) {
+        group.visible = false;
+        if (!this.entityPool) this.entityPool = [];
+        this.entityPool.push(group);
         renderer.entityMeshes.delete(id);
       }
     }
@@ -1079,82 +1084,89 @@ export class EntityManager {
 
   updateDebris() {
     if (!this.engine.debris) return;
+    if (!this.debrisPool) this.debrisPool = [];
     const activeDebris = new Set();
     const renderer = this.engine.renderer;
 
     this.engine.debris.forEach((deb, idx) => {
-      const id = `deb_${idx}`;
+      if (!deb.id) deb.id = `deb_${Math.random().toString(36).substr(2, 9)}`;
+      const id = deb.id;
       activeDebris.add(id);
 
       let group = renderer.debrisMeshes.get(id);
       if (!group) {
-        group = new THREE.Group();
+        if (this.debrisPool.length > 0) {
+          group = this.debrisPool.pop();
+          group.visible = true;
+        } else {
+          group = new THREE.Group();
 
-        if (!renderer.baseDebrisMaterial) {
-            renderer.baseDebrisMaterial = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0 });
-            renderer.baseDebrisMaterial.onBeforeCompile = (shader) => {
-              shader.vertexShader = shader.vertexShader.replace(
-                '#include <defaultnormal_vertex>',
-                `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
-              ).replace(
-                '#include <project_vertex>',
-                `
-                vec4 mvPosition = vec4( transformed, 1.0 );
-                #ifdef USE_INSTANCING
-                    mvPosition = instanceMatrix * mvPosition;
-                #endif
-                mvPosition = modelViewMatrix * mvPosition;
-                mvPosition.z += (position.y + 0.5) * 60.0;
-                gl_Position = projectionMatrix * mvPosition;
-                `
-              );
-            };
-            renderer.baseDebrisMaterial.customProgramCacheKey = () => 'baseDebrisMat';
+          const mat = (deb.isFX) ? renderer.baseFXMaterial.clone() : renderer.baseDebrisMaterial.clone();
+          mat.onBeforeCompile = mat.blending === THREE.AdditiveBlending ? renderer.baseFXMaterial.onBeforeCompile : renderer.baseDebrisMaterial.onBeforeCompile;
+          mat.customProgramCacheKey = mat.blending === THREE.AdditiveBlending ? renderer.baseFXMaterial.customProgramCacheKey : renderer.baseDebrisMaterial.customProgramCacheKey;
+
+          const geo = new THREE.PlaneGeometry(1, 1);
+          const sprite = new THREE.Mesh(geo, mat);
+          sprite.castShadow = false;
+          sprite.receiveShadow = true;
+          sprite.frustumCulled = false;
+          group.add(sprite);
+          group.userData.sprite = sprite;
+
+          const shadowGeo = new THREE.CircleGeometry(4, 16);
+          const shadow = new THREE.Mesh(shadowGeo, renderer.commonShadowMat);
+          group.add(shadow);
+          group.userData.shadow = shadow;
+
+          renderer.scene.add(group);
         }
-
-        const mat = renderer.baseDebrisMaterial.clone();
-        mat.onBeforeCompile = renderer.baseDebrisMaterial.onBeforeCompile;
-        mat.customProgramCacheKey = renderer.baseDebrisMaterial.customProgramCacheKey;
-
-        const geo = new THREE.PlaneGeometry(1, 1);
-        const sprite = new THREE.Mesh(geo, mat);
-        sprite.castShadow = id !== 'player_self' && this.engine.clientSettings.enableShadows !== false;
-        sprite.receiveShadow = true;
-        sprite.frustumCulled = false;
-        group.add(sprite);
-        group.userData.sprite = sprite;
-
-        const shadowGeo = new THREE.CircleGeometry(4, 16);
-        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
-        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-        group.add(shadow);
-        group.userData.shadow = shadow;
-
-        renderer.scene.add(group);
         renderer.debrisMeshes.set(id, group);
       }
 
       const sprite = group.userData.sprite;
       const shadow = group.userData.shadow;
 
+      if (deb.isFX && sprite.material.blending !== THREE.AdditiveBlending) {
+          if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+              sprite.material.map.dispose();
+          }
+          sprite.material.dispose();
+          sprite.material = renderer.baseFXMaterial.clone();
+          sprite.material.onBeforeCompile = renderer.baseFXMaterial.onBeforeCompile;
+          sprite.material.customProgramCacheKey = renderer.baseFXMaterial.customProgramCacheKey;
+          sprite.userData.mapUuid = null;
+      } else if (!deb.isFX && sprite.material.blending !== THREE.NormalBlending) {
+          if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+              sprite.material.map.dispose();
+          }
+          sprite.material.dispose();
+          sprite.material = renderer.baseDebrisMaterial.clone();
+          sprite.material.onBeforeCompile = renderer.baseDebrisMaterial.onBeforeCompile;
+          sprite.material.customProgramCacheKey = renderer.baseDebrisMaterial.customProgramCacheKey;
+          sprite.userData.mapUuid = null;
+      }
+
       let texName = deb.wasteTex;
-      if (deb.isCharred) texName = 'charred_1';
-      else if (deb.crumpleTimer > 0.2) texName = 'cronched_1';
-      else if (deb.crumpleTimer > 0.1) texName = 'cronched_2';
-      else if (deb.crumpleTimer > 0) texName = 'cronched_3';
+      if (!deb.isFX) {
+          if (deb.isCharred) texName = 'charred_1';
+          else if (deb.crumpleTimer > 0.2) texName = 'cronched_1';
+          else if (deb.crumpleTimer > 0.1) texName = 'cronched_2';
+          else if (deb.crumpleTimer > 0) texName = 'cronched_3';
+      }
 
       const tex = renderer.assetManager.textures[texName];
       if (tex && sprite.userData.mapUuid !== tex.uuid) {
+        if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+            sprite.material.map.dispose();
+        }
         sprite.material.map = tex.clone();
+        if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
         sprite.userData.mapUuid = tex.uuid;
         sprite.userData.tex = texName;
-        sprite.material.needsUpdate = true;
       }
 
       // Apply these outside the texture check to handle recycled object pooling correctly
       if (deb.isFX) {
-        sprite.material.blending = THREE.AdditiveBlending;
-        sprite.material.depthWrite = false;
         sprite.renderOrder = (texName === 'fx_teleport_2' || texName === 'fx_speed_start' || texName === 'fx_speed_step') ? 1000 : 999;
         sprite.material.color.setHex(0x000000); // Prevents the sun from double-brightening it
         if (deb.color) {
@@ -1173,19 +1185,18 @@ export class EntityManager {
           sprite.material.polygonOffset = false;
         }
       } else {
-        sprite.material.blending = THREE.NormalBlending;
-        sprite.material.depthWrite = true;
         sprite.renderOrder = 0;
         sprite.material.color.setHex(0xffffff);
         sprite.material.emissive.setHex(0x000000);
         sprite.material.emissiveMap = null;
         sprite.material.alphaTest = 0.5;
-        sprite.castShadow = this.engine.clientSettings.enableShadows !== false;
+        sprite.castShadow = false; // Fixes mid-frame shader compilation stutter on debris spawn
         sprite.material.polygonOffset = false;
       }
 
       if (deb.isFX) {
-        sprite.scale.set(deb.flipX ? -96 : 96, 192, 1);
+        const sMult = deb.scale !== undefined ? deb.scale : 1.0;
+        sprite.scale.set((deb.flipX ? -96 : 96) * sMult, 192 * sMult, 1);
         const seqLib = renderer.assetManager.sequenceLibrary;
         const seqData = seqLib[texName];
 
@@ -1195,12 +1206,13 @@ export class EntityManager {
           if (texName.startsWith('impact_')) {
             const frameIndex = Math.floor((1.0 - (deb.life / deb.maxLife)) * frameCount);
             if (sprite.material.map) sprite.material.map.offset.set(Math.min(frameIndex, frameCount - 1) / frameCount, 0);
-            sprite.scale.set(192, 192, 1);
+            sprite.scale.set(192 * sMult, 192 * sMult, 1);
           } else {
             const speed = seqData.speed || 80;
               const elapsedMs = (deb.maxLife - deb.life) * 1000;
               const frameIndex = Math.floor(elapsedMs / speed) % frameCount;
             if (sprite.material.map) sprite.material.map.offset.set(frameIndex / frameCount, 0);
+            if (texName === 'fx_electric_zap') sprite.scale.set((deb.flipX ? -128 : 128) * sMult, 128 * sMult, 1);
           }
         } else if ((texName === 'fx_teleport' || texName === 'fx_teleport_2' || texName === 'fx_speed_start' || texName === 'fx_speed_step') && tex) {
            const frameCount = texName === 'fx_speed_start' ? 9 : 8;
@@ -1248,12 +1260,9 @@ export class EntityManager {
 
     for (const [id, group] of renderer.debrisMeshes.entries()) {
       if (!activeDebris.has(id)) {
-        renderer.scene.remove(group);
-        if (group.userData.sprite) group.userData.sprite.material.dispose();
-        if (group.userData.shadow) {
-          group.userData.shadow.material.dispose();
-          group.userData.shadow.geometry.dispose();
-        }
+        group.visible = false;
+        if (!this.debrisPool) this.debrisPool = [];
+        this.debrisPool.push(group);
         renderer.debrisMeshes.delete(id);
       }
     }

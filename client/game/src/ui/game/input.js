@@ -15,6 +15,28 @@ export class InputManager {
     this.setupListeners();
   }
 
+  isActionDown(actionId) {
+    const binds = this.engine.clientSettings.actionBinds;
+    if (!binds || !binds[actionId]) return false;
+
+    return this.checkCompoundKey(binds[actionId].primary) || this.checkCompoundKey(binds[actionId].alt);
+  }
+
+  checkCompoundKey(bindStr) {
+    if (!bindStr) return false;
+    const parts = bindStr.toLowerCase().split('+');
+    let key = parts.pop().trim();
+
+    if (key === 'space') key = ' ';
+    else if (key === 'ctrl') key = 'control';
+
+    if (parts.includes('ctrl') && !this.keys['control']) return false;
+    if (parts.includes('shift') && !this.keys['shift']) return false;
+    if (parts.includes('alt') && !this.keys['alt']) return false;
+
+    return this.keys[key];
+  }
+
   setupListeners() {
     const eng = this.engine;
 
@@ -24,7 +46,7 @@ export class InputManager {
     };
 
     this.handleKeyUp = (e) => {
-      this.keys[e.key.toLowerCase()] = false;
+      if (e.key) this.keys[e.key.toLowerCase()] = false;
     };
 
      this.handleBlur = () => {
@@ -146,17 +168,19 @@ export class InputManager {
         eng.selectedTarget = clickedTarget;
         eng.ui.update();
 
-        if (eng.editMode && e.ctrlKey && eng.cursorGridPos) {
+        if (eng.editMode && eng.cursorGridPos) {
           if (eng.editShape === 'none') return;
           eng.isDraggingSelection = true;
 
           const activeSlot = document.querySelector('.hotbar-slot.active');
           const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-          const isDeleting = this.keys['shift'] || tex === 'erase';
-          const isPicker = tex === 'picker' || this.keys['alt'];
+          const isDeleting = eng.input.isActionDown('buildDelete') || tex === 'erase';
+          const isPicker = tex === 'picker' || eng.input.isActionDown('picker');
+
+          eng.selectionMode = isDeleting ? 'delete' : (isPicker ? 'pick' : 'build');
 
           let startPos = { x: eng.cursorGridPos.x, y: eng.cursorGridPos.y, z: eng.cursorGridPos.z };
-          if (!isDeleting && !isPicker && eng.cursorGridPos.hitExisting && eng.cursorGridPos.normal) {
+          if (eng.selectionMode === 'build' && eng.cursorGridPos.hitExisting && eng.cursorGridPos.normal) {
              startPos.x += eng.cursorGridPos.normal.x * 32;
              startPos.y += eng.cursorGridPos.normal.y * 32;
              startPos.z += eng.cursorGridPos.normal.z * 32;
@@ -168,214 +192,7 @@ export class InputManager {
           return;
         }
 
-        if (!clickedTarget && eng.editMode) {
-          if (eng.cursorGridPos) {
-            if (eng.editShape === 'none') return;
-            const position = new THREE.Vector3(eng.cursorGridPos.x, eng.cursorGridPos.y, eng.cursorGridPos.z);
-            const normal = eng.cursorGridPos.normal.clone();
-            const hitExistingBlock = eng.cursorGridPos.hitExisting;
-
-            const activeSlot = document.querySelector('.hotbar-slot.active');
-            const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-            const isDeleting = this.keys['shift'] || tex === 'erase';
-            const isPicker = tex === 'picker' || this.keys['alt'];
-
-            let targetX = position.x;
-            let targetY = position.y;
-            let targetZ = position.z;
-
-            if (isPicker) {
-              const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-              if (clickedVoxel) {
-                let matchTex = clickedVoxel.tex;
-                if (matchTex === 'water_flow') {
-                   matchTex = 'water';
-                   eng.editFluid = 'flow';
-                   const fBtn = document.getElementById('build-fluid-btn');
-                   if (fBtn) fBtn.innerText = 'Fluid State: FLOW';
-                } else if (matchTex === 'water') {
-                   eng.editFluid = 'still';
-                   const fBtn = document.getElementById('build-fluid-btn');
-                   if (fBtn) fBtn.innerText = 'Fluid State: STILL';
-                }
-                const slots = document.querySelectorAll('#builder-hotbar .hotbar-slot');
-                slots.forEach(s => {
-                  if (s.dataset.tex === matchTex) {
-                    slots.forEach(ss => ss.classList.remove('active'));
-                    s.classList.add('active');
-                    document.getElementById('build-fluid-btn').style.display = ['water', 'lava', 'acid'].includes(matchTex) ? 'block' : 'none';
-                    const tabs = document.querySelectorAll('#builder-tabs-container button');
-                    tabs.forEach(t => { if (t.innerText === s.dataset.cat) t.click(); });
-                  }
-                });
-                const pickedColor = clickedVoxel.color || '#ffffff';
-                eng.buildColor = pickedColor;
-                document.querySelectorAll('.shared-color-picker').forEach(cp => { cp.value = pickedColor; });
-
-                let matchShape = clickedVoxel.shape || 'cube';
-                let matchDir = 'n';
-                let matchFlip = false;
-                if (matchShape.startsWith('ramp_') || matchShape.startsWith('stair_')) {
-                  const parts = matchShape.split('_');
-                  matchShape = parts[0];
-                  matchDir = parts[1] || 'n';
-                } else if (matchShape.startsWith('door_') && !FURNITURE_REGISTRY[matchShape.replace('_open', '')]) {
-                  const parts = matchShape.split('_');
-                  matchShape = 'door';
-                  matchDir = parts[1] || 'n';
-                  matchFlip = matchShape.includes('_flip') || clickedVoxel.shape.includes('_flip');
-                } else if (FURNITURE_REGISTRY[matchShape]) {
-                  matchDir = clickedVoxel.dir || 'n';
-                } else if (matchShape === 'decal') {
-                  matchDir = clickedVoxel.dir || 'n';
-                } else if (matchShape.endsWith('_player')) {
-                  const parts = matchShape.split('_');
-                  matchShape = parts[0];
-                }
-                eng.editShapeBase = matchShape;
-                eng.editShapeDir = matchDir;
-                eng.editShapeRelative = false;
-                eng.editShapeFlip = matchFlip;
-                eng.editShape = clickedVoxel.shape || 'cube';
-                if (eng.editShape.includes('_open')) eng.editShape = eng.editShape.replace('_open', '');
-
-                const shapeBtn = document.getElementById('build-shape-btn');
-                const dirBtn = document.getElementById('build-dir-btn');
-                const relBtn = document.getElementById('build-rel-btn');
-                const flipBtn = document.getElementById('build-flip-btn');
-                if (shapeBtn) {
-                    if (shapeBtn.tagName === 'SELECT') {
-                        if (!Array.from(shapeBtn.options).some(o => o.value === matchShape)) {
-                            const opt = document.createElement('option');
-                            opt.value = matchShape;
-                            let disp = FURNITURE_REGISTRY[matchShape] ? FURNITURE_REGISTRY[matchShape].name : matchShape.replace(/_/g, ' ');
-                            opt.innerText = 'SHAPE: ' + disp.toUpperCase();
-                            shapeBtn.appendChild(opt);
-                        }
-                        shapeBtn.value = matchShape;
-                    } else {
-                        shapeBtn.innerText = 'Shape: ' + matchShape.toUpperCase();
-                    }
-                }
-                if (matchShape === 'door') {
-                    if (dirBtn) dirBtn.style.display = 'block';
-                    if (relBtn) relBtn.style.display = 'none';
-                    if (flipBtn) {
-                        flipBtn.style.display = 'block';
-                        flipBtn.style.background = matchFlip ? 'rgba(46, 204, 113, 0.2)' : 'transparent';
-                    }
-                } else if (FURNITURE_REGISTRY[matchShape]) {
-                    if (dirBtn) dirBtn.style.display = 'block';
-                    if (relBtn) relBtn.style.display = 'none';
-                    if (flipBtn) flipBtn.style.display = 'none';
-                } else if (matchShape === 'ramp' || matchShape === 'stair') {
-                    if (dirBtn) dirBtn.style.display = 'block';
-                    if (relBtn) relBtn.style.display = 'block';
-                    if (flipBtn) flipBtn.style.display = 'none';
-                } else {
-                    if (dirBtn) dirBtn.style.display = 'none';
-                    if (relBtn) relBtn.style.display = 'none';
-                    if (flipBtn) flipBtn.style.display = 'none';
-                }
-                if (dirBtn) dirBtn.innerText = matchDir.toUpperCase();
-                if (relBtn) relBtn.style.background = 'transparent';
-              }
-            } else if (isDeleting) {
-              const clickedVoxelOld = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-              if (clickedVoxelOld) {
-                eng.history = eng.history || [];
-                eng.history.push([{ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: { ...clickedVoxelOld } }]);
-                if (eng.history.length > 30) eng.history.shift();
-                eng.redoHistory = [];
-              }
-              const pTex = clickedVoxelOld ? clickedVoxelOld.tex : 'stone';
-              const pCol = clickedVoxelOld ? (clickedVoxelOld.color || '#ffffff') : '#ffffff';
-              eng.mapManager.setVoxelAt(targetX, targetY, targetZ, null);
-              eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: null });
-
-              eng.renderer.needsVoxelUpdate = true;
-              // Deletion particle effect
-              for (let i = 0; i < 25; i++) {
-                eng.spawnParticle({
-                  x: targetX + (Math.random() - 0.5) * 16, y: targetY + (Math.random() - 0.5) * 16, z: targetZ + (Math.random() - 0.5) * 16,
-                  vx: (Math.random() - 0.5) * 200,
-                  vy: (Math.random() - 0.5) * 200,
-                  vz: 50 + Math.random() * 150,
-                  vr: (Math.random() - 0.5) * 15,
-                  rot: Math.random() * Math.PI * 2,
-                  life: 0.2 + Math.random() * 0.2,
-                  maxLife: 0.4,
-                  tex: pTex,
-                  color: pCol,
-                  size: 2 + Math.random() * 4,
-                  uvOffsetX: Math.random() * 0.75, // Random 25% quadrant
-                  uvOffsetY: Math.random() * 0.75,
-                  uvScale: 0.25
-                });
-              }
-            } else {
-              const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-              let placeShape = eng.editShape || 'cube';
-              if (placeShape.endsWith('_player')) {
-                const base = placeShape.split('_')[0];
-                const pDir = eng.player.dir;
-                if (pDir.includes('up')) placeShape = base + '_n';
-                else if (pDir.includes('down')) placeShape = base + '_s';
-                else if (pDir.includes('right')) placeShape = base + '_e';
-                else if (pDir.includes('left')) placeShape = base + '_w';
-                else placeShape = base + '_s';
-              }
-
-              if (hitExistingBlock) {
-                if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1) {
-                  placeShape = 'cube';
-                } else if (clickedVoxel && clickedVoxel.shape === 'decal' && normal.z === 1) {
-                } else {
-                  targetX += normal.x * 32;
-                  targetY += normal.y * 32;
-                  targetZ += normal.z * 32;
-                }
-              }
-
-              const color = eng.buildColor || '#ffffff';
-
-              const clickedVoxelOld = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-              eng.history = eng.history || [];
-              eng.history.push([{ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: clickedVoxelOld ? { ...clickedVoxelOld } : null }]);
-              if (eng.history.length > 30) eng.history.shift();
-              eng.redoHistory = [];
-
-              let finalTex = tex;
-              if (finalTex === 'water' && eng.editFluid === 'flow') finalTex = 'water_flow';
-
-              const finalUVMode = eng.editShapeUV === 'auto' ? undefined : (eng.editShapeUV === 'mesh');
-
-              eng.mapManager.setVoxelAt(targetX, targetY, targetZ, { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode });
-              eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode } });
-
-              eng.renderer.needsVoxelUpdate = true;
-              // Todo: Creation particle effect
-              for (let i = 0; i < 15; i++) {
-                eng.spawnParticle({
-                  x: targetX + (Math.random() - 0.5) * 32,
-                  y: targetY + (Math.random() - 0.5) * 32,
-                  z: targetZ + (Math.random() - 0.5) * 32,
-                  vx: (Math.random() - 0.5) * 50,
-                  vy: (Math.random() - 0.5) * 50,
-                  vz: (Math.random() - 0.5) * 50,
-                  life: 0.15 + Math.random() * 0.15,
-                  maxLife: 0.3,
-                  tex: tex,
-                  color: color,
-                  size: 2 + Math.random() * 3,
-                  uvOffsetX: Math.random() * 0.75,
-                  uvOffsetY: Math.random() * 0.75,
-                  uvScale: 0.25
-                });
-              }
-            }
-          }
-        } else if (!eng.mapOverlay || !eng.mapOverlay.active) {
+        if (!eng.mapOverlay || !eng.mapOverlay.active) {
           if ((this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) && eng.mouseWorldPos) {
             eng.player.movePath = eng.physics.findPath(eng.player.x, eng.player.y, eng.player.z || 0, eng.mouseWorldPos.x, eng.mouseWorldPos.y);
             eng.player.moveTarget = { x: eng.mouseWorldPos.x, y: eng.mouseWorldPos.y, sprint: !!this.keys['shift'], timer: 15 };
@@ -384,6 +201,33 @@ export class InputManager {
         }
       } else if (e.button === 2) {
         e.preventDefault();
+
+        if (eng.pathEditMode) {
+            let targetPoint = null;
+            if (eng.mouseWorldPos) {
+                targetPoint = { x: eng.mouseWorldPos.x, y: eng.mouseWorldPos.y };
+            } else {
+                const mapPos = eng.getMapWorldPosFromScreen(e.clientX, e.clientY);
+                if (mapPos) targetPoint = { x: mapPos.x, y: mapPos.y };
+            }
+
+            if (targetPoint) {
+                const waitTime = parseFloat(document.getElementById('path-edit-wait')?.value) || 0;
+                const inputEl = document.getElementById(eng.pathEditInputId);
+                if (inputEl) {
+                    let current = inputEl.value.trim();
+                    if (current && !current.endsWith(';')) current += '; ';
+                    current += `${Math.round(targetPoint.x)},${Math.round(targetPoint.y)}`;
+                    if (waitTime > 0) current += `; wait ${waitTime}`;
+                    inputEl.value = current;
+
+                    eng.mapPings = eng.mapPings || [];
+                    eng.mapPings.push({ x: targetPoint.x, y: targetPoint.y, life: 1.0, color: '#e056fd' });
+                    inputEl.dispatchEvent(new Event('input'));
+                }
+            }
+            return;
+        }
 
         if (eng.clientSettings.clickToMove && this.keys['mouse0'] && !eng.editMode) {
            this.keys[' '] = true;
@@ -401,6 +245,9 @@ export class InputManager {
             eng.waypoints.splice(hitIndex, 1);
           } else {
             eng.waypoints.push({ x: mapPos.x, y: mapPos.y });
+            if (!eng.mapPings) eng.mapPings = [];
+            eng.mapPings.push({ x: mapPos.x, y: mapPos.y, life: 1.0, color: '#f1c40f' });
+            if (eng.network) eng.network.sendMapPing({ x: mapPos.x, y: mapPos.y });
           }
           return;
         }
@@ -601,30 +448,24 @@ export class InputManager {
       }
 
       if (eng.isDraggingSelection && eng.cursorGridPos) {
-        const activeSlot = document.querySelector('.hotbar-slot.active');
-        const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
-        const isDeleting = this.keys['shift'] || tex === 'erase';
-        const isPicker = tex === 'picker' || this.keys['alt'];
+        const isZMode = eng.input.isActionDown('buildDragSelect');
 
         let endPos = { x: eng.cursorGridPos.x, y: eng.cursorGridPos.y, z: eng.cursorGridPos.z };
-        if (!isDeleting && !isPicker && eng.cursorGridPos.hitExisting && eng.cursorGridPos.normal) {
+        if (eng.selectionMode === 'build' && eng.cursorGridPos.hitExisting && eng.cursorGridPos.normal) {
            endPos.x += eng.cursorGridPos.normal.x * 32;
            endPos.y += eng.cursorGridPos.normal.y * 32;
            endPos.z += eng.cursorGridPos.normal.z * 32;
         }
 
-        // Lock the appropriate axis during the drag
         if (eng.selectionStart) {
-          if (eng.editDragAxis === 'vertical') {
-             endPos.x = eng.selectionStart.x;
-             endPos.y = eng.selectionStart.y;
-          } else {
-             endPos.z = eng.selectionStart.z;
-          }
-        }
+          if (!eng.selectionEnd) eng.selectionEnd = { ...eng.selectionStart };
 
-        if (!eng.selectionEnd || eng.selectionEnd.x !== endPos.x || eng.selectionEnd.y !== endPos.y || eng.selectionEnd.z !== endPos.z) {
-          eng.selectionEnd = endPos;
+          if (isZMode) {
+             eng.selectionEnd.z = endPos.z;
+          } else {
+             eng.selectionEnd.x = endPos.x;
+             eng.selectionEnd.y = endPos.y;
+          }
           eng.updateSelectionArea();
         }
       }
@@ -645,11 +486,14 @@ export class InputManager {
       this.keys['mouse' + e.button] = false;
 
       if (e.button === 0 && eng.isDraggingSelection) {
-        eng.isDraggingSelection = false;
         if (eng.selectedTiles && eng.selectedTiles.length > 0) {
-          const activeSlot = document.querySelector('#builder-hotbar .hotbar-slot.active');
-          if (activeSlot) activeSlot.click();
+            this.performBuildSelection();
         }
+        eng.isDraggingSelection = false;
+        eng.selectionStart = null;
+        eng.selectionEnd = null;
+        eng.selectedTiles = [];
+        if (eng.renderer) eng.renderer.needsVoxelUpdate = true;
       }
       if (e.button === 0 && eng.isDraggingMinimap) {
         eng.isDraggingMinimap = false;
@@ -672,6 +516,125 @@ export class InputManager {
     window.addEventListener('mouseup', this.handleMouseUp);
     window.addEventListener('beforeunload', this.handleBeforeUnload);
     window.addEventListener('wheel', this.handleWheel, { passive: false });
+  }
+
+  performBuildSelection() {
+      const eng = this.engine;
+      if (!eng.selectedTiles || eng.selectedTiles.length === 0) return;
+
+      const activeSlot = document.querySelector('.hotbar-slot.active');
+      const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+      const isDeleting = eng.selectionMode === 'delete';
+      const isPicker = eng.selectionMode === 'pick';
+
+      // Execute the picker logic
+      if (isPicker) {
+          const t = eng.selectedTiles[0];
+          const clickedVoxel = eng.mapManager.getVoxelAt(t.x, t.y, t.z);
+          if (clickedVoxel) {
+              let matchTex = clickedVoxel.tex;
+              if (matchTex === 'water_flow') { matchTex = 'water'; eng.editFluid = 'flow'; const fBtn = document.getElementById('build-fluid-btn'); if (fBtn) fBtn.innerText = 'Fluid State: FLOW'; }
+              else if (matchTex === 'water') { eng.editFluid = 'still'; const fBtn = document.getElementById('build-fluid-btn'); if (fBtn) fBtn.innerText = 'Fluid State: STILL'; }
+              const slots = document.querySelectorAll('#builder-hotbar .hotbar-slot');
+              slots.forEach(s => {
+                  if (s.dataset.tex === matchTex) {
+                      slots.forEach(ss => ss.classList.remove('active'));
+                      s.classList.add('active');
+                      document.getElementById('build-fluid-btn').style.display = ['water', 'lava', 'acid'].includes(matchTex) ? 'block' : 'none';
+                      const tabs = document.querySelectorAll('#builder-tabs-container button');
+                      tabs.forEach(tab => { if (tab.innerText === s.dataset.cat) tab.click(); });
+                  }
+              });
+              const pickedColor = clickedVoxel.color || '#ffffff';
+              eng.buildColor = pickedColor;
+              document.querySelectorAll('.shared-color-picker').forEach(cp => { cp.value = pickedColor; });
+
+              let matchShape = clickedVoxel.shape || 'cube';
+              let matchDir = 'n';
+              let matchFlip = false;
+              if (matchShape.startsWith('ramp_') || matchShape.startsWith('stair_')) { const parts = matchShape.split('_'); matchShape = parts[0]; matchDir = parts[1] || 'n'; }
+              else if (matchShape.startsWith('door_') && !FURNITURE_REGISTRY[matchShape.replace('_open', '')]) { const parts = matchShape.split('_'); matchShape = 'door'; matchDir = parts[1] || 'n'; matchFlip = matchShape.includes('_flip') || clickedVoxel.shape.includes('_flip'); }
+              else if (FURNITURE_REGISTRY[matchShape]) { matchDir = clickedVoxel.dir || 'n'; }
+              else if (matchShape === 'decal') { matchDir = clickedVoxel.dir || 'n'; }
+              else if (matchShape.endsWith('_player')) { const parts = matchShape.split('_'); matchShape = parts[0]; }
+
+              eng.editShapeBase = matchShape; eng.editShapeDir = matchDir; eng.editShapeRelative = false; eng.editShapeFlip = matchFlip; eng.editShape = clickedVoxel.shape || 'cube';
+              if (eng.editShape.includes('_open')) eng.editShape = eng.editShape.replace('_open', '');
+
+              const shapeBtn = document.getElementById('build-shape-btn');
+              const dirBtn = document.getElementById('build-dir-btn');
+              const relBtn = document.getElementById('build-rel-btn');
+              const flipBtn = document.getElementById('build-flip-btn');
+              if (shapeBtn) {
+                  if (shapeBtn.tagName === 'SELECT') {
+                      if (!Array.from(shapeBtn.options).some(o => o.value === matchShape)) {
+                          const opt = document.createElement('option'); opt.value = matchShape;
+                          let disp = FURNITURE_REGISTRY[matchShape] ? FURNITURE_REGISTRY[matchShape].name : matchShape.replace(/_/g, ' ');
+                          opt.innerText = 'SHAPE: ' + disp.toUpperCase(); shapeBtn.appendChild(opt);
+                      }
+                      shapeBtn.value = matchShape;
+                  } else { shapeBtn.innerText = 'Shape: ' + matchShape.toUpperCase(); }
+              }
+              if (matchShape === 'door') {
+                  if (dirBtn) dirBtn.style.display = 'block'; if (relBtn) relBtn.style.display = 'none';
+                  if (flipBtn) { flipBtn.style.display = 'block'; flipBtn.style.background = matchFlip ? 'rgba(46, 204, 113, 0.2)' : 'transparent'; }
+              } else if (FURNITURE_REGISTRY[matchShape]) {
+                  if (dirBtn) dirBtn.style.display = 'block'; if (relBtn) relBtn.style.display = 'none'; if (flipBtn) flipBtn.style.display = 'none';
+              } else if (matchShape === 'ramp' || matchShape === 'stair') {
+                  if (dirBtn) dirBtn.style.display = 'block'; if (relBtn) relBtn.style.display = 'block'; if (flipBtn) flipBtn.style.display = 'none';
+              } else {
+                  if (dirBtn) dirBtn.style.display = 'none'; if (relBtn) relBtn.style.display = 'none'; if (flipBtn) flipBtn.style.display = 'none';
+              }
+              if (dirBtn) dirBtn.innerText = matchDir.toUpperCase(); if (relBtn) relBtn.style.background = 'transparent';
+          }
+          return;
+      }
+
+      // Execute Mass Place/Delete Logic
+      let placeShape = eng.editShape || 'cube';
+      if (placeShape.endsWith('_player')) {
+        const base = placeShape.split('_')[0];
+        const pDir = eng.player.dir;
+        if (pDir.includes('up')) placeShape = base + '_n';
+        else if (pDir.includes('down')) placeShape = base + '_s';
+        else if (pDir.includes('right')) placeShape = base + '_e';
+        else if (pDir.includes('left')) placeShape = base + '_w';
+        else placeShape = base + '_s';
+      }
+
+      let baseTex = tex;
+      if (baseTex === 'water' && eng.editFluid === 'flow') baseTex = 'water_flow';
+
+      const finalUVMode = eng.editShapeUV === 'auto' ? undefined : (eng.editShapeUV === 'mesh');
+      const updates = [];
+      const previousStates = [];
+
+      eng.selectedTiles.forEach(tile => {
+          const clickedVoxelOld = eng.mapManager.getVoxelAt(tile.x, tile.y, tile.z);
+          previousStates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: clickedVoxelOld ? { ...clickedVoxelOld } : null });
+
+          let finalTex = baseTex;
+          if (tex === 'arcade-carpet') {
+              const wx = Math.round(tile.x / 32); const wy = Math.round(tile.y / 32);
+              const rx = ((wx % 2) + 2) % 2; const ry = ((wy % 2) + 2) % 2;
+              finalTex = `arcade-carpet-${rx}-${ry}`;
+          }
+
+          if (isDeleting) {
+              eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, null, false);
+              updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: null });
+          } else {
+              eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode }, false);
+              updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode } });
+          }
+      });
+
+      eng.history = eng.history || [];
+      if (previousStates.length > 0) eng.history.push(previousStates);
+      if (eng.history.length > 30) eng.history.shift();
+      eng.redoHistory = [];
+
+      updates.forEach(u => eng.network.sendUpdateBlock(u));
   }
 
   disconnect() {

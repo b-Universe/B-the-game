@@ -10,7 +10,6 @@ export class TrainerUIManager {
   openTrainerUI(npc) {
     const dist = Math.hypot(this.engine.player.x - npc.x, this.engine.player.y - npc.y);
     if (dist > 150) {
-        this.engine.chat.addMessage('system', 'System', 'You are too far away to interact.');
         return;
     }
     this.engine.activeTrainer = npc;
@@ -80,7 +79,6 @@ export class TrainerUIManager {
         }
         btnTrain.onclick = () => {
             if (powerPicks <= 0) {
-              this.engine.chat.addMessage('system', 'System', 'You have no unspent power picks.');
               return;
             }
             if (viewDialog) viewDialog.style.display = 'none';
@@ -229,7 +227,6 @@ export class TrainerUIManager {
 
           pButton.onclick = () => {
             if (pButton.classList.contains('locked')) {
-              this.engine.chat.addMessage('system', 'System', 'You must learn earlier powers in this set first.');
             } else if (!alreadyLearned && canAfford) {
                this.engine.network.sendLearnPower({ powerId: power.id, powerset: psName });
             }

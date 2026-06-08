@@ -1,47 +1,161 @@
 import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
-import { NPCManagerWindow, NPCEditWindow } from '../windows/npc-windows.js?v=cache-bust-005';
+import { NPCManagerWindow, NPCEditWindow, EntityGroupManagerWindow, SpawnerManagerWindow, SpawnerEditWindow, MobPackManagerWindow, NPCTemplateManagerWindow, EntityTypeManagerWindow, PowerSelectorWindow } from '../windows/npc-windows.js?v=cache-bust-005';
 import { PlayerManagerWindow } from '../windows/player-windows.js?v=cache-bust-005';
-import { ZoneManagerWindow } from '../windows/zone-windows.js?v=cache-bust-005';
+import { ZoneManagerWindow, NeighborhoodManagerWindow } from '../windows/zone-windows.js?v=cache-bust-005';
 import { ArcadeManagerWindow, ArcadeEditWindow } from '../windows/arcade-windows.js?v=cache-bust-005';
-const HUD_BTN_STYLE = 'width: auto; height: 45px; padding: 0 10px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
-const DEV_BTN_STYLE = 'width: 100%; margin-top: 5px;';
-const HEADER_STYLE = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; margin-bottom: 10px;';
-const TOOL_BTN_STYLE = 'padding: 0 10px; border-color: #f1c40f; color: #f1c40f;';
-const MODAL_BG_STYLE = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000000;';
+import { DevToolsWindow, BuilderToolsWindow, ObjectLibraryWindow, TexturePaletteWindow, LosEditWindow } from '../windows/dev-windows.js?v=cache-bust-005';
+
 const NPC_ROW_STYLE = 'display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px;';
-const HOTBAR_HEADER_STYLE = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: center; align-items: center; cursor: move; user-select: none; margin: -10px -10px 10px -10px; border-radius: 6px 6px 0 0;';
+const PLAYER_ROW_STYLE = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
 const TOOLTIP_STYLE = 'position: fixed; background: rgba(0,0,0,0.9); border: 1px solid #3498db; color: #fff; padding: 5px 10px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; pointer-events: none; z-index: 1000000; display: none; white-space: nowrap; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.8);';
 const SHAPE_CONTAINER_STYLE = 'display: flex; gap: 5px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px; border: 1px solid #333; justify-content: center;';
 const SHAPE_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #3498db; color: #3498db; min-width: 100px;';
 const DIR_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #f39c12; color: #f39c12; display: none; min-width: 40px;';
 const REL_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #9b59b6; color: #9b59b6; display: none; min-width: 40px;';
 const FLUID_BTN_STYLE = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #3498db; color: #3498db; display: none; width: 100%;';
-const PLAYER_ROW_STYLE = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
 
 export class DevToolsUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;
     this.engine.buildColor = '#ffffff';
     this.ui = mainUIManager;
+    this.entityGroupsData = {};
+    this.selectedEntityGroup = null;
 
     this.npcManagerWindow = new NPCManagerWindow();
     this.npcEditWindow = new NPCEditWindow();
+    this.spawnerManagerWindow = new SpawnerManagerWindow();
+    this.spawnerEditWindow = new SpawnerEditWindow();
+    this.entityGroupManagerWindow = new EntityGroupManagerWindow();
     this.playerManagerWindow = new PlayerManagerWindow();
+    this.mobPackManagerWindow = new MobPackManagerWindow();
+    this.npcTemplateManagerWindow = new NPCTemplateManagerWindow();
+    this.entityTypeManagerWindow = new EntityTypeManagerWindow();
+    this.powerSelectorWindow = new PowerSelectorWindow();
     this.zoneManagerWindow = new ZoneManagerWindow();
+    this.neighborhoodManagerWindow = new NeighborhoodManagerWindow();
     this.arcadeManagerWindow = new ArcadeManagerWindow();
     this.arcadeEditWindow = new ArcadeEditWindow();
 
-    this.ui.makeDraggable('dev-panel', '.dev-panel-header');
-    this.ui.makeDraggable('builder-panel', '.dev-panel-header');
+    this.devToolsWindow = new DevToolsWindow();
+    this.builderToolsWindow = new BuilderToolsWindow();
+    this.losEditWindow = new LosEditWindow();
+    this.objectLibraryWindow = new ObjectLibraryWindow();
+    this.texturePaletteWindow = new TexturePaletteWindow();
 
     this.setupDevTools();
     this.setupBuilderTools();
+    this.setupEntityGroupManager();
     this.setupObjectLibrary();
     this.setupSideHudButtons();
     this.setupPlayerManager();
     this.setupZoneManager();
     this.setupArcadeManager();
+    this.setupNeighborhoodManager();
+    this.setupMobPacks();
+    this.setupNpcTemplates();
+    this.setupEntityTypes();
     this.updateBuildingMode();
+
+    const setupPathEditor = (btnId, inputId, modalRef) => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.onclick = () => {
+                this.engine.pathEditMode = true;
+                this.engine.pathEditInputId = inputId;
+                modalRef.close();
+
+                let overlay = document.getElementById('path-edit-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'path-edit-overlay';
+                    overlay.style.cssText = 'position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(5,7,10,0.9); border: 2px solid #e056fd; padding: 10px; border-radius: 8px; z-index: 100000; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); pointer-events: auto;';
+
+                    overlay.innerHTML = `
+                        <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;"><b>Path Editor:</b> Right-Click map to add nodes.</span>
+                        <label style="color: #f1c40f; font-family: var(--font-mono); font-size: 0.8rem; margin-left: 10px;">Wait (s):</label>
+                        <input type="number" id="path-edit-wait" value="2" style="width: 50px; background: #000; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 2px 5px; outline: none;">
+                        <button id="btn-path-edit-undo" class="b-btn btn-secondary" style="padding: 4px 10px; margin-left: 10px; border-color: #e74c3c; color: #e74c3c;">Undo Last</button>
+                        <button id="btn-path-edit-done" class="b-btn btn-primary" style="padding: 4px 15px; margin-left: 5px;">Done</button>
+                    `;
+                    document.body.appendChild(overlay);
+                }
+                overlay.style.display = 'flex';
+
+                document.getElementById('btn-path-edit-undo').onclick = () => {
+                    const inputEl = document.getElementById(this.engine.pathEditInputId);
+                    if (inputEl) {
+                        let parts = inputEl.value.split(';').map(s => s.trim()).filter(Boolean);
+                        if (parts.length > 0) {
+                            if (parts[parts.length - 1].startsWith('wait')) parts.pop();
+                            parts.pop();
+                            inputEl.value = parts.join('; ');
+                            inputEl.dispatchEvent(new Event('input'));
+                        }
+                    }
+                };
+
+                document.getElementById('btn-path-edit-done').onclick = () => {
+                    this.engine.pathEditMode = false;
+                    overlay.style.display = 'none';
+                    if (this.engine.pathEditInputId.includes('spawner')) this.spawnerEditWindow.open();
+                    else this.npcEditWindow.open();
+                };
+            };
+        }
+    };
+
+    setTimeout(() => {
+       setupPathEditor('btn-edit-npc-path', 'edit-npc-patrol', this.npcEditWindow);
+       setupPathEditor('btn-edit-spawner-path', 'edit-spawner-patrol', this.spawnerEditWindow);
+    }, 1000);
+  }
+
+  openPowerSelector(onSelect) {
+      const allPowers = Object.entries(window.POWER_REGISTRY || {}).map(([pId, pDef]) => {
+          let assignedSetNames = [];
+          if (this.engine.powersetsData) {
+              for (const [setId, setDef] of Object.entries(this.engine.powersetsData)) {
+                  if (setDef.powers && setDef.powers.some(p => p.id === pId || p.name === pDef.name)) {
+                      assignedSetNames.push(setDef.name);
+                  }
+              }
+          }
+          return { id: pId, name: pDef.name || pId, assignedSetNames };
+      });
+
+      this.powerSelectorWindow.open();
+
+      const searchInput = document.getElementById('power-selector-search');
+      const listContainer = document.getElementById('power-selector-list');
+
+      const render = () => {
+          const filter = searchInput.value.toLowerCase();
+          listContainer.innerHTML = '';
+
+          let sortedPowers = [...allPowers].sort((a, b) => a.name.localeCompare(b.name));
+
+          sortedPowers.forEach(p => {
+              const pName = p.name.toLowerCase();
+              const pId = p.id.toLowerCase();
+              let match = pName.includes(filter) || pId.includes(filter);
+
+              if (p.assignedSetNames) {
+                  p.assignedSetNames.forEach(psName => { if (psName.toLowerCase().includes(filter)) match = true; });
+              }
+
+              if (!match) return;
+              const btn = document.createElement('button');
+              btn.className = 'b-btn btn-secondary';
+              btn.style.cssText = 'text-align: left; padding: 5px; font-size: 0.85rem; display: flex; flex-direction: column; border-color: var(--text-dim);';
+              btn.innerHTML = `<strong style="color: #fff;">${p.name}</strong><span style="color: #aaa; font-size: 0.7rem;">${p.assignedSetNames.join(', ')}</span>`;
+              btn.onclick = () => { onSelect(p.id); this.powerSelectorWindow.close(); };
+              listContainer.appendChild(btn);
+          });
+      };
+      searchInput.value = ''; searchInput.oninput = render;
+      document.getElementById('btn-power-selector-close').onclick = () => this.powerSelectorWindow.close();
+      render();
   }
 
   setupSideHudButtons() {
@@ -61,7 +175,7 @@ export class DevToolsUIManager {
       const btn = document.createElement('button');
       btn.id = id;
       btn.className = 'btn-secondary';
-      btn.style.cssText = HUD_BTN_STYLE;
+      btn.style.cssText = 'width: auto; height: 45px; padding: 0 10px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
       btn.innerText = text;
       btn.title = title;
       btn.onclick = onClick;
@@ -87,20 +201,28 @@ export class DevToolsUIManager {
 
   setupDevTools() {
     const eng = this.engine;
-    const devPanel = document.getElementById('dev-panel');
-    if (devPanel) {
-      document.getElementById('btn-close-dev').onclick = () => devPanel.style.display = 'none';
 
-      const setupDevBtn = (id, prop, color, labelText) => {
-        let btn = document.getElementById(id);
-        if (!btn && devPanel) {
-          btn = document.createElement('button');
-          btn.id = id;
-          btn.className = 'btn-secondary';
-          btn.innerText = labelText || id;
-          btn.style.cssText = DEV_BTN_STYLE;
-          devPanel.appendChild(btn);
-        }
+    const tabBtns = this.devToolsWindow.element.querySelectorAll('.dev-tab-btn');
+    const tabPanels = this.devToolsWindow.element.querySelectorAll('.dev-tab-panel');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => {
+          b.classList.remove('active', 'btn-primary');
+          b.classList.add('btn-secondary');
+        });
+        btn.classList.add('active', 'btn-primary');
+        btn.classList.remove('btn-secondary');
+
+        const tabId = btn.dataset.tab;
+        tabPanels.forEach(panel => {
+          panel.style.display = panel.id === tabId ? 'flex' : 'none';
+        });
+      });
+    });
+
+      const setupDevBtn = (id, prop, color) => {
+        const btn = document.getElementById(id);
         if (btn) {
           btn.style.borderColor = eng.devOptions[prop] ? color : '';
           btn.style.color = eng.devOptions[prop] ? color : '';
@@ -113,77 +235,37 @@ export class DevToolsUIManager {
         }
       };
 
-      // Completely remove unused buttons from the DOM
-      ['btn-dev-player-tile', 'btn-dev-mouse', 'btn-dev-entity-tile', 'btn-dev-tile', 'btn-dev-chunk'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-      });
+      setupDevBtn('btn-dev-player', 'showPlayerPos', '#ff4757');
+      setupDevBtn('btn-dev-entity', 'showEntityPos', '#ff4757');
+      setupDevBtn('btn-dev-dist-player-mouse', 'showDistPlayerToMouse', '#f1c40f');
+      setupDevBtn('btn-dev-dist-mouse', 'showDistNpcToMouse', '#f1c40f');
+      setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f');
+      setupDevBtn('btn-dev-aggro', 'showAggro', '#e67e22');
+      setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757');
+      setupDevBtn('btn-dev-los', 'showLoS', '#f1c40f');
+      setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757');
+      setupDevBtn('btn-dev-npc-paths', 'showNpcPaths', '#9b59b6');
+      setupDevBtn('btn-dev-spawners', 'showSpawners', '#2ecc71');
+      setupDevBtn('btn-dev-arcade-hover', 'showArcadeHover', '#3498db');
+      setupDevBtn('btn-dev-neighborhoods', 'showNeighborhoods', '#e056fd');
 
-      setupDevBtn('btn-dev-player', 'showPlayerPos', '#ff4757', 'Toggle Player Pos');
-      setupDevBtn('btn-dev-entity', 'showEntityPos', '#ff4757', 'Toggle Entity Pos');
-      setupDevBtn('btn-dev-dist-player-mouse', 'showDistPlayerToMouse', '#f1c40f', 'Dist: Player to Mouse');
-      setupDevBtn('btn-dev-dist-mouse', 'showDistNpcToMouse', '#f1c40f', 'Dist: NPC to Mouse');
-      setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f', 'Dist: Player to NPC');
-      setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757', 'Toggle Melee Range');
-      setupDevBtn('btn-dev-los', 'showLoS', '#f1c40f', 'Toggle Line of Sight');
-      setupDevBtn('btn-dev-arcade-hover', 'showArcadeHover', '#e056fd', 'Toggle Arcade Hover');
-
-      const btnLos = document.getElementById('btn-dev-los');
-      if (btnLos && !document.getElementById('btn-dev-los-edit')) {
-        const wrapper = document.createElement('div');
-        wrapper.id = 'wrapper-dev-los';
-        wrapper.style.display = 'flex';
-        wrapper.style.gap = '5px';
-        wrapper.style.marginTop = '5px';
-        wrapper.style.width = '100%';
-
-        btnLos.parentNode.insertBefore(wrapper, btnLos);
-        btnLos.style.marginTop = '0';
-        wrapper.appendChild(btnLos);
-
-        const editBtn = document.createElement('button');
-        editBtn.id = 'btn-dev-los-edit';
-        editBtn.className = 'btn-secondary';
-        editBtn.innerText = '✎';
-        editBtn.style.cssText = TOOL_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
+      const editBtn = document.getElementById('btn-dev-los-edit');
+      if (editBtn) {
         editBtn.onclick = () => {
-          const modal = document.getElementById('los-edit-modal');
-          if (modal) {
-            document.getElementById('edit-los-dist').value = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400;
-            document.getElementById('edit-los-angle').value = eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60;
-            modal.style.display = 'flex';
-          }
+          document.getElementById('edit-los-dist').value = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400;
+          document.getElementById('edit-los-angle').value = eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60;
+          this.losEditWindow.open();
         };
-        wrapper.appendChild(editBtn);
       }
 
-      setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757', 'Toggle Hitboxes');
-
-      const btnDistPlayerMouse = document.getElementById('btn-dev-dist-player-mouse');
-      if (btnDistPlayerMouse && !document.getElementById('btn-dev-tooltip-toggle')) {
-        const wrapper = document.createElement('div');
-        wrapper.id = 'wrapper-dev-dist-player-mouse';
-        wrapper.style.display = 'flex';
-        wrapper.style.gap = '5px';
-        wrapper.style.marginTop = '5px';
-        wrapper.style.width = '100%';
-
-        btnDistPlayerMouse.parentNode.insertBefore(wrapper, btnDistPlayerMouse);
-        btnDistPlayerMouse.style.marginTop = '0';
-        wrapper.appendChild(btnDistPlayerMouse);
-
-        const tBtn = document.createElement('button');
-        tBtn.id = 'btn-dev-tooltip-toggle';
-        tBtn.className = 'btn-secondary';
-        tBtn.innerText = 'T';
-        tBtn.title = 'Toggle Tooltip Mode';
-        tBtn.style.cssText = `${TOOL_BTN_STYLE} ${eng.devOptions.useDebugTooltip ? 'background: rgba(241, 196, 15, 0.2);' : ''}`;
+      const tBtn = document.getElementById('btn-dev-tooltip-toggle');
+      if (tBtn) {
+        tBtn.style.background = eng.devOptions.useDebugTooltip ? 'rgba(241, 196, 15, 0.2)' : 'transparent';
         tBtn.onclick = () => {
           eng.devOptions.useDebugTooltip = !eng.devOptions.useDebugTooltip;
           tBtn.style.background = eng.devOptions.useDebugTooltip ? 'rgba(241, 196, 15, 0.2)' : 'transparent';
           localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
         };
-        wrapper.appendChild(tBtn);
       }
 
       const btnEditTarget = document.getElementById('btn-dev-edit-target');
@@ -199,11 +281,19 @@ export class DevToolsUIManager {
               document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
               document.getElementById('edit-npc-maxhp').value = npc.maxHp;
               document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
+              document.getElementById('edit-npc-battery').value = Math.floor(npc.synthEnergy || 1000);
               document.getElementById('edit-npc-x').value = Math.round(npc.x);
               document.getElementById('edit-npc-y').value = Math.round(npc.y);
               document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
               document.getElementById('edit-npc-type').value = npc.type || 'idle';
               document.getElementById('edit-npc-dir').value = npc.dir || 'down';
+              document.getElementById('edit-npc-group').value = npc.group || 'Civilian';
+              document.getElementById('edit-npc-respawn').value = npc.respawnRate || 0;
+              document.getElementById('edit-npc-level').value = npc.level || 1;
+              document.getElementById('edit-npc-strength').value = npc.strength || 0;
+              document.getElementById('edit-npc-aggro').value = npc.aggroRadius !== undefined ? npc.aggroRadius : 500;
+              document.getElementById('edit-npc-patrol').value = npc.patrolRoute || '';
+              document.getElementById('edit-npc-powers').value = (npc.powers || []).join(', ');
 
               this.npcEditWindow.open();
             }
@@ -216,8 +306,12 @@ export class DevToolsUIManager {
         btnNpcManager.style.borderColor = '#e056fd';
         btnNpcManager.style.color = '#e056fd';
         btnNpcManager.onclick = () => {
-          this.npcManagerWindow.open();
-          this.renderNpcManager();
+          if (this.npcManagerWindow.element.style.display === 'none') {
+            this.npcManagerWindow.open();
+            this.renderNpcManager();
+          } else {
+            this.npcManagerWindow.close();
+          }
         };
 
         document.getElementById('btn-edit-npc-tp-me').onclick = () => {
@@ -237,19 +331,28 @@ export class DevToolsUIManager {
             maxHp: parseFloat(document.getElementById('edit-npc-maxhp').value),
             energy: energyVal,
             maxEnergy: energyVal,
+            synthEnergy: parseFloat(document.getElementById('edit-npc-battery').value) || 0,
+            maxSynthEnergy: parseFloat(document.getElementById('edit-npc-battery').value) || 0,
             x: parseFloat(document.getElementById('edit-npc-x').value),
             y: parseFloat(document.getElementById('edit-npc-y').value),
             z: parseFloat(document.getElementById('edit-npc-z').value),
             type: document.getElementById('edit-npc-type').value,
-            dir: document.getElementById('edit-npc-dir').value
+            dir: document.getElementById('edit-npc-dir').value,
+            group: document.getElementById('edit-npc-group').value,
+            respawnRate: parseFloat(document.getElementById('edit-npc-respawn').value) || 0,
+            level: parseInt(document.getElementById('edit-npc-level').value, 10) || 1,
+            strength: parseInt(document.getElementById('edit-npc-strength').value, 10) || 0,
+            aggroRadius: parseFloat(document.getElementById('edit-npc-aggro').value) || 500,
+            patrolRoute: document.getElementById('edit-npc-patrol').value || '',
+            powers: document.getElementById('edit-npc-powers').value.split(',').map(s => s.trim()).filter(Boolean)
           };
           eng.network.sendEditNpc(uuid, updates);
         };
 
-        ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z'].forEach(id => {
+        ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-battery', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z', 'edit-npc-respawn', 'edit-npc-level', 'edit-npc-aggro', 'edit-npc-patrol', 'edit-npc-powers'].forEach(id => {
           document.getElementById(id).addEventListener('input', emitNpcUpdate);
         });
-        ['edit-npc-type', 'edit-npc-dir'].forEach(id => {
+        ['edit-npc-type', 'edit-npc-dir', 'edit-npc-group', 'edit-npc-strength'].forEach(id => {
           document.getElementById(id).addEventListener('change', emitNpcUpdate);
         });
 
@@ -259,9 +362,11 @@ export class DevToolsUIManager {
           const idx = eng.npcs.findIndex(n => n.uuid === uuid);
           if (idx !== -1) eng.npcs.splice(idx, 1);
           if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
+          if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
         });
         eng.socket.on('npc_spawned', () => {
           if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
+          if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
         });
         eng.socket.on('npc_updated', (updatedNpc) => {
           const idx = eng.npcs.findIndex(n => n.uuid === updatedNpc.uuid);
@@ -269,67 +374,149 @@ export class DevToolsUIManager {
             Object.assign(eng.npcs[idx], updatedNpc);
           }
           if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
+          if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
         });
       }
 
-      // Add the Management Group
-      let mgmtGroup = document.getElementById('dev-mgmt-group');
-      if (!mgmtGroup && devPanel) {
-        mgmtGroup = document.createElement('div');
-        mgmtGroup.id = 'dev-mgmt-group';
-        mgmtGroup.style.cssText = 'display: flex; flex-direction: column; gap: 5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(52, 152, 219, 0.5);';
+      const btnSpawnerManager = document.getElementById('btn-dev-spawner-manager');
+      if (btnSpawnerManager) {
+        btnSpawnerManager.onclick = () => {
+          if (this.spawnerManagerWindow.element.style.display === 'none') {
+            this.spawnerManagerWindow.open();
+            this.renderSpawnerManager();
+          } else {
+            this.spawnerManagerWindow.close();
+          }
+        };
 
-        const title = document.createElement('div');
-        title.innerText = 'World & Entity Management';
-        title.style.cssText = 'color: #3498db; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; text-align: center;';
-        mgmtGroup.appendChild(title);
+        document.getElementById('btn-edit-spawner-tp-me').onclick = () => {
+          document.getElementById('edit-spawner-x').value = Math.round(eng.player.x);
+          document.getElementById('edit-spawner-y').value = Math.round(eng.player.y);
+          document.getElementById('edit-spawner-z').value = Math.round(eng.player.z || 0);
+          emitSpawnerUpdate();
+        };
 
-        devPanel.appendChild(mgmtGroup);
+        const emitSpawnerUpdate = () => {
+          const uuid = document.getElementById('edit-spawner-uuid').value;
+          if (!uuid) return;
+          const updates = {
+            name: document.getElementById('edit-spawner-name').value,
+            mobPack: document.getElementById('edit-spawner-mobpack').value || null,
+            maxActive: parseInt(document.getElementById('edit-spawner-max').value, 10) || 5,
+            x: parseFloat(document.getElementById('edit-spawner-x').value),
+            y: parseFloat(document.getElementById('edit-spawner-y').value),
+            z: parseFloat(document.getElementById('edit-spawner-z').value),
+            radius: parseFloat(document.getElementById('edit-spawner-radius').value) || 300,
+            respawnRate: parseFloat(document.getElementById('edit-spawner-rate').value) || 10,
+            npcName: document.getElementById('edit-spawner-npcname').value,
+            npcGroup: document.getElementById('edit-spawner-group').value,
+            npcType: document.getElementById('edit-spawner-type').value,
+            levelMin: parseInt(document.getElementById('edit-spawner-lvlmin').value, 10) || 1,
+            levelMax: parseInt(document.getElementById('edit-spawner-lvlmax').value, 10) || 1,
+            strength: parseInt(document.getElementById('edit-spawner-strength').value, 10) || 0,
+            aggroRadius: parseFloat(document.getElementById('edit-spawner-aggro').value) || 500,
+            patrolRoute: document.getElementById('edit-spawner-patrol').value || '',
+            npcPowers: document.getElementById('edit-spawner-powers').value.split(',').map(s => s.trim()).filter(Boolean)
+          };
+          eng.network.sendEditSpawner(uuid, updates);
+        };
+
+        ['edit-spawner-name', 'edit-spawner-max', 'edit-spawner-x', 'edit-spawner-y', 'edit-spawner-z', 'edit-spawner-radius', 'edit-spawner-rate', 'edit-spawner-npcname', 'edit-spawner-lvlmin', 'edit-spawner-lvlmax', 'edit-spawner-strength', 'edit-spawner-aggro', 'edit-spawner-patrol', 'edit-spawner-powers'].forEach(id => {
+          document.getElementById(id).addEventListener('input', emitSpawnerUpdate);
+        });
+        ['edit-spawner-group', 'edit-spawner-type', 'edit-spawner-mobpack'].forEach(id => {
+          document.getElementById(id).addEventListener('change', emitSpawnerUpdate);
+        });
+        document.getElementById('btn-save-spawner-edit').onclick = () => this.spawnerEditWindow.close();
+        const btnUpdateSpawner = document.getElementById('btn-update-spawner-edit');
+        if (btnUpdateSpawner) btnUpdateSpawner.onclick = emitSpawnerUpdate;
+
+        const wipeBtn = document.getElementById('btn-spawner-wipe-npcs');
+        if (wipeBtn) wipeBtn.onclick = () => {
+            const uuid = document.getElementById('edit-spawner-uuid').value;
+            if (uuid && confirm(`Wipe all currently spawned NPCs from this spawner?`)) {
+                this.engine.network.socket.emit('wipe_spawner_npcs', uuid);
+            }
+        };
+
+        eng.socket.on('spawner_deleted', (uuid) => {
+          const idx = eng.spawners.findIndex(s => s.uuid === uuid);
+          if (idx !== -1) eng.spawners.splice(idx, 1);
+          if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
+        });
+        eng.socket.on('spawner_spawned', (spawner) => {
+          eng.spawners.push(spawner);
+          if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
+        });
+        eng.socket.on('spawner_updated', (updated) => {
+          const idx = eng.spawners.findIndex(s => s.uuid === updated.uuid);
+          if (idx !== -1) Object.assign(eng.spawners[idx], updated);
+          if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
+        });
       }
 
-      let btnPlayerManager = document.getElementById('btn-dev-player-manager');
-      if (!btnPlayerManager && devPanel) {
-        btnPlayerManager = document.createElement('button');
-        btnPlayerManager.id = 'btn-dev-player-manager';
-        btnPlayerManager.className = 'btn-secondary';
-        btnPlayerManager.innerText = 'Player Manager';
-        btnPlayerManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
-        btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
-      } else if (btnPlayerManager) {
-        btnPlayerManager.style.borderColor = '#e056fd';
-        btnPlayerManager.style.color = '#e056fd';
-        btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
+      const btnGroupManager = document.getElementById('btn-dev-group-manager');
+      if (btnGroupManager) {
+        btnGroupManager.onclick = () => {
+           if (this.entityGroupManagerWindow.element.style.display === 'none') {
+              this.entityGroupManagerWindow.open();
+              this.engine.network.sendRequestEntityGroups();
+           } else {
+              this.entityGroupManagerWindow.close();
+           }
+        };
       }
 
-      let btnAccountManager = document.getElementById('btn-dev-account-manager');
-      if (!btnAccountManager && devPanel) {
-        btnAccountManager = document.createElement('button');
-        btnAccountManager.id = 'btn-dev-account-manager';
-        btnAccountManager.className = 'btn-secondary';
-        btnAccountManager.innerText = 'Account Manager';
-        btnAccountManager.style.cssText = DEV_BTN_STYLE + ' border-color: #9b59b6; color: #9b59b6;';
-        btnAccountManager.onclick = () => eng.ui.playerModifier.openEmptyAccountManager();
-      } else if (btnAccountManager) {
-        btnAccountManager.onclick = () => eng.ui.playerModifier.openEmptyAccountManager();
+      const btnMobPack = document.getElementById('btn-dev-mobpack-manager');
+      if (btnMobPack) {
+        btnMobPack.onclick = () => {
+           if (this.mobPackManagerWindow.element.style.display === 'none') {
+              this.mobPackManagerWindow.open();
+              this.engine.network.sendRequestEntityGroups();
+              this.engine.network.socket.emit('request_mob_packs');
+              this.renderMobPacks();
+           } else {
+              this.mobPackManagerWindow.close();
+           }
+        };
       }
 
-      let btnEditMode = document.getElementById('btn-dev-edit-mode');
-      if (!btnEditMode && devPanel) {
-        btnEditMode = document.createElement('button');
-        btnEditMode.id = 'btn-dev-edit-mode';
-        btnEditMode.className = 'btn-secondary';
-        btnEditMode.innerText = 'Toggle Edit Mode (/edit)';
-        btnEditMode.style.cssText = DEV_BTN_STYLE;
-        btnEditMode.onclick = () => eng.chat.commandHandler.processCommand('/editmode');
+      const btnNpcTemplate = document.getElementById('btn-dev-npc-template-manager');
+      if (btnNpcTemplate) {
+        btnNpcTemplate.onclick = () => {
+           if (this.npcTemplateManagerWindow.element.style.display === 'none') {
+              this.npcTemplateManagerWindow.open();
+              this.engine.network.socket.emit('request_npc_templates');
+              this.engine.network.sendRequestEntityGroups();
+           } else {
+              this.npcTemplateManagerWindow.close();
+           }
+        };
       }
 
-      let btnZoneManager = document.getElementById('btn-dev-zone-manager');
-      if (!btnZoneManager && devPanel) {
-        btnZoneManager = document.createElement('button');
-        btnZoneManager.id = 'btn-dev-zone-manager';
-        btnZoneManager.className = 'btn-secondary';
-        btnZoneManager.innerText = 'Zone Manager';
-        btnZoneManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
+      const btnEntityType = document.getElementById('btn-dev-entity-type-manager');
+      if (btnEntityType) {
+        btnEntityType.onclick = () => {
+           if (this.entityTypeManagerWindow.element.style.display === 'none') {
+              this.entityTypeManagerWindow.open();
+              this.engine.network.socket.emit('request_entity_types');
+           } else {
+              this.entityTypeManagerWindow.close();
+           }
+        };
+      }
+
+      const btnPlayerManager = document.getElementById('btn-dev-player-manager');
+      if (btnPlayerManager) btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
+
+      const btnAccountManager = document.getElementById('btn-dev-account-manager');
+      if (btnAccountManager) btnAccountManager.onclick = () => eng.ui.playerModifier.openAccountManagerList();
+
+      const btnEditMode = document.getElementById('btn-dev-edit-mode');
+      if (btnEditMode) btnEditMode.onclick = () => eng.chat.commandHandler.processCommand('/editmode');
+
+      const btnZoneManager = document.getElementById('btn-dev-zone-manager');
+      if (btnZoneManager) {
         btnZoneManager.onclick = () => {
            if (this.zoneManagerWindow.element.style.display === 'none') {
               this.zoneManagerWindow.open();
@@ -338,30 +525,23 @@ export class DevToolsUIManager {
               this.zoneManagerWindow.close();
            }
         };
-      } else if (btnZoneManager) {
-        btnZoneManager.style.borderColor = '#e056fd';
-        btnZoneManager.style.color = '#e056fd';
-        btnZoneManager.onclick = () => {
-           if (this.zoneManagerWindow.element.style.display === 'none') {
-              this.zoneManagerWindow.open();
-              this.renderZoneManager();
+      }
+
+      const btnNeighborhoodManager = document.getElementById('btn-dev-neighborhood-manager');
+      if (btnNeighborhoodManager) {
+        btnNeighborhoodManager.onclick = () => {
+           if (this.neighborhoodManagerWindow.element.style.display === 'none') {
+              this.neighborhoodManagerWindow.open();
+              this.renderNeighborhoodManager();
+              this.engine.network.socket.emit('request_neighborhoods');
            } else {
-              this.zoneManagerWindow.close();
+              this.neighborhoodManagerWindow.close();
            }
         };
       }
 
-      let btnArcadeManager = document.getElementById('btn-dev-arcade-manager');
-      if (!btnArcadeManager && devPanel) {
-        btnArcadeManager = document.createElement('button');
-        btnArcadeManager.id = 'btn-dev-arcade-manager';
-        btnArcadeManager.className = 'btn-secondary';
-        btnArcadeManager.innerText = 'Arcade Manager';
-        btnArcadeManager.style.cssText = DEV_BTN_STYLE + ' border-color: #e056fd; color: #e056fd;';
-      }
+      const btnArcadeManager = document.getElementById('btn-dev-arcade-manager');
       if (btnArcadeManager) {
-        btnArcadeManager.style.borderColor = '#e056fd';
-        btnArcadeManager.style.color = '#e056fd';
         btnArcadeManager.onclick = () => {
            if (this.arcadeManagerWindow.element.style.display === 'none') {
               this.arcadeManagerWindow.open();
@@ -372,77 +552,477 @@ export class DevToolsUIManager {
         };
       }
 
-      if (mgmtGroup) {
-        if (btnPlayerManager) mgmtGroup.appendChild(btnPlayerManager);
-        if (btnAccountManager) mgmtGroup.appendChild(btnAccountManager);
-        if (btnNpcManager) mgmtGroup.appendChild(btnNpcManager);
-        if (btnZoneManager) mgmtGroup.appendChild(btnZoneManager);
-        if (btnArcadeManager) mgmtGroup.appendChild(btnArcadeManager);
-        if (btnEditTarget) mgmtGroup.appendChild(btnEditTarget);
-        if (btnEditMode) mgmtGroup.appendChild(btnEditMode);
-        const btnArcadeHover = document.getElementById('btn-dev-arcade-hover');
-        if (btnArcadeHover) {
-            mgmtGroup.appendChild(btnArcadeHover);
-        }
+      this.setupLosModal();
+  }
+
+  setupMobPacks() {
+      this.engine.mobPacks = this.engine.mobPacks || {};
+      this.selectedMobPack = null;
+
+      document.getElementById('btn-mp-add').onclick = () => {
+          const input = document.getElementById('mp-new-input');
+          const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+          if (id && !this.engine.mobPacks[id]) {
+              this.engine.mobPacks[id] = [];
+              input.value = '';
+              this.selectedMobPack = id;
+              this.renderMobPacks();
+          }
+      };
+
+      document.getElementById('btn-mp-add-entry').onclick = () => {
+          if (!this.selectedMobPack) return;
+          this.engine.mobPacks[this.selectedMobPack].push({
+              weight: 1, intensityMin: 1, intensityMax: 5, levelMinOffset: 0, levelMaxOffset: 1, strengthOffset: 0
+          });
+          this.renderMobPacks();
+      };
+
+      const btnBulkApply = document.getElementById('btn-mp-bulk-apply');
+      if (btnBulkApply) {
+          btnBulkApply.onclick = () => {
+              if (!this.selectedMobPack || !this.engine.mobPacks[this.selectedMobPack]) return;
+              const grp = document.getElementById('mp-bulk-group').value;
+              const iMin = parseInt(document.getElementById('mp-bulk-int-min').value, 10) || 1;
+              const iMax = parseInt(document.getElementById('mp-bulk-int-max').value, 10) || 5;
+              const lMin = parseInt(document.getElementById('mp-bulk-lvl-min').value, 10) || 0;
+              const lMax = parseInt(document.getElementById('mp-bulk-lvl-max').value, 10) || 1;
+              const sOff = parseInt(document.getElementById('mp-bulk-str').value, 10) || 0;
+
+              this.engine.mobPacks[this.selectedMobPack].forEach(ent => {
+                  if (grp) ent.group = grp;
+                  ent.intensityMin = iMin;
+                  ent.intensityMax = iMax;
+                  ent.levelMinOffset = lMin;
+                  ent.levelMaxOffset = lMax;
+                  ent.strengthOffset = sOff;
+              });
+              this.renderMobPacks();
+              this.engine.ui.showSystemMessage('Bulk properties applied to all NPCs in the pack.');
+          };
       }
 
-      const orderList = [
-        'btn-dev-player',
-        'btn-dev-entity',
-        'wrapper-dev-dist-player-mouse',
-        'btn-dev-dist-mouse',
-        'btn-dev-dist-npc',
-        'btn-dev-melee',
-        'wrapper-dev-los',
-        'btn-dev-hitbox',
-        'btn-dev-power-editor',
-        'dev-mgmt-group'
-      ];
+      document.getElementById('btn-mp-save').onclick = () => {
+          if (!this.selectedMobPack) return;
+          this.engine.network.socket.emit('save_mob_pack', { id: this.selectedMobPack, data: this.engine.mobPacks[this.selectedMobPack] });
+          this.engine.ui.showSystemMessage(`Saved Mob Pack: ${this.selectedMobPack}.`);
+      };
+  }
 
-      orderList.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && devPanel) {
-          devPanel.appendChild(el);
-          el.style.order = '';
-        }
+  renderMobPacks() {
+      const packList = document.getElementById('mp-list');
+      const entryList = document.getElementById('mp-entries-list');
+      if (!packList || !entryList) return;
+
+      packList.innerHTML = '';
+      const packKeys = Object.keys(this.engine.mobPacks || {});
+      if (!this.selectedMobPack && packKeys.length > 0) this.selectedMobPack = packKeys[0];
+
+      packKeys.forEach(k => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; gap: 2px;';
+          const btn = document.createElement('button');
+          btn.className = 'b-btn ' + (this.selectedMobPack === k ? 'btn-primary' : 'btn-secondary');
+          btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+          if (this.selectedMobPack === k) btn.style.borderColor = '#3498db';
+          btn.innerText = k;
+          btn.onclick = () => { this.selectedMobPack = k; this.renderMobPacks(); };
+
+          const editBtn = document.createElement('button');
+          editBtn.className = 'b-btn btn-secondary';
+          editBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem; border-color: #f1c40f; color: #f1c40f;';
+          editBtn.innerText = '✎';
+          editBtn.onclick = () => {
+              const newName = prompt('Enter new Mob Pack ID:', k);
+              if (newName && newName.trim() && newName !== k) {
+                  const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                  if (this.engine.mobPacks[safeName]) {
+                      this.engine.ui.showSystemMessage('A pack with that ID already exists.');
+                  } else {
+                      this.engine.mobPacks[safeName] = this.engine.mobPacks[k];
+                      delete this.engine.mobPacks[k];
+                      this.engine.network.socket.emit('delete_mob_pack', k);
+                      this.engine.network.socket.emit('save_mob_pack', { id: safeName, data: this.engine.mobPacks[safeName] });
+                      if (this.selectedMobPack === k) this.selectedMobPack = safeName;
+                      this.renderMobPacks();
+                  }
+              }
+          };
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'b-btn b-btn-danger';
+          delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
+          delBtn.innerText = 'X';
+          delBtn.onclick = () => {
+              if (confirm(`Delete Mob Pack: ${k}?`)) {
+                  delete this.engine.mobPacks[k];
+                  this.engine.network.socket.emit('delete_mob_pack', k);
+                  if (this.selectedMobPack === k) this.selectedMobPack = null;
+                  this.renderMobPacks();
+              }
+          };
+          row.appendChild(btn); row.appendChild(editBtn); row.appendChild(delBtn); packList.appendChild(row);
       });
+
+      const spawnerDrop = document.getElementById('edit-spawner-mobpack');
+      if (spawnerDrop) {
+          const currentVal = spawnerDrop.value;
+          spawnerDrop.innerHTML = '<option value="">-- Use Custom Template Below --</option>';
+          packKeys.forEach(k => { spawnerDrop.innerHTML += `<option value="${k}">${k}</option>`; });
+          spawnerDrop.value = currentVal;
+      }
+
+      entryList.innerHTML = '';
+
+      let groupOptions = '<option value="">-- Select Group --</option>';
+      const groups = Object.keys(this.entityGroupsData || {}).sort();
+      if (groups.length === 0) {
+          ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+      } else {
+          groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+      }
+
+      const bulkContainer = document.getElementById('mp-bulk-edit-container');
+      if (bulkContainer) {
+          bulkContainer.style.display = (this.selectedMobPack && this.engine.mobPacks[this.selectedMobPack] && this.engine.mobPacks[this.selectedMobPack].length > 0) ? 'flex' : 'none';
+          const bulkGroupDrop = document.getElementById('mp-bulk-group');
+          if (bulkGroupDrop) {
+              const currentVal = bulkGroupDrop.value;
+              bulkGroupDrop.innerHTML = groupOptions;
+              if (currentVal) bulkGroupDrop.value = currentVal;
+          }
+      }
+
+      if (this.selectedMobPack && this.engine.mobPacks[this.selectedMobPack]) {
+          const entries = this.engine.mobPacks[this.selectedMobPack];
+          if (entries.length === 0) entryList.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 0.85rem;">No entries in this pack.</div>';
+          entries.forEach((ent, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem;';
+
+              const lvlMin = ent.levelMinOffset !== undefined ? ent.levelMinOffset : (ent.levelOffset || 0);
+              const lvlMax = ent.levelMaxOffset !== undefined ? ent.levelMaxOffset : ((ent.levelOffset || 0) + 1);
+
+              row.innerHTML = `<div style="display: flex; gap: 5px;">
+                  <select class="b-select mp-ent-group" style="flex: 2;">${groupOptions}</select>
+                  <div style="display: flex; align-items: center; gap: 2px;"><span title="Weight (Spawn Chance). E.g. A weight of 10 vs 5 means this mob spawns twice as often!" style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span><input type="number" class="b-input mp-ent-weight" value="${ent.weight}" style="flex: 0.5; width: 40px;"></div>
+                  <button class="b-btn b-btn-danger mp-ent-del" style="padding: 0 8px;">X</button>
+              </div>
+              <div style="display: flex; gap: 5px; color: #aaa; align-items: center; flex-wrap: wrap; font-size: 0.75rem;">
+                  <span title="Neighborhood Intensity Range (1-5). Defines which difficulty neighborhoods this mob can spawn in." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span> Int: <input type="number" class="b-input mp-ent-int-min" value="${ent.intensityMin}" min="1" max="5" style="width: 35px;"> to <input type="number" class="b-input mp-ent-int-max" value="${ent.intensityMax}" min="1" max="5" style="width: 35px;"> |
+                  <span title="Level Range Offset. Adds to the Zone's Base Level. Default: 0 to +1." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span> Lvl Range: <input type="number" class="b-input mp-ent-lvl-min" value="${lvlMin}" style="width: 35px;"> to <input type="number" class="b-input mp-ent-lvl-max" value="${lvlMax}" style="width: 35px;"> |
+                  <span title="Strength Offset. Modifies raw stats (+1 Strong, -1 Weak, etc)." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span> Str Offset: <input type="number" class="b-input mp-ent-str-off" value="${ent.strengthOffset}" style="width: 35px;">
+              </div>`;
+
+              row.querySelector('.mp-ent-group').value = ent.group || '';
+              row.querySelector('.mp-ent-group').onchange = e => ent.group = e.target.value;
+              row.querySelector('.mp-ent-weight').oninput = e => ent.weight = parseFloat(e.target.value) || 1;
+              row.querySelector('.mp-ent-int-min').oninput = e => ent.intensityMin = parseInt(e.target.value, 10) || 1;
+              row.querySelector('.mp-ent-int-max').oninput = e => ent.intensityMax = parseInt(e.target.value, 10) || 5;
+              row.querySelector('.mp-ent-lvl-min').oninput = e => ent.levelMinOffset = parseInt(e.target.value, 10) || 0;
+              row.querySelector('.mp-ent-lvl-max').oninput = e => ent.levelMaxOffset = parseInt(e.target.value, 10) || 1;
+              row.querySelector('.mp-ent-str-off').oninput = e => ent.strengthOffset = parseInt(e.target.value, 10) || 0;
+              row.querySelector('.mp-ent-del').onclick = () => { entries.splice(idx, 1); this.renderMobPacks(); };
+              entryList.appendChild(row);
+          });
+      }
+  }
+
+  setupEntityGroupManager() {
+    const btnAdd = document.getElementById('btn-egm-add-group');
+    const btnSave = document.getElementById('btn-egm-save');
+
+    if (btnAdd) {
+      btnAdd.onclick = () => {
+        const input = document.getElementById('egm-new-group-input');
+        const group = input.value.trim();
+        if (group && !this.entityGroupsData[group]) {
+          this.entityGroupsData[group] = { hostileTo: [] };
+          input.value = '';
+          this.selectedEntityGroup = group;
+          this.renderEntityGroupManager(this.entityGroupsData);
+        }
+      };
     }
 
-    this.setupLosModal();
+    if (btnSave) {
+      btnSave.onclick = () => {
+        if (!this.selectedEntityGroup) return;
+        const checkboxes = document.querySelectorAll('.egm-hostile-cb:checked');
+        const hostileTo = Array.from(checkboxes).map(cb => cb.value);
+        const powersInput = document.getElementById('egm-powers-input');
+        this.entityGroupsData[this.selectedEntityGroup].hostileTo = hostileTo;
+        this.entityGroupsData[this.selectedEntityGroup].powers = powersInput ? powersInput.value.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        this.engine.network.sendSaveEntityGroup(this.selectedEntityGroup, this.entityGroupsData[this.selectedEntityGroup]);
+        this.engine.ui.showSystemMessage(`Saved aggression list for ${this.selectedEntityGroup}`);
+      };
+    }
+
+  }
+
+  setupNpcTemplates() {
+      this.engine.npcTemplates = this.engine.npcTemplates || {};
+      this.selectedNpcTemplate = null;
+
+      document.getElementById('btn-npct-add').onclick = () => {
+          const input = document.getElementById('npct-new-input');
+          const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+          if (id && !this.engine.npcTemplates[id]) {
+              this.engine.npcTemplates[id] = {
+                  name: 'New NPC',
+                  group: 'Civilian',
+                  strength: 0,
+                  type: 'generic',
+                  speedVariant: 1.0,
+                  aggroRadius: 500,
+                  powers: []
+              };
+              input.value = '';
+              this.selectedNpcTemplate = id;
+              this.renderNpcTemplates();
+          }
+      };
+
+      document.getElementById('btn-npct-save').onclick = () => {
+          if (!this.selectedNpcTemplate) return;
+          const data = {
+              name: document.getElementById('npct-name').value,
+              group: document.getElementById('npct-group').value,
+              strength: parseInt(document.getElementById('npct-strength').value, 10) || 0,
+              type: document.getElementById('npct-type').value,
+              speedVariant: parseFloat(document.getElementById('npct-speed').value) || 1.0,
+              aggroRadius: parseFloat(document.getElementById('npct-aggro').value) || 500,
+              baseExp: parseInt(document.getElementById('npct-exp').value, 10) || 20,
+          };
+          this.engine.npcTemplates[this.selectedNpcTemplate] = data;
+          this.engine.network.socket.emit('save_npc_template', { id: this.selectedNpcTemplate, data: data });
+          this.engine.ui.showSystemMessage(`Saved NPC Template: ${this.selectedNpcTemplate}.`);
+      };
+
+      document.getElementById('btn-npct-add-power').onclick = () => {
+          if (!this.selectedNpcTemplate) return;
+          this.openPowerSelector((pId) => {
+              if (this.engine.npcTemplates[this.selectedNpcTemplate]) {
+                  this.engine.npcTemplates[this.selectedNpcTemplate].powers = this.engine.npcTemplates[this.selectedNpcTemplate].powers || [];
+                  if (!this.engine.npcTemplates[this.selectedNpcTemplate].powers.includes(pId)) {
+                      this.engine.npcTemplates[this.selectedNpcTemplate].powers.push(pId);
+                      this.renderNpcTemplates();
+                  }
+              }
+          });
+      };
+  }
+
+  renderNpcTemplates() {
+      const list = document.getElementById('npct-list');
+      if (!list) return;
+      list.innerHTML = '';
+      const keys = Object.keys(this.engine.npcTemplates || {});
+      if (!this.selectedNpcTemplate && keys.length > 0) this.selectedNpcTemplate = keys[0];
+
+      let groupOptions = '';
+      const groups = Object.keys(this.entityGroupsData || {}).sort();
+      if (groups.length === 0) {
+          ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+      } else {
+          groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+      }
+      const groupDrop = document.getElementById('npct-group');
+      if (groupDrop) {
+          const val = groupDrop.value;
+          groupDrop.innerHTML = groupOptions;
+          if (val) groupDrop.value = val;
+      }
+
+      keys.forEach(k => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; gap: 2px;';
+          const btn = document.createElement('button');
+          btn.className = 'b-btn ' + (this.selectedNpcTemplate === k ? 'btn-primary' : 'btn-secondary');
+          btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+          if (this.selectedNpcTemplate === k) btn.style.borderColor = '#3498db';
+          btn.innerText = k;
+          btn.onclick = () => { this.selectedNpcTemplate = k; this.renderNpcTemplates(); };
+          const dupBtn = document.createElement('button');
+          dupBtn.className = 'b-btn btn-secondary';
+          dupBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem; border-color: #3498db; color: #3498db;';
+          dupBtn.innerText = '⧉';
+          dupBtn.onclick = () => {
+              const newName = prompt('Enter ID for duplicated template:', k + '-copy');
+              if (newName && newName.trim() && newName !== k) {
+                  const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                  if (this.engine.npcTemplates[safeName]) { this.engine.ui.showSystemMessage('A template with that ID already exists.'); }
+                  else { this.engine.npcTemplates[safeName] = JSON.parse(JSON.stringify(this.engine.npcTemplates[k])); this.engine.network.socket.emit('save_npc_template', { id: safeName, data: this.engine.npcTemplates[safeName] }); this.selectedNpcTemplate = safeName; this.renderNpcTemplates(); }
+              }
+          };
+          const delBtn = document.createElement('button');
+          delBtn.className = 'b-btn b-btn-danger';
+          delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
+          delBtn.innerText = 'X';
+          delBtn.onclick = () => {
+              if (confirm(`Delete NPC Template: ${k}?`)) { delete this.engine.npcTemplates[k]; this.engine.network.socket.emit('delete_npc_template', k); if (this.selectedNpcTemplate === k) this.selectedNpcTemplate = null; this.renderNpcTemplates(); }
+          };
+          row.appendChild(btn); row.appendChild(dupBtn); row.appendChild(delBtn); list.appendChild(row);
+      });
+
+      if (this.selectedNpcTemplate && this.engine.npcTemplates[this.selectedNpcTemplate]) {
+          const t = this.engine.npcTemplates[this.selectedNpcTemplate];
+          document.getElementById('npct-name').value = t.name || '';
+          document.getElementById('npct-group').value = t.group || 'Civilian';
+          document.getElementById('npct-strength').value = t.strength || 0;
+          document.getElementById('npct-type').value = t.type || 'generic';
+          document.getElementById('npct-speed').value = t.speedVariant || 1.0;
+          document.getElementById('npct-aggro').value = t.aggroRadius !== undefined ? t.aggroRadius : 500;
+          document.getElementById('npct-exp').value = t.baseExp !== undefined ? t.baseExp : 20;
+
+          const powersList = document.getElementById('npct-powers-list');
+          if (powersList) {
+              powersList.innerHTML = '';
+              (t.powers || []).forEach((pId, idx) => {
+                  const pName = window.POWER_REGISTRY && window.POWER_REGISTRY[pId] ? window.POWER_REGISTRY[pId].name : pId;
+                  const row = document.createElement('div');
+                  row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
+                  row.innerHTML = `<span style="color: #fff;">${pName}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;">X</button>`;
+                  row.querySelector('button').onclick = () => { t.powers.splice(idx, 1); this.renderNpcTemplates(); };
+                  powersList.appendChild(row);
+              });
+              if ((t.powers || []).length === 0) powersList.innerHTML = '<span style="color: #888; font-style: italic; font-size: 0.8rem; text-align: center;">No powers assigned.</span>';
+          }
+      }
+  }
+
+  setupEntityTypes() {
+      this.engine.entityTypes = this.engine.entityTypes || {};
+      this.selectedEntityType = null;
+
+      document.getElementById('btn-et-add').onclick = () => {
+          const input = document.getElementById('et-new-input');
+          const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+          if (id && !this.engine.entityTypes[id]) {
+              this.engine.entityTypes[id] = { hpMult: 1.0, dmgMult: 1.0, expMult: 1.0, isTargetable: true };
+              input.value = '';
+              this.selectedEntityType = id;
+              this.renderEntityTypes();
+          }
+      };
+
+      document.getElementById('btn-et-save').onclick = () => {
+          if (!this.selectedEntityType) return;
+          const data = {
+              hpMult: parseFloat(document.getElementById('et-hp-mult').value) || 1.0,
+              dmgMult: parseFloat(document.getElementById('et-dmg-mult').value) || 1.0,
+              expMult: parseFloat(document.getElementById('et-exp-mult').value) || 1.0,
+              isTargetable: document.getElementById('et-targetable').value === 'true'
+          };
+          this.engine.entityTypes[this.selectedEntityType] = data;
+          this.engine.network.socket.emit('save_entity_type', { id: this.selectedEntityType, data: data });
+          this.engine.ui.showSystemMessage(`Saved Entity Type: ${this.selectedEntityType}.`);
+      };
+  }
+
+  renderEntityTypes() {
+      const list = document.getElementById('et-list');
+      if (!list) return;
+      list.innerHTML = '';
+      const keys = Object.keys(this.engine.entityTypes || {});
+      if (!this.selectedEntityType && keys.length > 0) this.selectedEntityType = keys[0];
+
+      keys.forEach(k => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; gap: 2px;';
+          const btn = document.createElement('button');
+          btn.className = 'b-btn ' + (this.selectedEntityType === k ? 'btn-primary' : 'btn-secondary');
+          btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+          if (this.selectedEntityType === k) btn.style.borderColor = '#3498db';
+          btn.innerText = k;
+          btn.onclick = () => { this.selectedEntityType = k; this.renderEntityTypes(); };
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'b-btn b-btn-danger';
+          delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
+          delBtn.innerText = 'X';
+          delBtn.onclick = () => {
+              if (confirm(`Delete Entity Type: ${k}?`)) { delete this.engine.entityTypes[k]; this.engine.network.socket.emit('delete_entity_type', k); if (this.selectedEntityType === k) this.selectedEntityType = null; this.renderEntityTypes(); }
+          };
+          row.appendChild(btn); row.appendChild(delBtn); list.appendChild(row);
+      });
+
+      if (this.selectedEntityType && this.engine.entityTypes[this.selectedEntityType]) {
+          const t = this.engine.entityTypes[this.selectedEntityType];
+          document.getElementById('et-hp-mult').value = t.hpMult !== undefined ? t.hpMult : 1.0;
+          document.getElementById('et-dmg-mult').value = t.dmgMult !== undefined ? t.dmgMult : 1.0;
+          document.getElementById('et-exp-mult').value = t.expMult !== undefined ? t.expMult : 1.0;
+          document.getElementById('et-targetable').value = t.isTargetable !== false ? 'true' : 'false';
+      }
+
+      const options = keys.length > 0 ? keys.map(k => `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`).join('') : '<option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option>';
+      ['npct-type', 'edit-spawner-type', 'edit-npc-type'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { const val = el.value; el.innerHTML = options; if (val) el.value = val; }
+      });
+  }
+
+  renderEntityGroupManager(data) {
+    this.entityGroupsData = data || this.entityGroupsData;
+    const groupList = document.getElementById('egm-group-list');
+    const hostileList = document.getElementById('egm-hostile-list');
+    if (!groupList || !hostileList) return;
+
+    groupList.innerHTML = '';
+    const groups = Object.keys(this.entityGroupsData).sort();
+    if (!this.selectedEntityGroup && groups.length > 0) this.selectedEntityGroup = groups[0];
+
+    groups.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = 'b-btn ' + (this.selectedEntityGroup === g ? 'btn-primary' : 'btn-secondary');
+      btn.style.cssText = 'text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+      if (this.selectedEntityGroup === g) btn.style.borderColor = '#3498db';
+      btn.innerText = g;
+      btn.onclick = () => { this.selectedEntityGroup = g; this.renderEntityGroupManager(); };
+      groupList.appendChild(btn);
+    });
+
+    hostileList.innerHTML = '';
+    if (this.selectedEntityGroup && this.entityGroupsData[this.selectedEntityGroup]) {
+      const currentHostiles = this.entityGroupsData[this.selectedEntityGroup].hostileTo || [];
+      groups.forEach(g => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 0.85rem; cursor: pointer;';
+        const isChecked = currentHostiles.includes(g) ? 'checked' : '';
+        label.innerHTML = `<input type="checkbox" class="egm-hostile-cb" value="${g}" ${isChecked}> <span>${g}</span>`;
+        hostileList.appendChild(label);
+      });
+
+      const powersList = document.getElementById('egm-powers-list');
+      if (powersList) {
+          powersList.innerHTML = '';
+          const gData = this.entityGroupsData[this.selectedEntityGroup];
+          (gData.powers || []).forEach((pId, idx) => {
+              const pName = window.POWER_REGISTRY && window.POWER_REGISTRY[pId] ? window.POWER_REGISTRY[pId].name : pId;
+              const row = document.createElement('div');
+              row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
+              row.innerHTML = `<span style="color: #fff;">${pName}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;">X</button>`;
+              row.querySelector('button').onclick = () => { gData.powers.splice(idx, 1); this.renderEntityGroupManager(); };
+              powersList.appendChild(row);
+          });
+          if ((gData.powers || []).length === 0) powersList.innerHTML = '<span style="color: #888; font-style: italic; font-size: 0.8rem; text-align: center;">No powers assigned.</span>';
+      }
+
+      const strSelect = document.getElementById('egm-strength-select');
+      if (strSelect && strSelect.onchange) strSelect.onchange();
+    }
   }
 
   setupLosModal() {
     const eng = this.engine;
-    if (!document.getElementById('los-edit-modal')) {
-      const modal = document.createElement('div');
-      modal.id = 'los-edit-modal';
-      modal.style.cssText = MODAL_BG_STYLE;
-      modal.innerHTML = `
-        <div style="background: #0b0e14; border: 2px solid #f1c40f; padding: 20px; border-radius: 8px; font-family: var(--font-mono); width: 250px;">
-          <h3 style="color: #f1c40f; margin-top: 0;">Edit Line of Sight</h3>
-          <div style="margin-bottom: 10px;">
-            <label style="color: #fff; display: block; margin-bottom: 5px;">Distance (px)</label>
-            <input type="number" id="edit-los-dist" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px;" value="400">
-          </div>
-          <div style="margin-bottom: 15px;">
-            <label style="color: #fff; display: block; margin-bottom: 5px;">FOV Angle (degrees)</label>
-            <input type="number" id="edit-los-angle" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px;" value="60">
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <button id="btn-save-los" class="btn-primary" style="flex: 1;">Save</button>
-            <button id="btn-close-los" class="btn-secondary" style="flex: 1;">Cancel</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-      document.getElementById('btn-close-los').onclick = () => modal.style.display = 'none';
-      document.getElementById('btn-save-los').onclick = () => {
+      document.getElementById('btn-close-los').onclick = () => this.losEditWindow.close();
+      const btnSaveLos = document.getElementById('btn-save-los');
+      if (btnSaveLos) btnSaveLos.onclick = () => {
         eng.devOptions.losDistance = parseInt(document.getElementById('edit-los-dist').value, 10) || 400;
         eng.devOptions.losAngle = parseInt(document.getElementById('edit-los-angle').value, 10) || 60;
         localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
-        modal.style.display = 'none';
+        this.losEditWindow.close();
       };
-    }
   }
 
   setupZoneManager() {
@@ -468,6 +1048,179 @@ export class DevToolsUIManager {
           console.error(e);
         }
       };
+  }
+
+  setupNeighborhoodManager() {
+      const eng = this.engine;
+
+      document.getElementById('btn-new-nh').onclick = () => {
+          document.getElementById('edit-nh-id').value = '';
+          document.getElementById('edit-nh-name').value = '';
+          document.getElementById('edit-nh-level').value = 1;
+          document.getElementById('edit-nh-intensity').value = 1;
+          ['minx','miny','minz','maxx','maxy','maxz'].forEach(k => document.getElementById(`edit-nh-${k}`).value = '');
+          this.currentNeighborhoodFactions = [];
+          this.renderNeighborhoodFactions();
+      };
+
+      const btnAddFw = document.getElementById('btn-nh-add-faction');
+      if (btnAddFw) btnAddFw.onclick = () => {
+          this.currentNeighborhoodFactions = this.currentNeighborhoodFactions || [];
+          this.currentNeighborhoodFactions.push({ faction: 'Civilian', weight: 0 });
+          this.renderNeighborhoodFactions();
+      };
+
+      document.getElementById('btn-nh-set-min').onclick = () => {
+          document.getElementById('edit-nh-minx').value = Math.round(eng.player.x);
+          document.getElementById('edit-nh-miny').value = Math.round(eng.player.y);
+          document.getElementById('edit-nh-minz').value = Math.round(eng.player.z || 0);
+      };
+
+      document.getElementById('btn-nh-set-max').onclick = () => {
+          document.getElementById('edit-nh-maxx').value = Math.round(eng.player.x);
+          document.getElementById('edit-nh-maxy').value = Math.round(eng.player.y);
+          document.getElementById('edit-nh-maxz').value = Math.round(eng.player.z || 0);
+      };
+
+      document.getElementById('btn-save-nh').onclick = () => {
+          const factionStr = document.getElementById('edit-nh-factions').value || '';
+          const factionWeights = [];
+          factionStr.split(',').forEach(part => {
+             const parts = part.split(':');
+             if (parts.length === 2 && parts[0] && parts[1]) {
+                 factionWeights.push({ faction: parts[0].trim(), weight: parseInt(parts[1], 10) || 1 });
+             }
+          });
+
+          const payload = {
+              id: document.getElementById('edit-nh-id').value || ('nh_' + Math.random().toString(36).substr(2, 9)),
+              zone: eng.currentZone || 'untitled',
+              name: document.getElementById('edit-nh-name').value.trim() || 'Unnamed Neighborhood',
+              baseLevel: parseInt(document.getElementById('edit-nh-level').value, 10) || 1,
+              intensity: parseInt(document.getElementById('edit-nh-intensity').value, 10) || 1,
+              factionWeights: factionWeights,
+              bounds: {
+                  minX: parseFloat(document.getElementById('edit-nh-minx').value) || 0,
+                  minY: parseFloat(document.getElementById('edit-nh-miny').value) || 0,
+                  minZ: parseFloat(document.getElementById('edit-nh-minz').value) || 0,
+                  maxX: parseFloat(document.getElementById('edit-nh-maxx').value) || 0,
+                  maxY: parseFloat(document.getElementById('edit-nh-maxy').value) || 0,
+                  maxZ: parseFloat(document.getElementById('edit-nh-maxz').value) || 0
+              }
+          };
+          eng.network.socket.emit('save_neighborhood', payload);
+
+          if (!eng.neighborhoods) eng.neighborhoods = [];
+          if (Array.isArray(eng.neighborhoods)) {
+              const idx = eng.neighborhoods.findIndex(n => n.id === payload.id);
+              if (idx !== -1) eng.neighborhoods[idx] = payload;
+              else eng.neighborhoods.push(payload);
+          } else {
+              eng.neighborhoods[payload.id] = payload;
+          }
+          this.renderNeighborhoodManager();
+          eng.ui.showSystemMessage('Neighborhood saved.');
+      };
+  }
+
+  renderNeighborhoodFactions() {
+      const list = document.getElementById('nh-factions-list');
+      const totalSpan = document.getElementById('nh-faction-total');
+      if (!list || !totalSpan) return;
+      list.innerHTML = '';
+      let total = 0;
+      let groupOptions = '';
+      const groups = Object.keys(this.entityGroupsData || {}).sort();
+      if (groups.length === 0) {
+          ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+      } else {
+          groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+      }
+      (this.currentNeighborhoodFactions || []).forEach((fw, idx) => {
+          total += (fw.weight || 0);
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; gap: 5px; align-items: center;';
+          row.innerHTML = `
+              <select class="b-select nh-fw-faction" style="flex: 2; font-size: 0.8rem; padding: 2px;">${groupOptions}</select>
+              <input type="number" class="b-input nh-fw-weight" value="${fw.weight}" style="flex: 1; font-size: 0.8rem; padding: 2px;" min="0" max="100">
+              <span style="color: var(--text-dim); font-size: 0.8rem;">%</span>
+              <button class="b-btn b-btn-danger btn-nh-fw-del" style="padding: 2px 8px; font-size: 0.8rem;">X</button>
+          `;
+          row.querySelector('.nh-fw-faction').value = fw.faction || '';
+          row.querySelector('.nh-fw-faction').onchange = (e) => { fw.faction = e.target.value; };
+          row.querySelector('.nh-fw-weight').oninput = (e) => {
+              fw.weight = parseInt(e.target.value, 10) || 0;
+              // Update total dynamically to prevent input unfocusing!
+              let newTotal = 0;
+              (this.currentNeighborhoodFactions || []).forEach(f => newTotal += (f.weight || 0));
+              if (totalSpan) {
+                  totalSpan.innerText = newTotal;
+                  totalSpan.style.color = newTotal === 100 ? '#2ecc71' : '#e74c3c';
+              }
+          };
+          row.querySelector('.btn-nh-fw-del').onclick = () => { this.currentNeighborhoodFactions.splice(idx, 1); this.renderNeighborhoodFactions(); };
+          list.appendChild(row);
+      });
+      totalSpan.innerText = total;
+      totalSpan.style.color = total === 100 ? '#2ecc71' : '#e74c3c';
+  }
+
+  renderNeighborhoodManager() {
+      const list = document.getElementById('nh-manager-list');
+      if (!list) return;
+      list.innerHTML = '';
+
+      let nhList = this.engine.neighborhoods;
+      if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
+
+      if (!nhList || nhList.length === 0) {
+          list.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-style: italic;">No neighborhoods in this zone.</div>';
+          return;
+      }
+
+      nhList.forEach(nh => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.85rem;';
+          row.innerHTML = `
+              <span style="color: #fff; font-weight: bold;">${nh.name} <span style="color:#aaa; font-size:0.75rem;">(Lv.${nh.baseLevel} / Int.${nh.intensity})</span></span>
+              <div>
+                  <button class="b-btn btn-secondary btn-dup-nh" style="padding: 2px 8px; font-size: 0.7rem; border-color: #3498db; color: #3498db;" title="Duplicate">⧉ Dup</button>
+                  <button class="b-btn btn-secondary btn-edit-nh" style="padding: 2px 8px; font-size: 0.7rem; border-color: #e056fd; color: #e056fd;">✎ Edit</button>
+                  <button class="b-btn btn-danger btn-del-nh" style="padding: 2px 8px; font-size: 0.7rem; border-color: #e74c3c; color: #e74c3c;">X</button>
+              </div>
+          `;
+          row.querySelector('.btn-dup-nh').onclick = () => {
+              this.currentNeighborhoodFactions = nh.factionWeights ? JSON.parse(JSON.stringify(nh.factionWeights)) : [];
+              this.renderNeighborhoodFactions();
+              document.getElementById('edit-nh-id').value = '';
+              document.getElementById('edit-nh-name').value = nh.name + ' (Copy)';
+              document.getElementById('edit-nh-level').value = nh.baseLevel;
+              document.getElementById('edit-nh-intensity').value = nh.intensity;
+              ['minX','minY','minZ','maxX','maxY','maxZ'].forEach(k => document.getElementById(`edit-nh-${k.toLowerCase()}`).value = nh.bounds[k]);
+              this.engine.ui.showSystemMessage('Neighborhood duplicated in editor. Click Save to commit as a new record.');
+          };
+          row.querySelector('.btn-edit-nh').onclick = () => {
+              this.currentNeighborhoodFactions = nh.factionWeights ? JSON.parse(JSON.stringify(nh.factionWeights)) : [];
+              this.renderNeighborhoodFactions();
+              document.getElementById('edit-nh-id').value = nh.id;
+              document.getElementById('edit-nh-name').value = nh.name;
+              document.getElementById('edit-nh-level').value = nh.baseLevel;
+              document.getElementById('edit-nh-intensity').value = nh.intensity;
+              ['minX','minY','minZ','maxX','maxY','maxZ'].forEach(k => document.getElementById(`edit-nh-${k.toLowerCase()}`).value = nh.bounds[k]);
+          };
+          row.querySelector('.btn-del-nh').onclick = () => {
+              if (confirm(`Delete Neighborhood: ${nh.name}?`)) {
+                  this.engine.network.socket.emit('delete_neighborhood', nh.id);
+                  if (Array.isArray(this.engine.neighborhoods)) {
+                      this.engine.neighborhoods = this.engine.neighborhoods.filter(n => n.id !== nh.id);
+                  } else {
+                      delete this.engine.neighborhoods[nh.id];
+                  }
+                  this.renderNeighborhoodManager();
+              }
+          };
+          list.appendChild(row);
+      });
   }
 
   async renderZoneManager() {
@@ -687,11 +1440,17 @@ export class DevToolsUIManager {
         document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
         document.getElementById('edit-npc-maxhp').value = npc.maxHp;
         document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
+        document.getElementById('edit-npc-battery').value = Math.floor(npc.synthEnergy || 1000);
         document.getElementById('edit-npc-x').value = Math.round(npc.x);
         document.getElementById('edit-npc-y').value = Math.round(npc.y);
         document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
         document.getElementById('edit-npc-type').value = npc.type || 'idle';
         document.getElementById('edit-npc-dir').value = npc.dir || 'down';
+        document.getElementById('edit-npc-group').value = npc.group || 'Civilian';
+        document.getElementById('edit-npc-respawn').value = npc.respawnRate || 0;
+        document.getElementById('edit-npc-level').value = npc.level || 1;
+        document.getElementById('edit-npc-strength').value = npc.strength || 0;
+        document.getElementById('edit-npc-aggro').value = npc.aggroRadius !== undefined ? npc.aggroRadius : 200;
 
         this.npcEditWindow.open();
       };
@@ -713,28 +1472,106 @@ export class DevToolsUIManager {
     });
   }
 
+  renderSpawnerManager() {
+    const list = document.getElementById('spawner-manager-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const btnCreate = document.createElement('button');
+    btnCreate.className = 'b-btn btn-primary';
+    btnCreate.style.cssText = 'width: 100%; margin-bottom: 10px; padding: 10px; font-weight: bold;';
+    btnCreate.innerText = '+ Create New Spawner Here';
+    btnCreate.onclick = () => {
+        this.engine.network.sendCreateSpawner({ x: this.engine.player.x, y: this.engine.player.y, z: this.engine.player.z || 0, maxActive: 0, npcType: 'none' });
+    };
+    list.appendChild(btnCreate);
+
+    if (!this.engine.spawners || this.engine.spawners.length === 0) return;
+
+    this.engine.spawners.forEach(s => {
+      const row = document.createElement('div');
+      row.style.cssText = NPC_ROW_STYLE; // Reuse same style
+      row.innerHTML = `
+        <button class="btn-edit btn-secondary" style="width: auto; height: auto; padding: 5px; border-color: #f39c12; color: #f39c12; font-weight: bold; margin-right: 5px; font-size: 0.9rem;">✎</button>
+        <div style="flex: 1.5; font-weight: bold; color: #2ecc71;">${s.name}</div>
+        <div style="flex: 1.5; display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 0.85rem;">
+          <span>X:${Math.round(s.x)} Y:${Math.round(s.y)} Z:${Math.round(s.z || 0)}</span>
+          <button class="btn-tp btn-secondary" style="padding: 2px 8px; font-size: 0.75rem; width: auto; height: auto;">TP</button>
+        </div>
+        <div style="flex: 1.5; font-family: var(--font-mono); font-size: 0.85rem; color: #aaa;">NPC: ${s.npcName} (${s.maxActive})</div>
+        <button class="btn-del btn-secondary" style="width: auto; height: auto; padding: 5px 10px; border-color: #ff4757; color: #ff4757; font-weight: bold;">X</button>
+      `;
+      row.querySelector('.btn-edit').onclick = () => {
+        document.getElementById('edit-spawner-uuid').value = s.uuid;
+        document.getElementById('edit-spawner-name').value = s.name;
+        document.getElementById('edit-spawner-mobpack').value = s.mobPack || '';
+        document.getElementById('edit-spawner-max').value = s.maxActive;
+        document.getElementById('edit-spawner-x').value = Math.round(s.x);
+        document.getElementById('edit-spawner-y').value = Math.round(s.y);
+        document.getElementById('edit-spawner-z').value = Math.round(s.z || 0);
+        document.getElementById('edit-spawner-radius').value = Math.round(s.radius);
+        document.getElementById('edit-spawner-rate').value = Math.round(s.respawnRate);
+        document.getElementById('edit-spawner-npcname').value = s.npcName;
+        document.getElementById('edit-spawner-group').value = s.npcGroup;
+        document.getElementById('edit-spawner-type').value = s.npcType;
+        document.getElementById('edit-spawner-lvlmin').value = s.levelMin;
+        document.getElementById('edit-spawner-lvlmax').value = s.levelMax;
+        document.getElementById('edit-spawner-strength').value = s.strength;
+        document.getElementById('edit-spawner-aggro').value = s.aggroRadius !== undefined ? s.aggroRadius : 500;
+        document.getElementById('edit-spawner-patrol').value = s.patrolRoute || '';
+        document.getElementById('edit-spawner-powers').value = (s.npcPowers || []).join(', ');
+
+        this.updateSpawnerEditNpcList(s.uuid);
+
+        this.spawnerEditWindow.open();
+      };
+      row.querySelector('.btn-tp').onclick = () => { this.engine.player.x = s.x; this.engine.player.y = s.y; this.engine.camera.x = s.x; this.engine.camera.y = s.y; };
+      row.querySelector('.btn-del').onclick = () => { if (confirm(`Delete Spawner: ${s.name}?`)) this.engine.network.sendDeleteSpawner(s.uuid); };
+      list.appendChild(row);
+    });
+  }
+
+  updateSpawnerEditNpcList(uuid = null) {
+      if (!uuid) uuid = document.getElementById('edit-spawner-uuid').value;
+      const npcListEl = document.getElementById('edit-spawner-npc-list');
+      if (!uuid || !npcListEl) return;
+
+      npcListEl.innerHTML = '';
+      const spawnerNpcs = this.engine.npcs.filter(n => n.spawnerUuid === uuid);
+      if (spawnerNpcs.length > 0) {
+          spawnerNpcs.forEach(npc => {
+              const r = document.createElement('div');
+              r.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; margin-bottom: 2px;';
+              r.innerHTML = `<span style="color: #fff; font-weight: bold;">${npc.name} <span style="color:#aaa; font-size:0.75rem;">(Lv.${npc.level || 1})</span></span>
+                             <button class="b-btn btn-secondary btn-edit-spawner-npc" style="padding: 2px 8px; font-size: 0.7rem; border-color: #e056fd; color: #e056fd;">✎ Edit</button>`;
+              r.querySelector('.btn-edit-spawner-npc').onclick = () => {
+                  this.engine.selectedTarget = { type: 'npc', id: npc.uuid };
+                  const editTargetBtn = document.getElementById('btn-dev-edit-target');
+                  if (editTargetBtn) editTargetBtn.click();
+              };
+              npcListEl.appendChild(r);
+          });
+      } else {
+          npcListEl.innerHTML = '<div style="text-align: center; color: #888; font-style: italic;">No active NPCs spawned.</div>';
+      }
+  }
+
   setupBuilderTools() {
     const eng = this.engine;
-    const builderPanel = document.getElementById('builder-panel');
+    const builderPanel = this.builderToolsWindow.element;
     if (builderPanel) {
-      builderPanel.style.width = '260px';
       builderPanel.style.display = eng.editMode ? 'flex' : 'none';
 
-      if (!builderPanel.querySelector('.dev-panel-header')) {
-        const header = document.createElement('div');
-        header.className = 'dev-panel-header';
-        header.style.cssText = HEADER_STYLE;
-        header.innerHTML = `<span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Builder Tools</span><button id="btn-close-builder" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>`;
-        builderPanel.insertBefore(header, builderPanel.firstChild);
-        this.ui.makeDraggable('builder-panel', '.dev-panel-header');
-      }
-      document.getElementById('btn-close-builder').onclick = () => {
-        if (eng.editMode) {
-          eng.chat.commandHandler.processCommand('/editmode');
-        } else {
-          builderPanel.style.display = 'none';
+      if (eng.clientSettings.lockBuilderPanel) {
+        const savedPos = localStorage.getItem('b_builder_pos');
+        if (savedPos) {
+          try { const pos = JSON.parse(savedPos); builderPanel.style.left = pos.left; builderPanel.style.top = pos.top; } catch(e) {}
         }
-      };
+      } else {
+        builderPanel.style.top = '70px';
+        builderPanel.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '290px' : '30px';
+        builderPanel.style.left = 'auto';
+      }
 
       const toggleBuilderOpt = (id, prop) => {
         const btn = document.getElementById(id);
@@ -750,62 +1587,44 @@ export class DevToolsUIManager {
         }
       };
 
-      ['btn-build-tile', 'btn-build-coords'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-      });
-
       toggleBuilderOpt('btn-build-chunk', 'showChunk');
       toggleBuilderOpt('btn-build-preview', 'useBlockPreview');
 
-      const toolsGroup = document.createElement('div');
-      toolsGroup.style.cssText = 'display: flex; flex-direction: column; gap: 5px; margin-top: 10px;';
-
-      const btnToggleGrid = document.createElement('button');
-      btnToggleGrid.className = eng.devOptions.showGrid ? 'btn-primary' : 'btn-secondary';
-      btnToggleGrid.style.cssText = 'width: 100%; border-color: #2ecc71; color: #2ecc71;';
+      const btnToggleGrid = document.getElementById('btn-toggle-grid');
+      if (btnToggleGrid) {
+      btnToggleGrid.className = eng.devOptions.showGrid ? 'b-btn btn-primary' : 'b-btn btn-secondary';
       btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
       btnToggleGrid.onclick = () => {
           eng.devOptions.showGrid = !eng.devOptions.showGrid;
-          btnToggleGrid.className = eng.devOptions.showGrid ? 'btn-primary' : 'btn-secondary';
+          btnToggleGrid.className = eng.devOptions.showGrid ? 'b-btn btn-primary' : 'b-btn btn-secondary';
           btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
           localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
       };
+      }
 
-      const btnToggleHotbar = document.createElement('button');
-      btnToggleHotbar.className = 'btn-secondary';
-      btnToggleHotbar.style.cssText = 'width: 100%; border-color: #3498db; color: #3498db;';
-      btnToggleHotbar.innerText = 'Toggle Texture Palette';
-      btnToggleHotbar.onclick = () => {
-          const hb = document.getElementById('builder-hotbar');
-          const ol = document.getElementById('object-library-panel');
-          if (hb) {
-              const isHidden = hb.style.display === 'none';
-              hb.style.display = isHidden ? 'flex' : 'none';
-              if (isHidden && ol) ol.style.display = 'none';
+      const btnToggleHotbar = document.getElementById('btn-toggle-hotbar');
+      if (btnToggleHotbar) {
+        btnToggleHotbar.onclick = () => {
+          const hb = this.texturePaletteWindow.element;
+          const ol = this.objectLibraryWindow.element;
+          const isHidden = hb.style.display === 'none';
+          if (isHidden) this.texturePaletteWindow.open(); else this.texturePaletteWindow.close();
+          if (isHidden && ol) this.objectLibraryWindow.close();
               this.updateBuildingMode();
-          }
       };
+      }
 
-      const btnToggleObjLib = document.createElement('button');
-      btnToggleObjLib.className = 'btn-secondary';
-      btnToggleObjLib.style.cssText = 'width: 100%; border-color: #9b59b6; color: #9b59b6;';
-      btnToggleObjLib.innerText = 'Toggle Object Library';
-      btnToggleObjLib.onclick = () => {
-          const hb = document.getElementById('builder-hotbar');
-          const ol = document.getElementById('object-library-panel');
-          if (ol) {
-              const isHidden = ol.style.display === 'none';
-              ol.style.display = isHidden ? 'flex' : 'none';
-              if (isHidden && hb) hb.style.display = 'none';
+      const btnToggleObjLib = document.getElementById('btn-toggle-objlib');
+      if (btnToggleObjLib) {
+        btnToggleObjLib.onclick = () => {
+          const hb = this.texturePaletteWindow.element;
+          const ol = this.objectLibraryWindow.element;
+          const isHidden = ol.style.display === 'none';
+          if (isHidden) this.objectLibraryWindow.open(); else this.objectLibraryWindow.close();
+          if (isHidden && hb) this.texturePaletteWindow.close();
               this.updateBuildingMode();
-          }
       };
-
-      toolsGroup.appendChild(btnToggleGrid);
-      toolsGroup.appendChild(btnToggleHotbar);
-      toolsGroup.appendChild(btnToggleObjLib);
-      builderPanel.appendChild(toolsGroup);
+      }
     }
 
     this.setupBuilderHotbar();
@@ -862,12 +1681,7 @@ export class DevToolsUIManager {
 
   setupObjectLibrary() {
     const eng = this.engine;
-    let objLibPanel = document.getElementById('object-library-panel');
-    if (!objLibPanel) {
-      objLibPanel = document.createElement('div');
-      objLibPanel.id = 'object-library-panel';
-      objLibPanel.className = 'dev-panel';
-      objLibPanel.style.cssText = 'position: absolute; width: 260px; background: rgba(5, 7, 10, 0.9); border: 2px solid #3498db; border-radius: 8px; display: none; flex-direction: column; padding: 10px; z-index: 1000; pointer-events: auto; resize: vertical; overflow: hidden;';
+    const objLibPanel = this.objectLibraryWindow.element;
 
       if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
           const savedPos = localStorage.getItem('b_objlib_pos');
@@ -882,19 +1696,13 @@ export class DevToolsUIManager {
           objLibPanel.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '570px' : '310px';
       }
 
-      const header = document.createElement('div');
-      header.className = 'dev-panel-header';
-      header.style.cssText = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; margin: -10px -10px 10px -10px; border-radius: 6px 6px 0 0;';
-      header.innerHTML = `<span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Object Library</span><button id="btn-close-objlib" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>`;
-      objLibPanel.appendChild(header);
-
-      const objLibGrid = document.createElement('div');
-      objLibGrid.style.cssText = 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding-top: 5px; overflow-y: scroll; flex-grow: 1; min-height: 168px; padding-right: 5px; align-content: start;';
+      const objLibGrid = document.getElementById('obj-lib-grid');
+      if (objLibGrid) {
 
       for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
         const btnObj = document.createElement('button');
         btnObj.id = `btn-obj-${id}`;
-        btnObj.className = 'btn-secondary';
+        btnObj.className = 'b-btn btn-secondary';
         btnObj.innerHTML = `
           <img src="models/icons/${id}.png" style="width: 24px; height: 24px; object-fit: contain; image-rendering: pixelated;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
           <span style="display:none; font-size: 0.9rem; font-weight: bold; color: #fff;">${data.name.substring(0, 2).toUpperCase()}</span>
@@ -960,32 +1768,18 @@ export class DevToolsUIManager {
         };
         objLibGrid.appendChild(btnObj);
       }
-
-      objLibPanel.appendChild(objLibGrid);
-      this.appendColorPicker(objLibPanel);
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) {
-        gameScreen.appendChild(objLibPanel);
-      } else {
-        document.body.appendChild(objLibPanel);
       }
 
-      document.getElementById('btn-close-objlib').onclick = () => {
-          objLibPanel.style.display = 'none';
-          this.updateBuildingMode();
-      };
-      this.ui.makeDraggable('object-library-panel', '.dev-panel-header');
-    }
+      const colorPickerContainer = document.getElementById('obj-lib-color-picker');
+      if (colorPickerContainer) {
+        this.appendColorPicker(colorPickerContainer);
+      }
   }
 
   setupBuilderHotbar() {
     const eng = this.engine;
-    const builderHotbar = document.getElementById('builder-hotbar');
-    if (!builderHotbar) return;
+    const builderHotbar = this.texturePaletteWindow.element;
 
-      builderHotbar.innerHTML = '';
-
-      builderHotbar.style.position = 'absolute';
       if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
         const savedPos = localStorage.getItem('b_hotbar_pos');
         if (savedPos) {
@@ -1001,25 +1795,6 @@ export class DevToolsUIManager {
         builderHotbar.style.top = '280px';
         builderHotbar.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '290px' : '30px';
       }
-      builderHotbar.style.bottom = 'auto';
-      builderHotbar.style.background = 'rgba(5, 7, 10, 0.9)';
-      builderHotbar.style.border = '2px solid #3498db';
-      builderHotbar.style.borderRadius = '8px';
-      builderHotbar.style.pointerEvents = 'auto';
-      builderHotbar.style.display = 'none';
-      builderHotbar.style.flexDirection = 'column';
-      builderHotbar.style.padding = '10px';
-      builderHotbar.style.gap = '10px';
-      builderHotbar.style.zIndex = '1000';
-      builderHotbar.style.width = '260px';
-      builderHotbar.style.resize = 'vertical';
-      builderHotbar.style.overflow = 'hidden';
-
-      const header = document.createElement('div');
-      header.className = 'dev-panel-header';
-      header.style.cssText = HOTBAR_HEADER_STYLE;
-      header.innerHTML = `<span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Texture Palette</span>`;
-      builderHotbar.appendChild(header);
 
       let builderTooltip = document.getElementById('builder-tooltip');
       if (!builderTooltip) {
@@ -1106,10 +1881,9 @@ export class DevToolsUIManager {
         builderTooltip.style.top = (e.clientY + 15) + 'px';
       };
 
-    const controlsContainer = document.createElement('div');
-    controlsContainer.style.display = 'flex';
-    controlsContainer.style.flexDirection = 'column';
-    controlsContainer.style.gap = '5px';
+    const controlsContainer = document.getElementById('hotbar-controls-container');
+    const tabsContainer = document.getElementById('builder-tabs-container');
+    const gridsWrapper = document.getElementById('hotbar-grids-wrapper');
 
     this.appendColorPicker(controlsContainer);
 
@@ -1126,12 +1900,6 @@ export class DevToolsUIManager {
       eng.editShapeBase = e.target.value;
       updateShapeUI();
     };
-
-    const axisBtn = document.createElement('button');
-    axisBtn.id = 'build-axis-btn';
-    axisBtn.className = 'btn-secondary';
-    axisBtn.style.cssText = 'padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: #e74c3c; color: #e74c3c; min-width: 40px;';
-    axisBtn.innerText = 'Axis: X/Y';
 
     const dirBtn = document.createElement('button');
     dirBtn.id = 'build-dir-btn';
@@ -1161,7 +1929,6 @@ export class DevToolsUIManager {
     uvBtn.title = 'Toggle Texture Mapping (Seamless Box UV / Blockbench Mesh UV)';
 
     shapeContainer.appendChild(shapeBtn);
-    shapeContainer.appendChild(axisBtn);
     shapeContainer.appendChild(relBtn);
     shapeContainer.appendChild(dirBtn);
     shapeContainer.appendChild(flipBtn);
@@ -1175,10 +1942,7 @@ export class DevToolsUIManager {
     fluidBtn.innerText = 'Fluid State: STILL';
     controlsContainer.appendChild(fluidBtn);
 
-    builderHotbar.appendChild(controlsContainer);
-
     setupTooltip(shapeBtn, 'Select Block Shape');
-    setupTooltip(axisBtn, 'Toggle Drag Selection Axis (Horizontal X/Y vs Vertical Z)');
     setupTooltip(dirBtn, 'Cycle Block Direction (N, E, S, W)');
     setupTooltip(relBtn, 'Toggle Player-Relative Rotation');
     setupTooltip(fluidBtn, 'Toggle Fluid State (Still / Flow)');
@@ -1188,14 +1952,7 @@ export class DevToolsUIManager {
     eng.editShapeRelative = false;
     eng.editShapeFlip = false;
     eng.editShapeUV = 'auto'; // 'auto', 'mesh', 'box'
-    eng.editDragAxis = 'horizontal';
     eng.editFluid = 'still';
-
-    axisBtn.onclick = () => {
-        eng.editDragAxis = eng.editDragAxis === 'horizontal' ? 'vertical' : 'horizontal';
-        axisBtn.innerText = eng.editDragAxis === 'horizontal' ? 'Axis: X/Y' : 'Axis: Z';
-        axisBtn.style.background = eng.editDragAxis === 'vertical' ? 'rgba(231, 76, 60, 0.2)' : 'transparent';
-    };
 
     fluidBtn.onclick = () => {
         eng.editFluid = eng.editFluid === 'still' ? 'flow' : 'still';
@@ -1319,13 +2076,6 @@ export class DevToolsUIManager {
     };
     this.updateShapeUI = updateShapeUI;
     updateShapeUI();
-
-    const tabsContainer = document.createElement('div');
-    tabsContainer.id = 'builder-tabs-container';
-    tabsContainer.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 5px; margin-bottom: 5px;';
-
-    const gridsWrapper = document.createElement('div');
-    gridsWrapper.style.cssText = 'position: relative; overflow-y: scroll; flex-grow: 1; min-height: 168px; padding-right: 5px;';
 
     const categories = {};
     const addCategory = (id, name) => {
@@ -1469,7 +2219,7 @@ export class DevToolsUIManager {
             }
 
             if (eng.selectedTiles.length > 0) {
-              const isErase = slot.dataset.tex === 'erase' || eng.input.keys['shift'];
+              const isErase = slot.dataset.tex === 'erase' || eng.input.isActionDown('buildDelete');
               let placeShape = eng.editShape || 'cube';
               if (placeShape.endsWith('_player')) {
                 const base = placeShape.split('_')[0];
@@ -1611,11 +2361,6 @@ export class DevToolsUIManager {
       ensureSlot('lines', 'line-edge-end-1', 'url("assets/tiles/base/all-facing/line-edge-end-1.png") center/cover', '', 'Line (Edge End 1)');
       ensureSlot('lines', 'line-edge-end-2', 'url("assets/tiles/base/all-facing/line-edge-end-2.png") center/cover', '', 'Line (Edge End 2)');
 
-
-      builderHotbar.appendChild(tabsContainer);
-      builderHotbar.appendChild(gridsWrapper);
-      this.ui.makeDraggable('builder-hotbar', '.dev-panel-header');
-
       if (categories['naturals']) categories['naturals'].btn.click();
       const firstSlot = gridsWrapper.querySelector('.hotbar-slot[data-tex="stone"]');
       if (firstSlot) firstSlot.click();
@@ -1624,6 +2369,15 @@ export class DevToolsUIManager {
   setupPlayerManager() {
     const eng = this.engine;
     document.getElementById('pm-search-input').addEventListener('input', () => this.renderPlayerManager());
+
+    let pmCtx = document.getElementById('player-manager-ctx');
+    if (!pmCtx) {
+      pmCtx = document.createElement('div');
+      pmCtx.id = 'player-manager-ctx';
+      pmCtx.style.cssText = 'position: fixed; background: rgba(5,7,10,0.95); border: 1px solid #3498db; border-radius: 4px; padding: 5px; display: none; flex-direction: column; gap: 5px; z-index: 100000; font-family: var(--font-mono); font-size: 0.9rem; min-width: 120px;';
+      document.body.appendChild(pmCtx);
+      document.addEventListener('click', () => { if (pmCtx.style.display === 'flex') pmCtx.style.display = 'none'; });
+    }
   }
 
   renderPlayerManager() {
@@ -1698,6 +2452,29 @@ export class DevToolsUIManager {
 
       row.querySelector('.btn-edit').onclick = () => {
         this.engine.network.sendRequestPlayerData(p.name);
+      };
+
+      row.oncontextmenu = (e) => {
+          e.preventDefault();
+          const pmCtx = document.getElementById('player-manager-ctx');
+          if (!pmCtx) return;
+          pmCtx.innerHTML = `
+            <button class="btn-secondary" id="pm-ctx-copy-name" style="text-align: left; padding: 5px; border: none; background: transparent; color: #fff; cursor: pointer;">Copy Name</button>
+            <button class="btn-secondary" id="pm-ctx-copy-uuid" style="text-align: left; padding: 5px; border: none; background: transparent; color: #fff; cursor: pointer;">Copy Account UUID</button>
+          `;
+          pmCtx.style.left = e.clientX + 'px';
+          pmCtx.style.top = e.clientY + 'px';
+          pmCtx.style.display = 'flex';
+
+          document.getElementById('pm-ctx-copy-name').onclick = () => {
+            navigator.clipboard.writeText(p.name);
+            this.engine.ui.showSystemMessage('Copied name to clipboard: ' + p.name);
+          };
+          document.getElementById('pm-ctx-copy-uuid').onclick = () => {
+            const uuidToCopy = p.accountUuid || 'Unknown UUID';
+            navigator.clipboard.writeText(uuidToCopy);
+            this.engine.ui.showSystemMessage('Copied UUID to clipboard: ' + uuidToCopy);
+          };
       };
 
       list.appendChild(row);

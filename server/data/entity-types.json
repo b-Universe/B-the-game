@@ -1,0 +1,20 @@
+{
+  "generic": {
+    "hpMult": 1,
+    "dmgMult": 1,
+    "expMult": 1,
+    "isTargetable": true
+  },
+  "civilian": {
+    "hpMult": 1,
+    "dmgMult": 1,
+    "expMult": 1,
+    "isTargetable": true
+  },
+  "trainer": {
+    "hpMult": 1,
+    "dmgMult": 1,
+    "expMult": 1,
+    "isTargetable": false
+  }
+}

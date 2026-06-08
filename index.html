@@ -6,8 +6,20 @@
   <title>B - The Arrival</title>
   <link rel="stylesheet" href="css/themes.css">
   <link rel="stylesheet" href="css/ui.css">
+  <style>
+
+    #btn-login-music {
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    #btn-login-music:hover {
+      transform: scale(1.15) !important;
+      background: rgba(52, 152, 219, 0.4) !important;
+      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4) !important;
+    }
+  </style>
 </head>
 <body>
+  <button id="btn-login-music" class="btn-secondary" style="position: absolute; bottom: 20px; right: 20px; font-size: 1.5rem; padding: 8px 12px; background: rgba(5,7,10,0.8); border: 2px solid #3498db; border-radius: 6px; color: #fff; cursor: pointer; z-index: 100000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" title="Music Volume">🔉</button>
   <div id="game-container">
     <section id="creation-screen" class="ui-screen">
       <div class="screen-scaler">
@@ -35,6 +47,7 @@
           </div>
 
           <button id="btn-main" class="btn-primary">Login</button>
+          <button id="btn-guest" class="btn-secondary" style="margin-top: 10px;">Continue as Guest</button>
           <p class="toggle-text">Don't Have An Account? <span id="toggle-auth">Sign Up!</span></p>
           <button id="btn-dev-skip" class="btn-secondary" style="margin-top: 15px; width: 100%;">Dev: Skip To Creator</button>
         </div>
@@ -217,5 +230,39 @@
   </div>
 
   <script type="module" src="src/ui/creator.js?v=cache-bust-005"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnMusic = document.getElementById('btn-login-music');
+      if (btnMusic) {
+        const volSequence = [0, 0.25, 0.5, 0.75];
+        const iconSequence = ['🔇', '🔈', '🔉', '🔊'];
+        let currentVolIndex = 2; // Default to 50%
+        let isFirstClick = true;
+
+        // Recover from cache if returning
+        const savedVol = localStorage.getItem('b_login_volume');
+        if (savedVol !== null) {
+           const parsed = parseFloat(savedVol);
+           currentVolIndex = volSequence.indexOf(parsed);
+           if (currentVolIndex === -1) currentVolIndex = 2;
+           isFirstClick = false; // They've previously modified settings
+        }
+
+        const updateAudio = () => {
+           btnMusic.innerText = iconSequence[currentVolIndex];
+           localStorage.setItem('b_login_volume', volSequence[currentVolIndex]);
+           if (window.app && window.app.menuAudio && typeof window.app.menuAudio.setVolume === 'function') {
+               window.app.menuAudio.setVolume(volSequence[currentVolIndex]);
+           }
+        };
+
+        btnMusic.onclick = () => {
+           if (isFirstClick) { currentVolIndex = 0; isFirstClick = false; }
+           else { currentVolIndex = (currentVolIndex + 1) % volSequence.length; }
+           updateAudio();
+        };
+      }
+    });
+  </script>
 </body>
 </html>

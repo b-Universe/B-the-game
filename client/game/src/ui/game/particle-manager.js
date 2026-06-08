@@ -26,6 +26,33 @@ export class ParticleManager {
     this.vec2 = new THREE.Vector3();
     this.activeProjs = new Set();
     this.projectilePool = [];
+
+    // Pre-initialize particle mesh to prevent mid-frame shader compilation stutter
+    this.initParticleMesh();
+  }
+
+  initParticleMesh() {
+    const pGeo = new THREE.PlaneGeometry(1, 1);
+    const packedUVs = new Uint32Array(this.poolSize * 3);
+    pGeo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(packedUVs, 3));
+
+    const packedColor = new Uint32Array(this.poolSize);
+    pGeo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(packedColor, 1));
+
+    const packedData = new Uint32Array(this.poolSize);
+    packedData.fill(63);
+    pGeo.setAttribute('packedData', new THREE.InstancedBufferAttribute(packedData, 1));
+
+    const pMat = this.renderer.instancedMaterial.clone();
+    pMat.onBeforeCompile = this.renderer.instancedMaterial.onBeforeCompile;
+    pMat.side = THREE.DoubleSide;
+    pMat.transparent = true;
+    pMat.alphaTest = 0.1;
+    this.renderer.particleMesh = new THREE.InstancedMesh(pGeo, pMat, this.poolSize);
+    this.renderer.particleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.particleMesh.frustumCulled = false;
+    this.renderer.particleMesh.count = 0;
+    this.renderer.scene.add(this.renderer.particleMesh);
   }
 
   spawn(opts) {
@@ -104,7 +131,8 @@ export class ParticleManager {
     this.activeProjs.clear();
 
     engine.projectiles.forEach((proj, idx) => {
-      const id = `proj_${idx}`;
+      if (!proj.id) proj.id = proj.uuid || `proj_${Math.random().toString(36).substr(2, 9)}`;
+      const id = proj.id;
       this.activeProjs.add(id);
 
       let group = renderer.projectileMeshes.get(id);
@@ -115,32 +143,20 @@ export class ParticleManager {
         } else {
           group = new THREE.Group();
 
-          if (!renderer.baseProjectileMaterial) {
-              renderer.baseProjectileMaterial = new THREE.MeshPhongMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide, shininess: 0 });
-              renderer.baseProjectileMaterial.onBeforeCompile = (shader) => {
-                shader.vertexShader = shader.vertexShader.replace(
-                  '#include <defaultnormal_vertex>',
-                  `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
-                );
-              };
-              renderer.baseProjectileMaterial.customProgramCacheKey = () => 'baseProjMat';
-          }
-
-          const mat = renderer.baseProjectileMaterial.clone();
-          mat.onBeforeCompile = renderer.baseProjectileMaterial.onBeforeCompile;
-          mat.customProgramCacheKey = renderer.baseProjectileMaterial.customProgramCacheKey;
+          const mat = (renderer.baseProjectileMaterial || renderer.baseEntityMaterial).clone();
+          mat.onBeforeCompile = (renderer.baseProjectileMaterial || renderer.baseEntityMaterial).onBeforeCompile;
+          mat.customProgramCacheKey = (renderer.baseProjectileMaterial || renderer.baseEntityMaterial).customProgramCacheKey;
 
           const geo = new THREE.PlaneGeometry(1, 1);
           const sprite = new THREE.Mesh(geo, mat);
-          sprite.castShadow = engine.clientSettings.enableShadows !== false;
+          sprite.castShadow = false;
           sprite.receiveShadow = true;
           sprite.frustumCulled = false;
           group.add(sprite);
           group.userData.sprite = sprite;
 
           const shadowGeo = new THREE.CircleGeometry(6, 16);
-          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
-          const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+          const shadow = new THREE.Mesh(shadowGeo, renderer.commonShadowMat);
           group.add(shadow);
           group.userData.shadow = shadow;
 
@@ -188,7 +204,15 @@ export class ParticleManager {
       proj.lastY = proj.y;
       proj.lastZ = proj.z;
 
-      sprite.scale.set(64, 64, 1);
+      if (proj.isLaser) {
+          sprite.scale.set(120, 6, 1);
+          sprite.material.color.setHex(0x000000);
+          sprite.material.emissive.setStyle(proj.trailColor || '#f39c12');
+      } else {
+          sprite.scale.set(64, 64, 1);
+          sprite.material.color.setHex(0xffffff);
+          sprite.material.emissive.setHex(0x000000);
+      }
 
       sprite.quaternion.copy(renderer.camera.quaternion);
       sprite.rotateZ(rotAngle);
@@ -225,22 +249,30 @@ export class ParticleManager {
 
       sprite.position.set(0, 0, offsetZ);
 
-      const tex = renderer.assetManager.textures[seqId] || renderer.assetManager.textures['proj_airplane'];
+      const tex = proj.isLaser ? renderer.dummyTexture : (renderer.assetManager.textures[seqId] || renderer.assetManager.textures['proj_airplane']);
       if (tex) {
         if (sprite.userData.mapUuid !== tex.uuid) {
+          if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+              sprite.material.map.dispose();
+          }
           sprite.material.map = tex.clone();
+          if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
           sprite.userData.mapUuid = tex.uuid;
-          sprite.userData.tex = seqId;
-          sprite.material.needsUpdate = true;
+          sprite.userData.tex = proj.isLaser ? 'laser' : seqId;
         }
-        const frameIndex = Math.floor(performance.now() / animSpeed) % frameCount;
 
-        if (isLeft) {
-          sprite.material.map.repeat.set(1 / frameCount, -1);
-          sprite.material.map.offset.set(frameIndex / frameCount, 1);
+        if (!proj.isLaser) {
+            const frameIndex = Math.floor(performance.now() / animSpeed) % frameCount;
+            if (isLeft) {
+              sprite.material.map.repeat.set(1 / frameCount, -1);
+              sprite.material.map.offset.set(frameIndex / frameCount, 1);
+            } else {
+              sprite.material.map.repeat.set(1 / frameCount, 1);
+              sprite.material.map.offset.set(frameIndex / frameCount, 0);
+            }
         } else {
-          sprite.material.map.repeat.set(1 / frameCount, 1);
-          sprite.material.map.offset.set(frameIndex / frameCount, 0);
+            sprite.material.map.repeat.set(1, 1);
+            sprite.material.map.offset.set(0, 0);
         }
       }
     });
@@ -259,31 +291,12 @@ export class ParticleManager {
     const engine = renderer.engine;
 
     if (this.activeCount === 0) {
-      if (renderer.particleMesh) renderer.particleMesh.count = 0;
+      if (renderer.particleMesh) {
+        renderer.particleMesh.count = 1; // Preserve 1 invisible instance to force shader compilation
+        renderer.particleMesh.setMatrixAt(0, new THREE.Matrix4().makeScale(0, 0, 0));
+        renderer.particleMesh.instanceMatrix.needsUpdate = true;
+      }
       return;
-    }
-
-    if (!renderer.particleMesh) {
-      const pGeo = new THREE.PlaneGeometry(1, 1);
-      const packedUVs = new Uint32Array(this.poolSize * 3);
-      pGeo.setAttribute('packedUVs', new THREE.InstancedBufferAttribute(packedUVs, 3));
-
-      const packedColor = new Uint32Array(this.poolSize);
-      pGeo.setAttribute('packedColor', new THREE.InstancedBufferAttribute(packedColor, 1));
-
-      const packedData = new Uint32Array(this.poolSize);
-      packedData.fill(63);
-      pGeo.setAttribute('packedData', new THREE.InstancedBufferAttribute(packedData, 1));
-
-      const pMat = renderer.instancedMaterial.clone();
-      pMat.onBeforeCompile = renderer.instancedMaterial.onBeforeCompile;
-      pMat.side = THREE.DoubleSide;
-      pMat.transparent = true;
-      pMat.alphaTest = 0.1;
-      renderer.particleMesh = new THREE.InstancedMesh(pGeo, pMat, this.poolSize);
-      renderer.particleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      renderer.particleMesh.frustumCulled = false;
-      renderer.scene.add(renderer.particleMesh);
     }
 
     const dummy = this.dummy;
