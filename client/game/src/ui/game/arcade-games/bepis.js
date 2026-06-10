@@ -26,8 +26,14 @@ export class BepisVM {
     this.ctx = virtualScreen.ctx;
     this.audio = audio;
     this.engine = engine;
-    this.width = virtualScreen.canvas.width;
-    this.height = virtualScreen.canvas.height;
+    this.canvasWidth = virtualScreen.canvas.width;
+    this.canvasHeight = virtualScreen.canvas.height;
+    this.width = 256;
+    this.height = 256;
+    this.handlesCRT = true; // Tell the arcade system we will manually handle our own CRT overlay to protect the frame
+
+    this.frameImg = new Image();
+    this.frameImg.src = 'assets/images/ui/arcade-cabinets/bepis-frame.png';
 
     this.tileSize = 16;
     this.cols = 10;
@@ -340,7 +346,15 @@ export class BepisVM {
 
   draw() {
     this.ctx.fillStyle = '#0b0e14';
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    this.ctx.save();
+    this.ctx.translate(44, 44);
+    this.ctx.scale(168 / 256, 168 / 256);
+
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, this.width, this.height);
+    this.ctx.clip();
 
     if (this.gameState === 'title') {
       this.ctx.fillStyle = '#f1c40f';
@@ -360,6 +374,16 @@ export class BepisVM {
         this.ctx.fillText(`HIGH SCORE: ${hs.score}`, this.width / 2, 30);
         this.ctx.fillStyle = '#aaa';
         this.ctx.fillText(`BY ${hs.player}`, this.width / 2, 45);
+      }
+
+      this.ctx.restore();
+
+      if (this.engine.clientSettings.enableArcadeCRT !== false) {
+        this.screen.drawCRTEffect();
+      }
+
+      if (this.frameImg && this.frameImg.complete) {
+        this.ctx.drawImage(this.frameImg, 0, 0, this.canvasWidth, this.canvasHeight);
       }
       return;
     }
@@ -483,6 +507,16 @@ export class BepisVM {
         this.ctx.font = 'bold 12px monospace';
         this.ctx.fillText('PRESS SPACE', this.width / 2, this.height / 2 + 20);
       }
+    }
+
+    this.ctx.restore();
+
+    if (this.engine.clientSettings.enableArcadeCRT !== false) {
+      this.screen.drawCRTEffect();
+    }
+
+    if (this.frameImg && this.frameImg.complete) {
+      this.ctx.drawImage(this.frameImg, 0, 0, this.canvasWidth, this.canvasHeight);
     }
   }
 }

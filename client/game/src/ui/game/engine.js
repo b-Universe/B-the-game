@@ -1148,7 +1148,7 @@ export class GameEngine {
     if (this.renderer.debugCtx) {
       if (this.clientSettings.showMinimap && (!this.mapOverlay || !this.mapOverlay.active)) {
         this.minimap.draw(this.renderer.debugCtx);
-      } F
+      }
       if (this.mapOverlay && this.mapOverlay.active) {
         this.mapOverlay.draw(this.renderer.debugCtx);
         this.mapOverlay.drawBorder(this.renderer.debugCtx);
