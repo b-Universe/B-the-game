@@ -50,7 +50,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
           setTimeout(() => {
             const p = activePlayers[socket.id]; if (!p || !p.zone || p.state === 'death' || !p.activePowers || !p.activePowers.includes('satelite-support')) return;
             const droneId = randomUUID();
-            const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: p.name, x: p.x, y: p.y, z: (p.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: i, orbitOffset: (i / numDrones) * Math.PI * 2 + (Math.random() * Math.PI), hp: hasUpgradeRobot ? 150 : 100, maxHp: hasUpgradeRobot ? 150 : 100, type: 'drone', isCombatDrone: i === 1, isAssaultDrone: i === 2, isUpgraded: hasUpgradeRobot, zone: p.zone };
+            const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: p.name, x: p.x, y: p.y, z: (p.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: i, orbitOffset: (i / numDrones) * Math.PI * 2 + (Math.random() * Math.PI), hp: hasUpgradeRobot ? 150 : 100, maxHp: hasUpgradeRobot ? 150 : 100, type: 'drone', isCombatDrone: i === 1, isAssaultDrone: i === 2, isUpgraded: hasUpgradeRobot, zone: p.zone, level: p.level || 1, strength: -2 };
             activeDrones[droneId] = newDrone; io.to(p.zone).emit('drone_spawned', newDrone);
           }, delay); delay += 500;
         }
@@ -117,8 +117,12 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
 
   socket.on('map_update', (updates) => {
     const player = activePlayers[socket.id]; if (!player) return;
-    const pName = player.name.toLowerCase(); const perms = permissionsCatalog['editmode'] || [];
-    if (!perms.includes('*') && !perms.includes(pName)) { logSystem(`UNAUTHORIZED BULK MAP UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
+    const pName = player.name.toLowerCase();
+    const hasPerm = ['editmode', 'builder', 'dev', 'admin'].some(role => {
+        const p = permissionsCatalog[role] || [];
+        return p.includes('*') || p.includes(pName);
+    });
+    if (!hasPerm) { logSystem(`UNAUTHORIZED BULK MAP UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
     if (!Array.isArray(updates)) return;
     const updatedChunks = new Set(); const zone = player.zone; if (!zone) return;
     updates.forEach(u => {
@@ -145,7 +149,12 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
 
   socket.on('update_block', (payload) => {
     const player = activePlayers[socket.id]; if (!player) return;
-    const pName = player.name.toLowerCase(); const perms = permissionsCatalog['editmode'] || []; if (!perms.includes('*') && !perms.includes(pName)) { logSystem(`UNAUTHORIZED BLOCK UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
+    const pName = player.name.toLowerCase();
+    const hasPerm = ['editmode', 'builder', 'dev', 'admin'].some(role => {
+        const p = permissionsCatalog[role] || [];
+        return p.includes('*') || p.includes(pName);
+    });
+    if (!hasPerm) { logSystem(`UNAUTHORIZED BLOCK UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
     if (!player.zone) return; const zone = player.zone; const { worldX, worldY, worldZ, voxelData } = payload;
     const localX = Math.round(worldX / 32); const localY = Math.round(worldY / 32); const localZ = Math.round(worldZ / 32);
     const cx = Math.floor(localX / 32); const cy = Math.floor(localY / 32); const chunkId = `chunk_${cx}_${cy}`; const tileKey = `${localX}_${localY}_${localZ}`;

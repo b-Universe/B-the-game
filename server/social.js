@@ -14,7 +14,7 @@ module.exports = function registerSocialSockets(socket, io, state, deps) {
         } else if (data.type === 'pm') {
           let targetId = null; let targetPlayer = null;
           for (let id in activePlayers) { if (activePlayers[id].name.toLowerCase() === data.target.toLowerCase()) { targetId = id; targetPlayer = activePlayers[id]; break; } }
-          if (targetId) { io.to(targetId).emit('chat_message', { type: 'pm', name: `From [${player.name}]`, text: data.text }); if (targetPlayer.isAFK) { const afkReply = targetPlayer.afkMessage || `Away from keyboard.`; socket.emit('chat_message', { type: 'system', name: 'System', text: `${targetPlayer.name} is AFK: ${afkReply}` }); } } else { socket.emit('chat_message', { type: 'system', name: 'System', text: `Player ${data.target} not found.` }); }
+          if (targetId) { io.to(targetId).emit('chat_message', { type: 'pm', name: `From [${player.name}]`, text: data.text }); if (targetPlayer.isAFK) { const afkReply = targetPlayer.afkMessage || `Away from keyboard.`; socket.emit('system_dialog', `${targetPlayer.name} is AFK: ${afkReply}`); } } else { socket.emit('system_dialog', `Player ${data.target} not found.`); }
         } else {
           socket.to(player.zone || 'untitled').emit('chat_message', payload);
         }

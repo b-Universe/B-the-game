@@ -1,3 +1,28 @@
+import { BaseWindow } from '../base-window.js?v=cache-bust-005';
+
+class PlayerSearchWindow extends BaseWindow {
+  constructor() {
+    super('player-search-window', 'Player Search', { width: 350, height: 450, x: 100, y: 100 });
+    this.setContent(`
+      <div style="display: flex; flex-direction: column; height: 100%; gap: 10px; padding: 5px;">
+        <div style="display: flex; gap: 10px;">
+           <input type="text" id="pl-search-input" class="b-input" placeholder="Search by name..." style="flex: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); color: #fff; padding: 5px; border-radius: 4px; font-family: var(--font-mono);">
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--text-dim); padding-bottom: 5px; font-size: 0.85rem; color: var(--accent-neon, #3498db); font-weight: bold; font-family: var(--font-header);">
+           <span style="flex: 2;">Name</span>
+           <span style="flex: 1; text-align: center;">Level</span>
+           <span style="flex: 1; text-align: right;">Status</span>
+        </div>
+        <div id="player-list-content" style="display: flex; flex-direction: column; gap: 5px; flex-grow: 1; overflow-y: auto; padding-right: 5px; height: 280px;">
+        </div>
+        <div style="border-top: 1px solid var(--text-dim); padding-top: 10px; font-size: 0.8rem; color: #aaa; text-align: right; font-family: var(--font-mono);">
+           Online: <span id="player-list-count">0</span>
+        </div>
+      </div>
+    `);
+  }
+}
+
 export class PlayerListUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;
@@ -27,53 +52,32 @@ export class PlayerListUIManager {
       }
     }
 
-    let panel = document.getElementById('player-list-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'player-list-panel';
-      panel.style.cssText = 'position: absolute; top: 80px; right: 300px; width: 220px; background: rgba(5, 7, 10, 0.9); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; z-index: 1000; font-family: var(--font-mono); box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
+    this.searchWindow = new PlayerSearchWindow();
 
-      panel.innerHTML = `
-        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none;">
-          <span style="color: #fff; font-weight: bold; font-size: 0.9rem;">Players Online (<span id="player-list-count">0</span>)</span>
-          <button id="btn-close-player-list" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; padding: 0 5px;">X</button>
-        </div>
-        <div id="player-list-content" style="padding: 10px; display: flex; flex-direction: column; gap: 5px; max-height: 300px; overflow-y: auto;">
-        </div>
-      `;
-
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) {
-        gameScreen.appendChild(panel);
-      } else {
-        document.body.appendChild(panel);
-      }
-
-      document.getElementById('btn-close-player-list').onclick = () => this.togglePanel();
-
-      this.ui.makeDraggable('player-list-panel', '.dev-panel-header');
+    const searchInput = document.getElementById('pl-search-input');
+    if (searchInput) {
+       searchInput.addEventListener('input', () => this.updateList());
     }
   }
 
   togglePanel() {
-    const panel = document.getElementById('player-list-panel');
-    if (panel) {
-      if (panel.style.display === 'none') {
-        panel.style.display = 'flex';
-        this.updateList();
-      } else {
-        panel.style.display = 'none';
-      }
+    if (this.searchWindow.element.style.display === 'none') {
+      this.searchWindow.open();
+      this.updateList();
+    } else {
+      this.searchWindow.close();
     }
   }
 
   updateList() {
-    const panel = document.getElementById('player-list-panel');
-    if (!panel || panel.style.display === 'none') return;
+    if (this.searchWindow.element.style.display === 'none') return;
 
     const content = document.getElementById('player-list-content');
     const countEl = document.getElementById('player-list-count');
     if (!content) return;
+
+    const searchInput = document.getElementById('pl-search-input');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
     content.innerHTML = '';
 
@@ -99,8 +103,9 @@ export class PlayerListUIManager {
       });
     }
 
+    const filteredPlayers = players.filter(p => p.name.toLowerCase().includes(searchTerm));
     if (countEl) countEl.innerText = players.length;
-    players.sort((a, b) => a.name.localeCompare(b.name));
+    filteredPlayers.sort((a, b) => a.name.localeCompare(b.name));
 
     let pCtx = document.getElementById('player-list-ctx');
     if (!pCtx) {
@@ -114,13 +119,14 @@ export class PlayerListUIManager {
       });
     }
 
-    players.forEach(p => {
+    filteredPlayers.forEach(p => {
       const row = document.createElement('div');
       const afkTag = p.isAFK ? '<span style="color: #95a5a6; font-size: 0.8rem; margin-right: 5px;">[AFK]</span>' : '';
       row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9rem; cursor: context-menu;';
       row.innerHTML = `
-        <div>${afkTag}<span style="color: ${p.isSelf ? '#2ecc71' : '#3498db'}; font-weight: ${p.isSelf ? 'bold' : 'normal'};">${p.name}</span></div>
-        <span style="color: #aaa; font-size: 0.8rem;">Lv.${p.level}</span>
+        <div style="flex: 2;">${afkTag}<span style="color: ${p.isSelf ? '#2ecc71' : '#3498db'}; font-weight: ${p.isSelf ? 'bold' : 'normal'};">${p.name}</span></div>
+        <span style="flex: 1; text-align: center; color: #aaa; font-size: 0.85rem;">${p.level}</span>
+        <span style="flex: 1; text-align: right; color: ${p.isSelf ? '#2ecc71' : '#3498db'}; font-size: 0.8rem;">${p.isSelf ? 'You' : 'Online'}</span>
       `;
 
       row.oncontextmenu = (e) => {

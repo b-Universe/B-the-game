@@ -156,14 +156,14 @@ export class TerrainGenerator {
         else if (elevW === elevation + 1) rampShape = 'ramp_w';
 
         if (rampShape) {
-           const rampKey = `${worldX}_${worldY}_${elevation + 1}`;
-           if (!voxels.has(rampKey)) {
-             voxels.set(rampKey, {
-               tex: surfaceTex,
-               color: surfaceColor,
-               shape: rampShape
-             });
-           }
+          const rampKey = `${worldX}_${worldY}_${elevation + 1}`;
+          if (!voxels.has(rampKey)) {
+            voxels.set(rampKey, {
+              tex: surfaceTex,
+              color: surfaceColor,
+              shape: rampShape
+            });
+          }
         }
       }
     }

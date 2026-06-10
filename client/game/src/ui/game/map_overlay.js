@@ -96,7 +96,7 @@ export class MapOverlayManager {
     this.keydownListener = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.repeat) return;
-      if (e.key.toLowerCase() === 'm') {
+      if (e.key.toLowerCase() === 'm' || (this.active && e.key === 'Escape')) {
         toggleMap();
       }
     };

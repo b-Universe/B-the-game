@@ -69,17 +69,17 @@ export class InventoryUIManager {
         e.preventDefault();
         const data = JSON.parse(e.dataTransfer.getData('text/plain'));
         if (data.source === 'trade' && this.currentTrade) {
-            const temp = inv[i];
-            inv[i] = this.currentTrade.self[data.index];
-            this.currentTrade.self[data.index] = temp || null;
-            this.renderInventory();
-            this.renderTradeGrids();
+          const temp = inv[i];
+          inv[i] = this.currentTrade.self[data.index];
+          this.currentTrade.self[data.index] = temp || null;
+          this.renderInventory();
+          this.renderTradeGrids();
         } else if (data.source === 'inventory') {
-            const temp = inv[i];
-            inv[i] = inv[data.index];
-            inv[data.index] = temp || null;
-            this.renderInventory();
-            this.engine.network.sendInventoryMove(data.index, i);
+          const temp = inv[i];
+          inv[i] = inv[data.index];
+          inv[data.index] = temp || null;
+          this.renderInventory();
+          this.engine.network.sendInventoryMove(data.index, i);
         }
       };
 
@@ -175,18 +175,18 @@ export class InventoryUIManager {
         e.preventDefault();
         const data = JSON.parse(e.dataTransfer.getData('text/plain'));
         if (data.source === 'inventory') {
-            this.engine.playerData.inventory = this.engine.playerData.inventory || [];
-            const inv = this.engine.playerData.inventory;
-            const temp = this.currentTrade.self[i];
-            this.currentTrade.self[i] = inv[data.index];
-            inv[data.index] = temp || null;
-            this.renderInventory();
-            this.renderTradeGrids();
+          this.engine.playerData.inventory = this.engine.playerData.inventory || [];
+          const inv = this.engine.playerData.inventory;
+          const temp = this.currentTrade.self[i];
+          this.currentTrade.self[i] = inv[data.index];
+          inv[data.index] = temp || null;
+          this.renderInventory();
+          this.renderTradeGrids();
         } else if (data.source === 'trade') {
-            const temp = this.currentTrade.self[i];
-            this.currentTrade.self[i] = this.currentTrade.self[data.index];
-            this.currentTrade.self[data.index] = temp || null;
-            this.renderTradeGrids();
+          const temp = this.currentTrade.self[i];
+          this.currentTrade.self[i] = this.currentTrade.self[data.index];
+          this.currentTrade.self[data.index] = temp || null;
+          this.renderTradeGrids();
         }
       };
       gridSelf.appendChild(slotS);

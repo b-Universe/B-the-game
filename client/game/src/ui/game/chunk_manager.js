@@ -222,7 +222,7 @@ export class MapManager {
       // Immediately free it from RAM since we no longer need the raw grid data!
       this.generatedChunks.delete(chunkKey);
       if (!chunk.isModified) {
-          this.chunks.delete(chunkKey);
+        this.chunks.delete(chunkKey);
       }
     }
   }
@@ -290,10 +290,10 @@ export class MapManager {
           this._lastChunk = null;
         }
 
-      const chunk = this.chunks.get(chunkKey);
-      if (chunk && !chunk.isModified) {
+        const chunk = this.chunks.get(chunkKey);
+        if (chunk && !chunk.isModified) {
           this.chunks.delete(chunkKey);
-      }
+        }
       }
     }
   }
@@ -353,19 +353,19 @@ export class MapManager {
       // Sub-chunk border checking: If a block touches the edge of a 16x16x16 sub-chunk, update the neighbors!
       const activeUpdates = new Set();
       for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-              for (let dz = -1; dz <= 1; dz++) {
-                  const ncx = Math.floor((localX + dx) / 16);
-                  const ncy = Math.floor((localY + dy) / 16);
-                  const ncz = Math.floor((localZ + dz) / 16);
-                  activeUpdates.add(`${ncx}_${ncy}_${ncz}`);
-              }
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            const ncx = Math.floor((localX + dx) / 16);
+            const ncy = Math.floor((localY + dy) / 16);
+            const ncz = Math.floor((localZ + dz) / 16);
+            activeUpdates.add(`${ncx}_${ncy}_${ncz}`);
           }
+        }
       }
       for (const key of activeUpdates) {
-          const [ncx, ncy, ncz] = key.split('_').map(Number);
-          const nChunk = this.chunks.get(`${ncx}_${ncy}`);
-          this.engine.renderer.updateChunkMesh(ncx, ncy, ncz, nChunk, true);
+        const [ncx, ncy, ncz] = key.split('_').map(Number);
+        const nChunk = this.chunks.get(`${ncx}_${ncy}`);
+        this.engine.renderer.updateChunkMesh(ncx, ncy, ncz, nChunk, true);
       }
     }
     this.updatePixel(localX, localY);

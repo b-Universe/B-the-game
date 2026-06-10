@@ -65,7 +65,7 @@ export class DebugRenderer {
     this.renderer.losLineMesh.visible = false;
     this.renderer.debugMeshes.add(this.renderer.losLineMesh);
 
-    const losConeGeo = new THREE.CircleGeometry(400, 32, -Math.PI/3, (Math.PI/3)*2);
+    const losConeGeo = new THREE.CircleGeometry(400, 32, -Math.PI / 3, (Math.PI / 3) * 2);
     const losConeMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false });
     this.renderer.losCone = new THREE.Mesh(losConeGeo, losConeMat);
     this.renderer.losCone.add(new THREE.LineSegments(new THREE.EdgesGeometry(losConeGeo), new THREE.LineBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.8, depthTest: false })));
@@ -86,6 +86,7 @@ export class DebugRenderer {
     const spawnerBoxMat = new THREE.MeshBasicMaterial({ color: 0x2ecc71, wireframe: true, depthTest: false, transparent: true, opacity: 0.5 });
     this.renderer.spawnerBoxMesh = new THREE.InstancedMesh(spawnerBoxGeo, spawnerBoxMat, 100);
     this.renderer.spawnerBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.spawnerBoxMesh.frustumCulled = false;
     this.renderer.spawnerBoxMesh.visible = false;
     this.renderer.debugMeshes.add(this.renderer.spawnerBoxMesh);
 
@@ -99,6 +100,7 @@ export class DebugRenderer {
     const nhBoxMat = new THREE.MeshBasicMaterial({ color: 0xe056fd, wireframe: true, depthTest: false, transparent: true, opacity: 0.3 });
     this.renderer.neighborhoodBoxMesh = new THREE.InstancedMesh(nhBoxGeo, nhBoxMat, 50);
     this.renderer.neighborhoodBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.neighborhoodBoxMesh.frustumCulled = false;
     this.renderer.neighborhoodBoxMesh.visible = false;
     this.renderer.debugMeshes.add(this.renderer.neighborhoodBoxMesh);
 
@@ -247,118 +249,118 @@ export class DebugRenderer {
 
     let hoverCab = null;
     if (eng.devOptions.showArcadeHover && !eng.editMode) {
-        if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
-            let bestDist = Infinity;
-            for (let dx = -32; dx <= 32; dx += 32) {
-                for (let dy = -32; dy <= 32; dy += 32) {
-                    for (let dz = 32; dz >= -96; dz -= 32) {
-                        let v = eng.mapManager.getVoxelAt(eng.cursorGridPos.x + dx, eng.cursorGridPos.y + dy, eng.cursorGridPos.z + dz);
-                        if (v && v.shape && v.shape.startsWith('arcade-box')) {
-                            const dist = Math.hypot(eng.mouseWorldPos.x - (eng.cursorGridPos.x + dx), eng.mouseWorldPos.y - (eng.cursorGridPos.y + dy));
-                            if (dist < bestDist) {
-                                bestDist = dist;
-                                hoverCab = { x: eng.cursorGridPos.x + dx, y: eng.cursorGridPos.y + dy, z: eng.cursorGridPos.z + dz };
-                            }
-                        }
-                    }
+      if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
+        let bestDist = Infinity;
+        for (let dx = -32; dx <= 32; dx += 32) {
+          for (let dy = -32; dy <= 32; dy += 32) {
+            for (let dz = 32; dz >= -96; dz -= 32) {
+              let v = eng.mapManager.getVoxelAt(eng.cursorGridPos.x + dx, eng.cursorGridPos.y + dy, eng.cursorGridPos.z + dz);
+              if (v && v.shape && v.shape.startsWith('arcade-box')) {
+                const dist = Math.hypot(eng.mouseWorldPos.x - (eng.cursorGridPos.x + dx), eng.mouseWorldPos.y - (eng.cursorGridPos.y + dy));
+                if (dist < bestDist) {
+                  bestDist = dist;
+                  hoverCab = { x: eng.cursorGridPos.x + dx, y: eng.cursorGridPos.y + dy, z: eng.cursorGridPos.z + dz };
                 }
+              }
             }
+          }
         }
+      }
     }
 
     // Highlight Arcade Cabinet Editor Focus
     const devTools = eng.ui?.devTools;
     let highlightVisible = false;
     if (devTools && devTools.currentEditCabinet && document.getElementById('arcade-edit-modal')?.style.display !== 'none' && document.getElementById('edit-arcade-highlight')?.checked) {
-        const cab = devTools.currentEditCabinet;
-        this.renderer.arcadeHighlightBox.position.set(cab.wx, cab.wy, cab.wz + 32); // Z-center of 3 block height offset
-        highlightVisible = true;
+      const cab = devTools.currentEditCabinet;
+      this.renderer.arcadeHighlightBox.position.set(cab.wx, cab.wy, cab.wz + 32); // Z-center of 3 block height offset
+      highlightVisible = true;
     } else if (hoverCab) {
-        this.renderer.arcadeHighlightBox.position.set(hoverCab.x, hoverCab.y, hoverCab.z + 32);
-        highlightVisible = true;
+      this.renderer.arcadeHighlightBox.position.set(hoverCab.x, hoverCab.y, hoverCab.z + 32);
+      highlightVisible = true;
     }
 
     if (this.renderer.arcadeHighlightBox) {
-        this.renderer.arcadeHighlightBox.visible = highlightVisible;
+      this.renderer.arcadeHighlightBox.visible = highlightVisible;
     }
 
     if (eng.devOptions.showNeighborhoods && eng.neighborhoods) {
-        let hitCount = 0;
-        const dummy = new THREE.Object3D();
+      let hitCount = 0;
+      const dummy = new THREE.Object3D();
 
-        let nhList = eng.neighborhoods;
-        if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
+      let nhList = eng.neighborhoods;
+      if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
 
-        nhList.forEach(nh => {
-            if (hitCount < 50 && nh.bounds) {
-                const width = nh.bounds.maxX - nh.bounds.minX;
-                const depth = nh.bounds.maxY - nh.bounds.minY;
-                const height = nh.bounds.maxZ - nh.bounds.minZ;
-                const cx = nh.bounds.minX + width / 2;
-                const cy = nh.bounds.minY + depth / 2;
-                const cz = nh.bounds.minZ + height / 2;
+      nhList.forEach(nh => {
+        if (hitCount < 50 && nh.bounds) {
+          const width = nh.bounds.maxX - nh.bounds.minX;
+          const depth = nh.bounds.maxY - nh.bounds.minY;
+          const height = nh.bounds.maxZ - nh.bounds.minZ;
+          const cx = nh.bounds.minX + width / 2;
+          const cy = nh.bounds.minY + depth / 2;
+          const cz = nh.bounds.minZ + height / 2;
 
-                dummy.position.set(cx, cy, cz);
-                dummy.scale.set(width, depth, height);
-                dummy.updateMatrix();
-                this.renderer.neighborhoodBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
-            }
-        });
-        this.renderer.neighborhoodBoxMesh.count = hitCount;
-        this.renderer.neighborhoodBoxMesh.instanceMatrix.needsUpdate = true;
-        this.renderer.neighborhoodBoxMesh.visible = hitCount > 0;
+          dummy.position.set(cx, cy, cz);
+          dummy.scale.set(width, depth, height);
+          dummy.updateMatrix();
+          this.renderer.neighborhoodBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+        }
+      });
+      this.renderer.neighborhoodBoxMesh.count = hitCount;
+      this.renderer.neighborhoodBoxMesh.instanceMatrix.needsUpdate = true;
+      this.renderer.neighborhoodBoxMesh.visible = hitCount > 0;
     } else if (this.renderer.neighborhoodBoxMesh) { this.renderer.neighborhoodBoxMesh.visible = false; }
 
     if (eng.devOptions.showAggro) {
-        let hitCount = 0;
-        eng.npcs.forEach(npc => {
-            if (npc.state !== 'dead' && hitCount < 100) {
-                let ring;
-                if (hitCount < this.renderer.aggroLinePool.length) {
-                    ring = this.renderer.aggroLinePool[hitCount];
-                } else {
-                    const points = [];
-                    for (let i = 0; i <= 64; i++) {
-                        const theta = (i / 64) * Math.PI * 2;
-                        points.push(new THREE.Vector3(Math.cos(theta), Math.sin(theta), 0));
-                    }
-                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                    const material = new THREE.LineDashedMaterial({ color: 0xe67e22, linewidth: 1, dashSize: 10, gapSize: 10, transparent: true, opacity: 0.6 });
-                    ring = new THREE.Line(geometry, material);
-                    ring.computeLineDistances();
-                    this.renderer.aggroLineGroup.add(ring);
-                    this.renderer.aggroLinePool.push(ring);
-                }
-
-                const r = npc.aggroRadius !== undefined ? npc.aggroRadius : 200;
-                ring.scale.set(r, r, 1);
-                ring.position.set(npc.x, npc.y, (npc.z || 0) + 2);
-                ring.material.scale = r;
-                ring.visible = true;
-                hitCount++;
+      let hitCount = 0;
+      eng.npcs.forEach(npc => {
+        if (npc.state !== 'dead' && hitCount < 100) {
+          let ring;
+          if (hitCount < this.renderer.aggroLinePool.length) {
+            ring = this.renderer.aggroLinePool[hitCount];
+          } else {
+            const points = [];
+            for (let i = 0; i <= 64; i++) {
+              const theta = (i / 64) * Math.PI * 2;
+              points.push(new THREE.Vector3(Math.cos(theta), Math.sin(theta), 0));
             }
-        });
-        for (let i = hitCount; i < this.renderer.aggroLinePool.length; i++) {
-            this.renderer.aggroLinePool[i].visible = false;
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineDashedMaterial({ color: 0xe67e22, linewidth: 1, dashSize: 10, gapSize: 10, transparent: true, opacity: 0.6 });
+            ring = new THREE.Line(geometry, material);
+            ring.computeLineDistances();
+            this.renderer.aggroLineGroup.add(ring);
+            this.renderer.aggroLinePool.push(ring);
+          }
+
+          const r = npc.aggroRadius !== undefined ? npc.aggroRadius : 200;
+          ring.scale.set(r, r, 1);
+          ring.position.set(npc.x, npc.y, (npc.z || 0) + 2);
+          ring.material.scale = r;
+          ring.visible = true;
+          hitCount++;
         }
+      });
+      for (let i = hitCount; i < this.renderer.aggroLinePool.length; i++) {
+        this.renderer.aggroLinePool[i].visible = false;
+      }
     } else {
-        if (this.renderer.aggroLinePool) this.renderer.aggroLinePool.forEach(ring => ring.visible = false);
+      if (this.renderer.aggroLinePool) this.renderer.aggroLinePool.forEach(ring => ring.visible = false);
     }
 
     if (eng.devOptions.showSpawners && eng.spawners) {
-        let hitCount = 0;
-        const dummy = new THREE.Object3D();
-        eng.spawners.forEach(s => {
-            if (hitCount < 100) {
-                dummy.position.set(s.x, s.y, s.z || 0);
-                dummy.scale.set(s.radius || 300, s.radius || 300, s.radius || 300);
-                dummy.updateMatrix();
-                this.renderer.spawnerBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
-            }
-        });
-        this.renderer.spawnerBoxMesh.count = hitCount;
-        this.renderer.spawnerBoxMesh.instanceMatrix.needsUpdate = true;
-        this.renderer.spawnerBoxMesh.visible = hitCount > 0;
+      let hitCount = 0;
+      const dummy = new THREE.Object3D();
+      eng.spawners.forEach(s => {
+        if (hitCount < 100) {
+          dummy.position.set(s.x, s.y, s.z || 0);
+          dummy.scale.set(s.radius || 300, s.radius || 300, s.radius || 300);
+          dummy.updateMatrix();
+          this.renderer.spawnerBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+        }
+      });
+      this.renderer.spawnerBoxMesh.count = hitCount;
+      this.renderer.spawnerBoxMesh.instanceMatrix.needsUpdate = true;
+      this.renderer.spawnerBoxMesh.visible = hitCount > 0;
     } else if (this.renderer.spawnerBoxMesh) { this.renderer.spawnerBoxMesh.visible = false; }
 
     if (eng.devOptions.showMelee) {
@@ -459,8 +461,8 @@ export class DebugRenderer {
         if (checkHitLoS(entity.x, entity.y, entity.z)) {
           dummy.position.set(entity.x, entity.y, (entity.z || 0) + 1);
           dummy.updateMatrix();
-            this.renderer.losMesh.setMatrixAt(hitCount, dummy.matrix);
-            this.renderer.losLineMesh.setMatrixAt(hitCount++, dummy.matrix);
+          this.renderer.losMesh.setMatrixAt(hitCount, dummy.matrix);
+          this.renderer.losLineMesh.setMatrixAt(hitCount++, dummy.matrix);
         }
       };
 
@@ -476,35 +478,35 @@ export class DebugRenderer {
     }
 
     if (eng.devOptions.showNpcPaths) {
-        let count = 0;
-        const positions = this.renderer.npcPathLineMesh.geometry.attributes.position.array;
+      let count = 0;
+      const positions = this.renderer.npcPathLineMesh.geometry.attributes.position.array;
 
-        eng.npcs.forEach(npc => {
-            if (npc.state !== 'dead' && npc.serverPath && npc.serverPath.length > 0) {
-                let lastPt = { x: npc.x, y: npc.y, z: npc.z || 0 };
-                for (let i = 0; i < npc.serverPath.length; i++) {
-                    if (count >= 5000 * 3) break;
-                    const pt = npc.serverPath[i];
-                    const pz = pt.z !== undefined ? pt.z : eng.getTerrainZ(pt.x, pt.y);
+      eng.npcs.forEach(npc => {
+        if (npc.state !== 'dead' && npc.serverPath && npc.serverPath.length > 0) {
+          let lastPt = { x: npc.x, y: npc.y, z: npc.z || 0 };
+          for (let i = 0; i < npc.serverPath.length; i++) {
+            if (count >= 5000 * 3) break;
+            const pt = npc.serverPath[i];
+            const pz = pt.z !== undefined ? pt.z : eng.getTerrainZ(pt.x, pt.y);
 
-                    positions[count++] = lastPt.x;
-                    positions[count++] = lastPt.y;
-                    positions[count++] = lastPt.z + 2;
+            positions[count++] = lastPt.x;
+            positions[count++] = lastPt.y;
+            positions[count++] = lastPt.z + 2;
 
-                    positions[count++] = pt.x;
-                    positions[count++] = pt.y;
-                    positions[count++] = pz + 2;
+            positions[count++] = pt.x;
+            positions[count++] = pt.y;
+            positions[count++] = pz + 2;
 
-                    lastPt = { x: pt.x, y: pt.y, z: pz };
-                }
-            }
-        });
+            lastPt = { x: pt.x, y: pt.y, z: pz };
+          }
+        }
+      });
 
-        this.renderer.npcPathLineMesh.geometry.setDrawRange(0, count / 3);
-        this.renderer.npcPathLineMesh.geometry.attributes.position.needsUpdate = true;
-        this.renderer.npcPathLineMesh.visible = count > 0;
+      this.renderer.npcPathLineMesh.geometry.setDrawRange(0, count / 3);
+      this.renderer.npcPathLineMesh.geometry.attributes.position.needsUpdate = true;
+      this.renderer.npcPathLineMesh.visible = count > 0;
     } else {
-        if (this.renderer.npcPathLineMesh) this.renderer.npcPathLineMesh.visible = false;
+      if (this.renderer.npcPathLineMesh) this.renderer.npcPathLineMesh.visible = false;
     }
 
     let tileHitCount = 0;
@@ -550,9 +552,9 @@ export class DebugRenderer {
         batcher.drawBar(entity.x, entity.y, (entity.z || 0) + currentOffset, 30 * hpPercent, 4, isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db'), 1.0, -15 + (15 * hpPercent), 0);
 
         if (entity.energy !== undefined && entity.maxEnergy) {
-           currentOffset -= 4;
-           const epPercent = Math.max(0, entity.energy / entity.maxEnergy);
-           batcher.drawBar(entity.x, entity.y, (entity.z || 0) + currentOffset, 30 * epPercent, 4, '#0984e3', 1.0, -15 + (15 * epPercent), 0);
+          currentOffset -= 4;
+          const epPercent = Math.max(0, entity.energy / entity.maxEnergy);
+          batcher.drawBar(entity.x, entity.y, (entity.z || 0) + currentOffset, 30 * epPercent, 4, '#0984e3', 1.0, -15 + (15 * epPercent), 0);
         }
         currentOffset += 10;
       }
@@ -565,25 +567,25 @@ export class DebugRenderer {
         if (textToShow) {
           let tColor = '#3498db';
           if (isPlayer) {
-              tColor = entity.isAFK ? '#95a5a6' : '#2ecc71';
+            tColor = entity.isAFK ? '#95a5a6' : '#2ecc71';
           } else if (entity.uuid) {
-              if (entity.type === 'trainer') {
-                  tColor = '#3498db';
-              } else if (entity.type === 'civilian') {
-                  tColor = '#bdc3c7';
-              } else {
-                 const playerLvl = window.currentGameEngine.playerData.level || 1;
-                 const targetLvl = entity.level || 1;
-                 const diff = targetLvl - playerLvl;
-                 if (diff >= 4) tColor = '#ff4757';
-                 else if (diff === 3) tColor = '#e67e22';
-                 else if (diff === 2) tColor = '#f39c12';
-                 else if (diff === 1) tColor = '#f1c40f';
-                 else if (diff === 0) tColor = '#ffffff';
-                 else if (diff === -1) tColor = '#bdc3c7';
-                 else if (diff === -2) tColor = '#7f8c8d';
-                 else tColor = '#444444';
-              }
+            if (entity.type === 'trainer') {
+              tColor = '#3498db';
+            } else if (entity.type === 'civilian') {
+              tColor = '#bdc3c7';
+            } else {
+              const playerLvl = window.currentGameEngine.playerData.level || 1;
+              const targetLvl = entity.level || 1;
+              const diff = targetLvl - playerLvl;
+              if (diff >= 4) tColor = '#ff4757';
+              else if (diff === 3) tColor = '#e67e22';
+              else if (diff === 2) tColor = '#f39c12';
+              else if (diff === 1) tColor = '#f1c40f';
+              else if (diff === 0) tColor = '#ffffff';
+              else if (diff === -1) tColor = '#bdc3c7';
+              else if (diff === -2) tColor = '#7f8c8d';
+              else tColor = '#444444';
+            }
           }
           batcher.drawText(textToShow, entity.x, entity.y, (entity.z || 0) + currentOffset, 18, tColor);
         }
@@ -609,19 +611,19 @@ export class DebugRenderer {
 
     // Arcade Hover Text
     if (eng.arcadeSystem && eng.arcadeSystem.nearestCabinet && !eng.arcadeSystem.isActive) {
-       const cab = eng.arcadeSystem.nearestCabinet;
-       if (cab.powerState !== 'off') {
-           const zFloat = 100 + (Math.sin(performance.now() / 200) * 5);
-           batcher.drawText('Press [T] to Play', cab.x, cab.y, cab.z + zFloat, 14, '#e056fd');
-           if (cab.customName) {
-               batcher.drawText(`"${cab.customName}"`, cab.x, cab.y, cab.z + zFloat + 18, 16, '#f1c40f');
-           }
-       }
+      const cab = eng.arcadeSystem.nearestCabinet;
+      if (cab.powerState !== 'off') {
+        const zFloat = 100 + (Math.sin(performance.now() / 200) * 5);
+        batcher.drawText('Press [T] to Play', cab.x, cab.y, cab.z + zFloat, 14, '#e056fd');
+        if (cab.customName) {
+          batcher.drawText(`"${cab.customName}"`, cab.x, cab.y, cab.z + zFloat + 18, 16, '#f1c40f');
+        }
+      }
     }
 
     // NPC Hover Text
     if (eng.nearestTrainer && !eng.activeTrainer) {
-       batcher.drawText('Press [T] to Talk', eng.nearestTrainer.x, eng.nearestTrainer.y, (eng.nearestTrainer.z || 0) + 130 + (Math.sin(performance.now() / 200) * 5), 14, '#3498db');
+      batcher.drawText('Press [T] to Talk', eng.nearestTrainer.x, eng.nearestTrainer.y, (eng.nearestTrainer.z || 0) + 130 + (Math.sin(performance.now() / 200) * 5), 14, '#3498db');
     }
   }
 
@@ -631,10 +633,10 @@ export class DebugRenderer {
     const eng = this.engine;
 
     const drawEntityBubbles = (entity) => {
-        const p3d = new THREE.Vector3(entity.x, entity.y, (entity.z || 0) + 116).project(this.renderer.camera);
-        const sx = (p3d.x + 1) / 2 * window.innerWidth;
-        const sy = -(p3d.y - 1) / 2 * window.innerHeight;
-        eng.chat.drawBubbles(ctx, sx, sy, entity.chatBubbles);
+      const p3d = new THREE.Vector3(entity.x, entity.y, (entity.z || 0) + 116).project(this.renderer.camera);
+      const sx = (p3d.x + 1) / 2 * window.innerWidth;
+      const sy = -(p3d.y - 1) / 2 * window.innerHeight;
+      eng.chat.drawBubbles(ctx, sx, sy, entity.chatBubbles);
     };
 
     eng.npcs.forEach(npc => drawEntityBubbles(npc));
@@ -727,7 +729,7 @@ export class DebugRenderer {
         const sx = (p3d.x + 1) / 2 * window.innerWidth;
         const sy = -(p3d.y - 1) / 2 * window.innerHeight;
 
-            const zoom = this.renderer.camera.zoom;
+        const zoom = this.renderer.camera.zoom;
         const width = 48 * zoom;
         const height = (customHeight || 104) * zoom;
 
@@ -754,8 +756,8 @@ export class DebugRenderer {
 
       ctx.save();
       const drawIsoArrow = (ox, oy, oz, dx, dy) => {
-        const p1 = new THREE.Vector3(ox + dx*16, oy + dy*16, oz).project(this.renderer.camera);
-        const p2 = new THREE.Vector3(ox + dx*48, oy + dy*48, oz).project(this.renderer.camera);
+        const p1 = new THREE.Vector3(ox + dx * 16, oy + dy * 16, oz).project(this.renderer.camera);
+        const p2 = new THREE.Vector3(ox + dx * 48, oy + dy * 48, oz).project(this.renderer.camera);
 
         const sx1 = (p1.x + 1) / 2 * window.innerWidth;
         const sy1 = -(p1.y - 1) / 2 * window.innerHeight;
@@ -772,52 +774,52 @@ export class DebugRenderer {
         const angle = Math.atan2(sy2 - sy1, sx2 - sx1);
         ctx.beginPath();
         ctx.moveTo(sx2, sy2);
-        ctx.lineTo(sx2 - 12 * Math.cos(angle - Math.PI/6), sy2 - 12 * Math.sin(angle - Math.PI/6));
-        ctx.lineTo(sx2 - 12 * Math.cos(angle + Math.PI/6), sy2 - 12 * Math.sin(angle + Math.PI/6));
+        ctx.lineTo(sx2 - 12 * Math.cos(angle - Math.PI / 6), sy2 - 12 * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(sx2 - 12 * Math.cos(angle + Math.PI / 6), sy2 - 12 * Math.sin(angle + Math.PI / 6));
         ctx.closePath();
         ctx.fillStyle = color;
         ctx.fill();
       };
 
-        const drawVerticalArrow = (ox, oy, oz, dir) => {
-          const p1 = new THREE.Vector3(ox, oy, oz + dir*16).project(this.renderer.camera);
-          const p2 = new THREE.Vector3(ox, oy, oz + dir*48).project(this.renderer.camera);
-          const sx1 = (p1.x + 1) / 2 * window.innerWidth;
-          const sy1 = -(p1.y - 1) / 2 * window.innerHeight;
-          const sx2 = (p2.x + 1) / 2 * window.innerWidth;
-          const sy2 = -(p2.y - 1) / 2 * window.innerHeight;
+      const drawVerticalArrow = (ox, oy, oz, dir) => {
+        const p1 = new THREE.Vector3(ox, oy, oz + dir * 16).project(this.renderer.camera);
+        const p2 = new THREE.Vector3(ox, oy, oz + dir * 48).project(this.renderer.camera);
+        const sx1 = (p1.x + 1) / 2 * window.innerWidth;
+        const sy1 = -(p1.y - 1) / 2 * window.innerHeight;
+        const sx2 = (p2.x + 1) / 2 * window.innerWidth;
+        const sy2 = -(p2.y - 1) / 2 * window.innerHeight;
 
-          ctx.beginPath();
-          ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
-          ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
+        ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
 
-          const angle = Math.atan2(sy2 - sy1, sx2 - sx1);
-          ctx.beginPath();
-          ctx.moveTo(sx2, sy2);
-          ctx.lineTo(sx2 - 12 * Math.cos(angle - Math.PI/6), sy2 - 12 * Math.sin(angle - Math.PI/6));
-          ctx.lineTo(sx2 - 12 * Math.cos(angle + Math.PI/6), sy2 - 12 * Math.sin(angle + Math.PI/6));
-          ctx.closePath();
-          ctx.fillStyle = color; ctx.fill();
-        };
+        const angle = Math.atan2(sy2 - sy1, sx2 - sx1);
+        ctx.beginPath();
+        ctx.moveTo(sx2, sy2);
+        ctx.lineTo(sx2 - 12 * Math.cos(angle - Math.PI / 6), sy2 - 12 * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(sx2 - 12 * Math.cos(angle + Math.PI / 6), sy2 - 12 * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fillStyle = color; ctx.fill();
+      };
 
       if (eng.isDraggingSelection && eng.selectionStart && eng.selectionEnd) {
         const minX = Math.min(eng.selectionStart.x, eng.selectionEnd.x);
         const maxX = Math.max(eng.selectionStart.x, eng.selectionEnd.x);
         const minY = Math.min(eng.selectionStart.y, eng.selectionEnd.y);
         const maxY = Math.max(eng.selectionStart.y, eng.selectionEnd.y);
-          const minZ = Math.min(eng.selectionStart.z, eng.selectionEnd.z);
-          const maxZ = Math.max(eng.selectionStart.z, eng.selectionEnd.z);
+        const minZ = Math.min(eng.selectionStart.z, eng.selectionEnd.z);
+        const maxZ = Math.max(eng.selectionStart.z, eng.selectionEnd.z);
         const cz = eng.selectionStart.z + 16;
         const midX = (minX + maxX) / 2;
         const midY = (minY + maxY) / 2;
 
-          if (eng.input.isActionDown('buildDragSelect')) {
-              drawVerticalArrow(midX, midY, maxZ + 32, 1);
-              drawVerticalArrow(midX, midY, minZ, -1);
-          } else {
-              drawIsoArrow(maxX, midY, cz, 1, 0); drawIsoArrow(minX, midY, cz, -1, 0);
-              drawIsoArrow(midX, maxY, cz, 0, 1); drawIsoArrow(midX, minY, cz, 0, -1);
-          }
+        if (eng.input.isActionDown('buildDragSelect')) {
+          drawVerticalArrow(midX, midY, maxZ + 32, 1);
+          drawVerticalArrow(midX, midY, minZ, -1);
+        } else {
+          drawIsoArrow(maxX, midY, cz, 1, 0); drawIsoArrow(minX, midY, cz, -1, 0);
+          drawIsoArrow(midX, maxY, cz, 0, 1); drawIsoArrow(midX, minY, cz, 0, -1);
+        }
       } else {
         const cz = eng.cursorGridPos.z + 16;
         drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, 1, 0); drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, -1, 0);
@@ -829,9 +831,25 @@ export class DebugRenderer {
     ctx.save();
     ctx.fillStyle = '#f1c40f';
     ctx.font = 'bold 14px monospace';
-    ctx.textAlign = 'right';
     ctx.strokeStyle = '#000';
-    let textY = window.innerHeight - (eng.clientSettings.snapIndicators ? ((eng.hudIndicatorBottomOffset || 80) * (eng.clientSettings.uiScale || 1.0)) : 80);
+
+    let textX = 15;
+    let textY = 25;
+    ctx.textAlign = 'left';
+
+    const targetWin = document.getElementById('target-window');
+    const petWin = document.getElementById('pet-window');
+    let maxBottom = 0;
+    if (targetWin && targetWin.style.display !== 'none') {
+      maxBottom = Math.max(maxBottom, targetWin.getBoundingClientRect().bottom);
+    }
+    if (petWin && petWin.style.display !== 'none') {
+      maxBottom = Math.max(maxBottom, petWin.getBoundingClientRect().bottom);
+    }
+
+    if (maxBottom > 0) {
+      textY = maxBottom + 20;
+    }
 
     if ((eng.clientSettings.showCoords || eng.clientSettings.showYawPitch) && eng.player) {
       let text = "";
@@ -845,23 +863,23 @@ export class DebugRenderer {
         text += `Yaw: ${yaw}° Pitch: ${pitch}°`;
       }
       if (text.length > 0) {
-        ctx.strokeText(text, window.innerWidth - 20, textY);
-        ctx.fillText(text, window.innerWidth - 20, textY);
-        textY -= 20;
+        ctx.strokeText(text, textX, textY);
+        ctx.fillText(text, textX, textY);
+        textY += 20;
       }
     }
 
     if (eng.clientSettings.showPing) {
       const text = `Ping: ${eng.ping}ms`;
-      ctx.strokeText(text, window.innerWidth - 20, textY);
-      ctx.fillText(text, window.innerWidth - 20, textY);
-      textY -= 20;
+      ctx.strokeText(text, textX, textY);
+      ctx.fillText(text, textX, textY);
+      textY += 20;
     }
     if (eng.clientSettings.showFPS) {
       const text = `FPS: ${eng.fps}`;
-      ctx.strokeText(text, window.innerWidth - 20, textY);
-      ctx.fillText(text, window.innerWidth - 20, textY);
-      textY -= 20;
+      ctx.strokeText(text, textX, textY);
+      ctx.fillText(text, textX, textY);
+      textY += 20;
     }
     ctx.restore();
   }
@@ -939,7 +957,7 @@ export class DebugRenderer {
       } else {
         const buildMeshes = [...Array.from(this.renderer.chunkMeshes.values()), ...Array.from(this.renderer.chunkTransparentMeshes.values())];
         if (this.renderer.dynamicDoorMeshes) {
-            buildMeshes.push(...Array.from(this.renderer.dynamicDoorMeshes.values()));
+          buildMeshes.push(...Array.from(this.renderer.dynamicDoorMeshes.values()));
         }
 
         if (buildMeshes.length > 0) {
@@ -991,7 +1009,7 @@ export class DebugRenderer {
             const checkZAbove = gridZ + 32;
             const voxelAbove = eng.mapManager.getVoxelAt(gridX, gridY, checkZAbove);
             if (voxelAbove && voxelAbove.shape === 'decal') {
-                gridZ = checkZAbove;
+              gridZ = checkZAbove;
             }
           }
           hitPos.set(gridX, gridY, gridZ);
@@ -1067,273 +1085,273 @@ export class DebugRenderer {
         const isPicker = tex === 'picker' || eng.input.isActionDown('picker');
 
         if (isPicker) {
-           this.renderer.highlightBox.scale.set(1, 1, 1);
-           this.renderer.highlightBox.position.set(targetX, targetY, targetZ);
-           this.renderer.highlightBox.material.color.setHex(0x9b59b6); // Purple for picker
-           this.renderer.highlightBox.visible = !eng.isDraggingSelection;
+          this.renderer.highlightBox.scale.set(1, 1, 1);
+          this.renderer.highlightBox.position.set(targetX, targetY, targetZ);
+          this.renderer.highlightBox.material.color.setHex(0x9b59b6); // Purple for picker
+          this.renderer.highlightBox.visible = !eng.isDraggingSelection;
         } else if (isDeleting) {
-           const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-           if (clickedVoxel && clickedVoxel.shape && clickedVoxel.shape.startsWith('door')) {
-             this.renderer.highlightBox.scale.set(1, 1, 2);
-             this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 16);
-               } else if (clickedVoxel && (clickedVoxel.shape === 'slab' || clickedVoxel.shape === 'decal' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('half_ramp')))) {
-                 this.renderer.highlightBox.scale.set(1, 1, 0.5);
-                 this.renderer.highlightBox.position.set(targetX, targetY, targetZ - 8);
-               } else if (clickedVoxel && (clickedVoxel.shape === 'top_slab' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('top_half_ramp')))) {
-                 this.renderer.highlightBox.scale.set(1, 1, 0.5);
-                 this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 8);
-               } else {
-                 this.renderer.highlightBox.scale.set(1, 1, 1);
-                 this.renderer.highlightBox.position.set(targetX, targetY, targetZ);
-               }
-           this.renderer.highlightBox.material.color.setHex(0xff4757); // Red for delete
-           this.renderer.highlightBox.visible = !eng.isDraggingSelection;
+          const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
+          if (clickedVoxel && clickedVoxel.shape && clickedVoxel.shape.startsWith('door')) {
+            this.renderer.highlightBox.scale.set(1, 1, 2);
+            this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 16);
+          } else if (clickedVoxel && (clickedVoxel.shape === 'slab' || clickedVoxel.shape === 'decal' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('half_ramp')))) {
+            this.renderer.highlightBox.scale.set(1, 1, 0.5);
+            this.renderer.highlightBox.position.set(targetX, targetY, targetZ - 8);
+          } else if (clickedVoxel && (clickedVoxel.shape === 'top_slab' || (clickedVoxel.shape && clickedVoxel.shape.startsWith('top_half_ramp')))) {
+            this.renderer.highlightBox.scale.set(1, 1, 0.5);
+            this.renderer.highlightBox.position.set(targetX, targetY, targetZ + 8);
+          } else {
+            this.renderer.highlightBox.scale.set(1, 1, 1);
+            this.renderer.highlightBox.position.set(targetX, targetY, targetZ);
+          }
+          this.renderer.highlightBox.material.color.setHex(0xff4757); // Red for delete
+          this.renderer.highlightBox.visible = !eng.isDraggingSelection;
         } else {
-           this.renderer.highlightBox.scale.set(1, 1, 1);
-           let placeShape = eng.editShape || 'cube';
-           if (placeShape === 'none') {
-             this.renderer.highlightBox.visible = false;
-           } else {
-             if (placeShape.endsWith('_player')) {
-                const base = placeShape.split('_')[0];
-                const pDir = eng.player.dir;
-                if (pDir.includes('up')) placeShape = base + '_n';
-                else if (pDir.includes('down')) placeShape = base + '_s';
-                else if (pDir.includes('right')) placeShape = base + '_e';
-                else if (pDir.includes('left')) placeShape = base + '_w';
-                else placeShape = base + '_s';
-             }
-             const colorHex = eng.buildColor || '#ffffff';
+          this.renderer.highlightBox.scale.set(1, 1, 1);
+          let placeShape = eng.editShape || 'cube';
+          if (placeShape === 'none') {
+            this.renderer.highlightBox.visible = false;
+          } else {
+            if (placeShape.endsWith('_player')) {
+              const base = placeShape.split('_')[0];
+              const pDir = eng.player.dir;
+              if (pDir.includes('up')) placeShape = base + '_n';
+              else if (pDir.includes('down')) placeShape = base + '_s';
+              else if (pDir.includes('right')) placeShape = base + '_e';
+              else if (pDir.includes('left')) placeShape = base + '_w';
+              else placeShape = base + '_s';
+            }
+            const colorHex = eng.buildColor || '#ffffff';
 
-             let tilesToPreview = [];
-             if (eng.isDraggingSelection && eng.selectedTiles && eng.selectedTiles.length > 0) {
-               tilesToPreview = [...eng.selectedTiles];
-             } else {
-               const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-               const texMatch = clickedVoxel && clickedVoxel.tex === tex && clickedVoxel.color === colorHex;
-               if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && placeShape === 'top_slab' && texMatch) {
-                 placeShape = 'cube';
-               } else if (clickedVoxel && clickedVoxel.shape === 'top_slab' && normal.z === -1 && placeShape === 'slab' && texMatch) {
-                 placeShape = 'cube';
-               } else if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && placeShape.startsWith('top_half_ramp') && texMatch) {
-                 placeShape = placeShape.replace('top_half_ramp', 'ramp');
-               } else if (clickedVoxel && clickedVoxel.shape === 'top_slab' && normal.z === -1 && placeShape.startsWith('half_ramp') && texMatch) {
-                 placeShape = placeShape.replace('half_ramp', 'ramp');
-               } else if (clickedVoxel && clickedVoxel.shape === 'decal' && normal.z === 1) {
-                 // Do nothing, overwrite the decal on the exact same coordinate plane
-               } else {
-                 targetX += normal.x * 32; targetY += normal.y * 32; targetZ += normal.z * 32;
-               }
-               tilesToPreview = [{ x: targetX, y: targetY, z: targetZ }];
-             }
-
-              let furnId = '';
-              if (placeShape) {
-                  for (const id in FURNITURE_REGISTRY) {
-                      if (placeShape.startsWith(id)) { furnId = id; break; }
-                  }
+            let tilesToPreview = [];
+            if (eng.isDraggingSelection && eng.selectedTiles && eng.selectedTiles.length > 0) {
+              tilesToPreview = [...eng.selectedTiles];
+            } else {
+              const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
+              const texMatch = clickedVoxel && clickedVoxel.tex === tex && clickedVoxel.color === colorHex;
+              if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && placeShape === 'top_slab' && texMatch) {
+                placeShape = 'cube';
+              } else if (clickedVoxel && clickedVoxel.shape === 'top_slab' && normal.z === -1 && placeShape === 'slab' && texMatch) {
+                placeShape = 'cube';
+              } else if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && placeShape.startsWith('top_half_ramp') && texMatch) {
+                placeShape = placeShape.replace('top_half_ramp', 'ramp');
+              } else if (clickedVoxel && clickedVoxel.shape === 'top_slab' && normal.z === -1 && placeShape.startsWith('half_ramp') && texMatch) {
+                placeShape = placeShape.replace('half_ramp', 'ramp');
+              } else if (clickedVoxel && clickedVoxel.shape === 'decal' && normal.z === 1) {
+                // Do nothing, overwrite the decal on the exact same coordinate plane
+              } else {
+                targetX += normal.x * 32; targetY += normal.y * 32; targetZ += normal.z * 32;
               }
-              const furn = FURNITURE_REGISTRY[furnId];
+              tilesToPreview = [{ x: targetX, y: targetY, z: targetZ }];
+            }
 
-             let currentMesh; const dummy = new THREE.Object3D();
-             let isDoor = false;
-             let doorRot = 0;
-             let doorIsFlip = false;
-             if (placeShape === 'slab') { currentMesh = this.renderer.previewSlabMesh; }
-             else if (placeShape === 'top_slab') { currentMesh = this.renderer.previewTopSlabMesh; }
-             else if (placeShape.startsWith('ramp')) {
-               currentMesh = this.renderer.previewRampMesh;
-               if (placeShape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
-               else if (placeShape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI);
-               else if (placeShape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
-             } else if (placeShape.startsWith('half_ramp')) {
-               currentMesh = this.renderer.previewHalfRampMesh;
-               if (placeShape === 'half_ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
-               else if (placeShape === 'half_ramp_n') dummy.rotation.set(0, 0, Math.PI);
-               else if (placeShape === 'half_ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
-             } else if (placeShape.startsWith('top_half_ramp')) {
-               currentMesh = this.renderer.previewTopHalfRampMesh;
-               if (placeShape === 'top_half_ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
-               else if (placeShape === 'top_half_ramp_n') dummy.rotation.set(0, 0, Math.PI);
-               else if (placeShape === 'top_half_ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
-             } else if (placeShape.startsWith('stair')) {
-               currentMesh = this.renderer.previewStairMesh;
-               if (placeShape === 'stair_e') dummy.rotation.set(0, 0, -Math.PI / 2);
-               else if (placeShape === 'stair_n') dummy.rotation.set(0, 0, Math.PI);
-               else if (placeShape === 'stair_w') dummy.rotation.set(0, 0, Math.PI / 2);
-             } else if (placeShape === 'decal') {
-               currentMesh = this.renderer.previewDecalMesh;
-               if (eng.editShapeDir === 'e') dummy.rotation.set(0, 0, -Math.PI / 2);
-               else if (eng.editShapeDir === 'n') dummy.rotation.set(0, 0, Math.PI);
-               else if (eng.editShapeDir === 'w') dummy.rotation.set(0, 0, Math.PI / 2);
-             } else if (placeShape === 'fence') {
-               currentMesh = this.renderer.previewFenceMesh;
-             } else if (placeShape.includes('door')) {
-               if (placeShape.startsWith('door_')) {
-                   currentMesh = this.renderer.previewDoorMesh;
-               } else {
-                   currentMesh = this.renderer.assetManager.previewModelMeshes[placeShape.replace('_open', '').replace('_flip', '')];
-               }
-               isDoor = true;
-               const isOp = placeShape.includes('_open');
-               doorIsFlip = placeShape.includes('_flip');
-               if (placeShape.includes('door_e') || eng.editShapeDir === 'e') doorRot = -Math.PI / 2;
-               else if (placeShape.includes('door_n') || eng.editShapeDir === 'n') doorRot = Math.PI;
-               else if (placeShape.includes('door_w') || eng.editShapeDir === 'w') doorRot = Math.PI / 2;
-               else doorRot = 0;
+            let furnId = '';
+            if (placeShape) {
+              for (const id in FURNITURE_REGISTRY) {
+                if (placeShape.startsWith(id)) { furnId = id; break; }
+              }
+            }
+            const furn = FURNITURE_REGISTRY[furnId];
 
-               let targetRot = doorRot;
-               if (isOp) {
-                 targetRot += doorIsFlip ? -Math.PI / 2 : Math.PI / 2;
-               }
-               dummy.userData = { targetRot };
-             } else if (this.renderer.assetManager.previewModelMeshes && this.renderer.assetManager.previewModelMeshes[placeShape.replace('_open', '')]) {
-               currentMesh = this.renderer.assetManager.previewModelMeshes[placeShape.replace('_open', '')];
-               let rot = 0;
-               if (eng.editShapeDir === 'e') rot = -Math.PI / 2;
-               else if (eng.editShapeDir === 'n') rot = Math.PI;
-               else if (eng.editShapeDir === 'w') rot = Math.PI / 2;
-               if (placeShape.includes('_open')) rot += eng.editShapeFlip ? -Math.PI / 2 : Math.PI / 2;
-               dummy.rotation.set(0, 0, rot);
-             } else { currentMesh = this.renderer.previewCubeMesh; }
+            let currentMesh; const dummy = new THREE.Object3D();
+            let isDoor = false;
+            let doorRot = 0;
+            let doorIsFlip = false;
+            if (placeShape === 'slab') { currentMesh = this.renderer.previewSlabMesh; }
+            else if (placeShape === 'top_slab') { currentMesh = this.renderer.previewTopSlabMesh; }
+            else if (placeShape.startsWith('ramp')) {
+              currentMesh = this.renderer.previewRampMesh;
+              if (placeShape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+              else if (placeShape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI);
+              else if (placeShape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+            } else if (placeShape.startsWith('half_ramp')) {
+              currentMesh = this.renderer.previewHalfRampMesh;
+              if (placeShape === 'half_ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+              else if (placeShape === 'half_ramp_n') dummy.rotation.set(0, 0, Math.PI);
+              else if (placeShape === 'half_ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+            } else if (placeShape.startsWith('top_half_ramp')) {
+              currentMesh = this.renderer.previewTopHalfRampMesh;
+              if (placeShape === 'top_half_ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+              else if (placeShape === 'top_half_ramp_n') dummy.rotation.set(0, 0, Math.PI);
+              else if (placeShape === 'top_half_ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+            } else if (placeShape.startsWith('stair')) {
+              currentMesh = this.renderer.previewStairMesh;
+              if (placeShape === 'stair_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+              else if (placeShape === 'stair_n') dummy.rotation.set(0, 0, Math.PI);
+              else if (placeShape === 'stair_w') dummy.rotation.set(0, 0, Math.PI / 2);
+            } else if (placeShape === 'decal') {
+              currentMesh = this.renderer.previewDecalMesh;
+              if (eng.editShapeDir === 'e') dummy.rotation.set(0, 0, -Math.PI / 2);
+              else if (eng.editShapeDir === 'n') dummy.rotation.set(0, 0, Math.PI);
+              else if (eng.editShapeDir === 'w') dummy.rotation.set(0, 0, Math.PI / 2);
+            } else if (placeShape === 'fence') {
+              currentMesh = this.renderer.previewFenceMesh;
+            } else if (placeShape.includes('door')) {
+              if (placeShape.startsWith('door_')) {
+                currentMesh = this.renderer.previewDoorMesh;
+              } else {
+                currentMesh = this.renderer.assetManager.previewModelMeshes[placeShape.replace('_open', '').replace('_flip', '')];
+              }
+              isDoor = true;
+              const isOp = placeShape.includes('_open');
+              doorIsFlip = placeShape.includes('_flip');
+              if (placeShape.includes('door_e') || eng.editShapeDir === 'e') doorRot = -Math.PI / 2;
+              else if (placeShape.includes('door_n') || eng.editShapeDir === 'n') doorRot = Math.PI;
+              else if (placeShape.includes('door_w') || eng.editShapeDir === 'w') doorRot = Math.PI / 2;
+              else doorRot = 0;
 
-             const nameToId = {};
-             for (const id in BlockRegistry) {
-               nameToId[BlockRegistry[id].name] = id;
-             }
+              let targetRot = doorRot;
+              if (isOp) {
+                targetRot += doorIsFlip ? -Math.PI / 2 : Math.PI / 2;
+              }
+              dummy.userData = { targetRot };
+            } else if (this.renderer.assetManager.previewModelMeshes && this.renderer.assetManager.previewModelMeshes[placeShape.replace('_open', '')]) {
+              currentMesh = this.renderer.assetManager.previewModelMeshes[placeShape.replace('_open', '')];
+              let rot = 0;
+              if (eng.editShapeDir === 'e') rot = -Math.PI / 2;
+              else if (eng.editShapeDir === 'n') rot = Math.PI;
+              else if (eng.editShapeDir === 'w') rot = Math.PI / 2;
+              if (placeShape.includes('_open')) rot += eng.editShapeFlip ? -Math.PI / 2 : Math.PI / 2;
+              dummy.rotation.set(0, 0, rot);
+            } else { currentMesh = this.renderer.previewCubeMesh; }
 
-             const overrideTex = (furn && furn.customTexture) ? furnId : tex;
-             const blockId = nameToId[overrideTex];
-             const voxelDef = blockId ? BlockRegistry[blockId] : null;
-             let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
-             if (voxelDef && voxelDef.faces) {
-               mainAtlasPos = { x: voxelDef.faces.top[0], y: voxelDef.faces.top[1] };
-               sidesAtlasPos = { x: voxelDef.faces.sides[0], y: voxelDef.faces.sides[1] };
-               bottomAtlasPos = { x: voxelDef.faces.bottom[0], y: voxelDef.faces.bottom[1] };
-             } else {
-               mainAtlasPos = this.renderer.assetManager.atlasMap[overrideTex] || this.renderer.assetManager.atlasMap['stone'];
-               sidesAtlasPos = mainAtlasPos;
-               bottomAtlasPos = mainAtlasPos;
-             }
+            const nameToId = {};
+            for (const id in BlockRegistry) {
+              nameToId[BlockRegistry[id].name] = id;
+            }
 
-             let fluidType = 0.0;
-             if (tex === 'water' || tex === 'water_flow') fluidType = 1.0;
-             else if (tex === 'lava' || tex === 'lava_flow') fluidType = 2.0;
-             else if (tex === 'acid') fluidType = 3.0;
-             else if (tex && tex.startsWith('block-lamp-on')) fluidType = 4.0;
-             else if (placeShape && placeShape.startsWith('arcade-box')) fluidType = 5.0;
-             const isFluid = fluidType > 0.0 && fluidType < 4.0;
-             const isGlassBlock = tex.startsWith('glass') || tex.startsWith('clear_stained_glass');
-             const parsedColor = new THREE.Color(colorHex);
+            const overrideTex = (furn && furn.customTexture) ? furnId : tex;
+            const blockId = nameToId[overrideTex];
+            const voxelDef = blockId ? BlockRegistry[blockId] : null;
+            let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
+            if (voxelDef && voxelDef.faces) {
+              mainAtlasPos = { x: voxelDef.faces.top[0], y: voxelDef.faces.top[1] };
+              sidesAtlasPos = { x: voxelDef.faces.sides[0], y: voxelDef.faces.sides[1] };
+              bottomAtlasPos = { x: voxelDef.faces.bottom[0], y: voxelDef.faces.bottom[1] };
+            } else {
+              mainAtlasPos = this.renderer.assetManager.atlasMap[overrideTex] || this.renderer.assetManager.atlasMap['stone'];
+              sidesAtlasPos = mainAtlasPos;
+              bottomAtlasPos = mainAtlasPos;
+            }
 
-             const maxPreview = Math.min(tilesToPreview.length, 4096);
+            let fluidType = 0.0;
+            if (tex === 'water' || tex === 'water_flow') fluidType = 1.0;
+            else if (tex === 'lava' || tex === 'lava_flow') fluidType = 2.0;
+            else if (tex === 'acid') fluidType = 3.0;
+            else if (tex && tex.startsWith('block-lamp-on')) fluidType = 4.0;
+            else if (placeShape && placeShape.startsWith('arcade-box')) fluidType = 5.0;
+            const isFluid = fluidType > 0.0 && fluidType < 4.0;
+            const isGlassBlock = tex.startsWith('glass') || tex.startsWith('clear_stained_glass');
+            const parsedColor = new THREE.Color(colorHex);
 
-             const previewSet = new Set();
-             for (let i = 0; i < maxPreview; i++) {
-               previewSet.add(`${tilesToPreview[i].x}_${tilesToPreview[i].y}_${tilesToPreview[i].z}`);
-             }
+            const maxPreview = Math.min(tilesToPreview.length, 4096);
 
-             for (let i = 0; i < maxPreview; i++) {
-               const t = tilesToPreview[i];
-               if (isDoor) {
-                   const m = new THREE.Matrix4();
-                   m.makeTranslation(t.x, t.y, t.z);
+            const previewSet = new Set();
+            for (let i = 0; i < maxPreview; i++) {
+              previewSet.add(`${tilesToPreview[i].x}_${tilesToPreview[i].y}_${tilesToPreview[i].z}`);
+            }
 
-                   let hingeOffset = new THREE.Vector3(-16, 0, 0);
-                   if (doorIsFlip) hingeOffset.set(16, 0, 0);
-                   hingeOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), doorRot);
+            for (let i = 0; i < maxPreview; i++) {
+              const t = tilesToPreview[i];
+              if (isDoor) {
+                const m = new THREE.Matrix4();
+                m.makeTranslation(t.x, t.y, t.z);
 
-                   m.multiply(new THREE.Matrix4().makeTranslation(hingeOffset.x, hingeOffset.y, 0));
-                   m.multiply(new THREE.Matrix4().makeRotationZ(dummy.userData.targetRot));
-                   if (doorIsFlip) {
-                       m.multiply(new THREE.Matrix4().makeTranslation(-16, 0, 0));
-                       m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
-                   } else {
-                       m.multiply(new THREE.Matrix4().makeTranslation(16, 0, 0));
-                   }
+                let hingeOffset = new THREE.Vector3(-16, 0, 0);
+                if (doorIsFlip) hingeOffset.set(16, 0, 0);
+                hingeOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), doorRot);
 
-                   currentMesh.setMatrixAt(i, m);
-               } else {
-                   dummy.position.set(t.x, t.y, t.z);
-                   dummy.updateMatrix();
-                   currentMesh.setMatrixAt(i, dummy.matrix);
-               }
+                m.multiply(new THREE.Matrix4().makeTranslation(hingeOffset.x, hingeOffset.y, 0));
+                m.multiply(new THREE.Matrix4().makeRotationZ(dummy.userData.targetRot));
+                if (doorIsFlip) {
+                  m.multiply(new THREE.Matrix4().makeTranslation(-16, 0, 0));
+                  m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
+                } else {
+                  m.multiply(new THREE.Matrix4().makeTranslation(16, 0, 0));
+                }
 
-               if (currentMesh.geometry.attributes.packedColor) {
-                 const pr = Math.max(0, Math.min(255, parsedColor.r * 255)) | 0;
-                 const pg = Math.max(0, Math.min(255, parsedColor.g * 255)) | 0;
-                 const pb = Math.max(0, Math.min(255, parsedColor.b * 255)) | 0;
-                 currentMesh.geometry.attributes.packedColor.setX(i, pr | (pg << 8) | (pb << 16));
-               } else {
-                 currentMesh.setColorAt(i, parsedColor);
-               }
+                currentMesh.setMatrixAt(i, m);
+              } else {
+                dummy.position.set(t.x, t.y, t.z);
+                dummy.updateMatrix();
+                currentMesh.setMatrixAt(i, dummy.matrix);
+              }
 
-               let tMainAtlasPos = mainAtlasPos;
-               let tSidesAtlasPos = sidesAtlasPos;
-               let tBottomAtlasPos = bottomAtlasPos;
+              if (currentMesh.geometry.attributes.packedColor) {
+                const pr = Math.max(0, Math.min(255, parsedColor.r * 255)) | 0;
+                const pg = Math.max(0, Math.min(255, parsedColor.g * 255)) | 0;
+                const pb = Math.max(0, Math.min(255, parsedColor.b * 255)) | 0;
+                currentMesh.geometry.attributes.packedColor.setX(i, pr | (pg << 8) | (pb << 16));
+              } else {
+                currentMesh.setColorAt(i, parsedColor);
+              }
 
-               let subScale = 1.0; let subOffsetX = 0; let subOffsetY = 0;
-               if (tex === 'arcade-carpet') {
-                 subScale = 0.5;
-                 subOffsetX = ((Math.round(t.x / 32) % 2 + 2) % 2) * 0.5;
-                 subOffsetY = ((Math.round(t.y / 32) % 2 + 2) % 2) * 0.5;
-               }
+              let tMainAtlasPos = mainAtlasPos;
+              let tSidesAtlasPos = sidesAtlasPos;
+              let tBottomAtlasPos = bottomAtlasPos;
 
-               const packUV = (atlasPos, sOffX, sOffY, sScale, isFlipped) => {
-                   const tx = atlasPos ? atlasPos.x : 0; const ty = atlasPos ? atlasPos.y : 0;
-                   const ux = Math.round((tx + sOffX) * 8); const uy = Math.round((ty + sOffY) * 8);
-                   let scaleLevel = sScale === 0.5 ? 1 : (sScale === 0.25 ? 2 : (sScale === 0.125 ? 3 : 0));
-                   const flip = isFlipped ? 1 : 0;
-                   return (ux & 255) | ((uy & 255) << 8) | (scaleLevel << 16) | (flip << 19);
-               };
+              let subScale = 1.0; let subOffsetX = 0; let subOffsetY = 0;
+              if (tex === 'arcade-carpet') {
+                subScale = 0.5;
+                subOffsetX = ((Math.round(t.x / 32) % 2 + 2) % 2) * 0.5;
+                subOffsetY = ((Math.round(t.y / 32) % 2 + 2) % 2) * 0.5;
+              }
 
-               if (currentMesh.geometry.attributes.packedUVs) {
-                 const isFlipped = placeShape.includes('_flip');
-                 currentMesh.geometry.attributes.packedUVs.setXYZ(i,
-                    packUV(tMainAtlasPos, subOffsetX, subOffsetY, subScale, isFlipped),
-                    packUV(tSidesAtlasPos, subOffsetX, subOffsetY, subScale, isFlipped),
-                    packUV(tBottomAtlasPos, subOffsetX, subOffsetY, subScale, isFlipped)
-                 );
-               }
+              const packUV = (atlasPos, sOffX, sOffY, sScale, isFlipped) => {
+                const tx = atlasPos ? atlasPos.x : 0; const ty = atlasPos ? atlasPos.y : 0;
+                const ux = Math.round((tx + sOffX) * 8); const uy = Math.round((ty + sOffY) * 8);
+                let scaleLevel = sScale === 0.5 ? 1 : (sScale === 0.25 ? 2 : (sScale === 0.125 ? 3 : 0));
+                const flip = isFlipped ? 1 : 0;
+                return (ux & 255) | ((uy & 255) << 8) | (scaleLevel << 16) | (flip << 19);
+              };
 
-               let visE = 1, visW = 1, visS = 1, visN = 1, visT = 1, visB = 1;
+              if (currentMesh.geometry.attributes.packedUVs) {
+                const isFlipped = placeShape.includes('_flip');
+                currentMesh.geometry.attributes.packedUVs.setXYZ(i,
+                  packUV(tMainAtlasPos, subOffsetX, subOffsetY, subScale, isFlipped),
+                  packUV(tSidesAtlasPos, subOffsetX, subOffsetY, subScale, isFlipped),
+                  packUV(tBottomAtlasPos, subOffsetX, subOffsetY, subScale, isFlipped)
+                );
+              }
 
-               const checkCull = (nx, ny, nz) => {
-                 if (previewSet.has(`${nx}_${ny}_${nz}`)) return true;
-                 if (isGlassBlock || isFluid) {
-                   const v = eng.mapManager.getVoxelAt(nx, ny, nz);
-                   if (v && v.tex === tex && (v.shape || 'cube') === placeShape) return true;
-                 }
-                 return false;
-               };
+              let visE = 1, visW = 1, visS = 1, visN = 1, visT = 1, visB = 1;
 
-               if (checkCull(t.x + 32, t.y, t.z)) visE = 0;
-               if (checkCull(t.x - 32, t.y, t.z)) visW = 0;
-               if (checkCull(t.x, t.y + 32, t.z)) visS = 0;
-               if (checkCull(t.x, t.y - 32, t.z)) visN = 0;
-               if (checkCull(t.x, t.y, t.z + 32)) visT = 0;
-               if (checkCull(t.x, t.y, t.z - 32)) visB = 0;
+              const checkCull = (nx, ny, nz) => {
+                if (previewSet.has(`${nx}_${ny}_${nz}`)) return true;
+                if (isGlassBlock || isFluid) {
+                  const v = eng.mapManager.getVoxelAt(nx, ny, nz);
+                  if (v && v.tex === tex && (v.shape || 'cube') === placeShape) return true;
+                }
+                return false;
+              };
 
-               if (currentMesh.geometry.attributes.packedData) {
-                 let packed = 0;
-                 if (visE) packed |= 1;
-                 if (visW) packed |= 2;
-                 if (visS) packed |= 4;
-                 if (visN) packed |= 8;
-                 if (visT) packed |= 16;
-                 if (visB) packed |= 32;
-                 packed |= (fluidType & 7) << 6;
-                 currentMesh.geometry.attributes.packedData.setX(i, packed);
-               }
-             }
+              if (checkCull(t.x + 32, t.y, t.z)) visE = 0;
+              if (checkCull(t.x - 32, t.y, t.z)) visW = 0;
+              if (checkCull(t.x, t.y + 32, t.z)) visS = 0;
+              if (checkCull(t.x, t.y - 32, t.z)) visN = 0;
+              if (checkCull(t.x, t.y, t.z + 32)) visT = 0;
+              if (checkCull(t.x, t.y, t.z - 32)) visB = 0;
 
-             currentMesh.count = maxPreview;
-             currentMesh.instanceMatrix.needsUpdate = true;
-             if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
-             if (currentMesh.geometry.attributes.packedUVs) currentMesh.geometry.attributes.packedUVs.needsUpdate = true;
-             if (currentMesh.geometry.attributes.packedColor) currentMesh.geometry.attributes.packedColor.needsUpdate = true;
-             if (currentMesh.geometry.attributes.packedData) currentMesh.geometry.attributes.packedData.needsUpdate = true;
-           }
+              if (currentMesh.geometry.attributes.packedData) {
+                let packed = 0;
+                if (visE) packed |= 1;
+                if (visW) packed |= 2;
+                if (visS) packed |= 4;
+                if (visN) packed |= 8;
+                if (visT) packed |= 16;
+                if (visB) packed |= 32;
+                packed |= (fluidType & 7) << 6;
+                currentMesh.geometry.attributes.packedData.setX(i, packed);
+              }
+            }
+
+            currentMesh.count = maxPreview;
+            currentMesh.instanceMatrix.needsUpdate = true;
+            if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
+            if (currentMesh.geometry.attributes.packedUVs) currentMesh.geometry.attributes.packedUVs.needsUpdate = true;
+            if (currentMesh.geometry.attributes.packedColor) currentMesh.geometry.attributes.packedColor.needsUpdate = true;
+            if (currentMesh.geometry.attributes.packedData) currentMesh.geometry.attributes.packedData.needsUpdate = true;
+          }
         }
       }
     }
@@ -1367,32 +1385,32 @@ export class DebugRenderer {
         let vz = Math.round(targetPoint.z / 32) * 32;
 
         if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
-           vx = eng.cursorGridPos.x;
-           vy = eng.cursorGridPos.y;
-           vz = eng.cursorGridPos.z;
+          vx = eng.cursorGridPos.x;
+          vy = eng.cursorGridPos.y;
+          vz = eng.cursorGridPos.z;
         }
 
         const voxel = eng.mapManager.getVoxelAt(vx, vy, vz);
         let voxelInfo = '<span style="color: #aaa;">Empty Space (Air)</span>';
         if (voxel) {
-           let baseShape = voxel.shape || 'cube';
-           let shapeDisplay = baseShape;
+          let baseShape = voxel.shape || 'cube';
+          let shapeDisplay = baseShape;
 
-           let isStandard = baseShape === 'cube' || baseShape === 'slab' || baseShape === 'decor' || baseShape.startsWith('ramp') || baseShape.startsWith('stair') || baseShape.startsWith('door');
-           const cleanShape = baseShape.replace('_open', '');
+          let isStandard = baseShape === 'cube' || baseShape === 'slab' || baseShape === 'decor' || baseShape.startsWith('ramp') || baseShape.startsWith('stair') || baseShape.startsWith('door');
+          const cleanShape = baseShape.replace('_open', '');
 
-           if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[cleanShape]) {
-               shapeDisplay = `Model (${FURNITURE_REGISTRY[cleanShape].name})`;
-           } else if (isStandard) {
-               shapeDisplay = `Block (${baseShape})`;
-           } else {
-               shapeDisplay = `<span style="color: #ff4757;">Orphaned Data (${baseShape} &rarr; Cube)</span>`;
-           }
+          if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[cleanShape]) {
+            shapeDisplay = `Model (${FURNITURE_REGISTRY[cleanShape].name})`;
+          } else if (isStandard) {
+            shapeDisplay = `Block (${baseShape})`;
+          } else {
+            shapeDisplay = `<span style="color: #ff4757;">Orphaned Data (${baseShape} &rarr; Cube)</span>`;
+          }
 
-           const dirNames = { 'n': 'North', 'e': 'East', 's': 'South', 'w': 'West' };
-           const dirDisplay = dirNames[voxel.dir || 'n'] || (voxel.dir || 'North');
+          const dirNames = { 'n': 'North', 'e': 'East', 's': 'South', 'w': 'West' };
+          const dirDisplay = dirNames[voxel.dir || 'n'] || (voxel.dir || 'North');
 
-           voxelInfo = `Material: <span style="color: #f1c40f;">${voxel.tex}</span><br>Shape: <span style="color: #9b59b6;">${shapeDisplay}</span><br>Direction: <span style="color: #e67e22;">${dirDisplay}</span>`;
+          voxelInfo = `Material: <span style="color: #f1c40f;">${voxel.tex}</span><br>Shape: <span style="color: #9b59b6;">${shapeDisplay}</span><br>Direction: <span style="color: #e67e22;">${dirDisplay}</span>`;
         }
 
         tooltipHTML += `
@@ -1404,10 +1422,10 @@ export class DebugRenderer {
       }
 
       if (tooltipHTML !== '' && this.renderer.debugOverlay) {
-         this.renderer.debugOverlay.style.display = 'block';
-         this.renderer.debugOverlay.style.left = (eng.input.mousePos.x + 20) + 'px';
-         this.renderer.debugOverlay.style.top = (eng.input.mousePos.y + 20) + 'px';
-         this.renderer.debugOverlay.innerHTML = tooltipHTML;
+        this.renderer.debugOverlay.style.display = 'block';
+        this.renderer.debugOverlay.style.left = (eng.input.mousePos.x + 20) + 'px';
+        this.renderer.debugOverlay.style.top = (eng.input.mousePos.y + 20) + 'px';
+        this.renderer.debugOverlay.innerHTML = tooltipHTML;
       }
 
       if (this.renderer.debugCtx && !eng.devOptions.useDebugTooltip) {
@@ -1421,45 +1439,45 @@ export class DebugRenderer {
           const sx2 = (p2.x + 1) / 2 * window.innerWidth;
           const sy2 = -(p2.y - 1) / 2 * window.innerHeight;
 
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(sx1, sy1);
-            ctx.lineTo(sx2, sy2);
-            ctx.stroke();
-            ctx.fillStyle = '#ff4757';
-            ctx.fillRect(sx1 - 2, sy1 - 2, 4, 4);
-            ctx.fillRect(sx2 - 2, sy2 - 2, 4, 4);
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 12px monospace';
-            ctx.textAlign = 'left';
-            ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-            ctx.lineWidth = 3;
-            ctx.strokeText(`${originLabel} X:${Math.round(origin.x)} Y:${Math.round(origin.y)} Z:${Math.round(origin.z)}`, sx1 + 10, sy1);
-            ctx.fillText(`${originLabel} X:${Math.round(origin.x)} Y:${Math.round(origin.y)} Z:${Math.round(origin.z)}`, sx1 + 10, sy1);
-            ctx.strokeText(`${targetLabel} X:${Math.round(target.x)} Y:${Math.round(target.y)} Z:${Math.round(target.z)}`, sx2 + 10, sy2);
-            ctx.fillText(`${targetLabel} X:${Math.round(target.x)} Y:${Math.round(target.y)} Z:${Math.round(target.z)}`, sx2 + 10, sy2);
-            ctx.textAlign = 'center';
-            const midX = (sx1 + sx2) / 2;
-            const midY = (sy1 + sy2) / 2;
-            const dx = target.x - origin.x;
-            const dy = target.y - origin.y;
-            const dz = target.z - origin.z;
-            const dist = Math.hypot(Math.hypot(dx, dy), dz);
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            const text = `Dist: ${Math.round(dist)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(sx1, sy1);
+          ctx.lineTo(sx2, sy2);
+          ctx.stroke();
+          ctx.fillStyle = '#ff4757';
+          ctx.fillRect(sx1 - 2, sy1 - 2, 4, 4);
+          ctx.fillRect(sx2 - 2, sy2 - 2, 4, 4);
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'left';
+          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+          ctx.lineWidth = 3;
+          ctx.strokeText(`${originLabel} X:${Math.round(origin.x)} Y:${Math.round(origin.y)} Z:${Math.round(origin.z)}`, sx1 + 10, sy1);
+          ctx.fillText(`${originLabel} X:${Math.round(origin.x)} Y:${Math.round(origin.y)} Z:${Math.round(origin.z)}`, sx1 + 10, sy1);
+          ctx.strokeText(`${targetLabel} X:${Math.round(target.x)} Y:${Math.round(target.y)} Z:${Math.round(target.z)}`, sx2 + 10, sy2);
+          ctx.fillText(`${targetLabel} X:${Math.round(target.x)} Y:${Math.round(target.y)} Z:${Math.round(target.z)}`, sx2 + 10, sy2);
+          ctx.textAlign = 'center';
+          const midX = (sx1 + sx2) / 2;
+          const midY = (sy1 + sy2) / 2;
+          const dx = target.x - origin.x;
+          const dy = target.y - origin.y;
+          const dz = target.z - origin.z;
+          const dist = Math.hypot(Math.hypot(dx, dy), dz);
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+          const text = `Dist: ${Math.round(dist)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
 
-            let screenAngle = Math.atan2(sy2 - sy1, sx2 - sx1);
-            if (sx1 > sx2) screenAngle += Math.PI;
-            ctx.save();
-            ctx.translate(midX, midY);
-            ctx.rotate(screenAngle);
-            ctx.strokeText(text, 0, -10);
-            ctx.fillText(text, 0, -10);
-            ctx.restore();
-            ctx.restore();
+          let screenAngle = Math.atan2(sy2 - sy1, sx2 - sx1);
+          if (sx1 > sx2) screenAngle += Math.PI;
+          ctx.save();
+          ctx.translate(midX, midY);
+          ctx.rotate(screenAngle);
+          ctx.strokeText(text, 0, -10);
+          ctx.fillText(text, 0, -10);
+          ctx.restore();
+          ctx.restore();
         };
 
         if (eng.devOptions.showDistPlayerToMouse && eng.mouseWorldPos) {
@@ -1479,7 +1497,7 @@ export class DebugRenderer {
       }
     }
 
-      if (eng.targetingPower && targetPoint) {
+    if (eng.targetingPower && targetPoint) {
       const maxMapSize = 511 * 32;
       targetPoint.x = Math.max(0, Math.min(targetPoint.x, maxMapSize));
       targetPoint.y = Math.max(0, Math.min(targetPoint.y, maxMapSize));
@@ -1487,12 +1505,12 @@ export class DebugRenderer {
     }
 
     if (this.renderer.gridHelper) {
-        if (eng.editMode && eng.devOptions.showGrid && eng.cursorGridPos) {
-            this.renderer.gridHelper.position.set(eng.cursorGridPos.x + 16, eng.cursorGridPos.y + 16, eng.cursorGridPos.z + 16);
-            this.renderer.gridHelper.visible = true;
-        } else {
-            this.renderer.gridHelper.visible = false;
-        }
+      if (eng.editMode && eng.devOptions.showGrid && eng.cursorGridPos) {
+        this.renderer.gridHelper.position.set(eng.cursorGridPos.x + 16, eng.cursorGridPos.y + 16, eng.cursorGridPos.z + 16);
+        this.renderer.gridHelper.visible = true;
+      } else {
+        this.renderer.gridHelper.visible = false;
+      }
     }
 
     eng.mouseWorldPos = targetPoint;
@@ -1555,34 +1573,34 @@ export class DebugRenderer {
     }
 
     if (eng.pathEditMode && eng.pathEditInputId) {
-        const inputEl = document.getElementById(eng.pathEditInputId);
-        if (inputEl && inputEl.value) {
-            const parts = inputEl.value.split(';');
-            const points = [];
-            parts.forEach(p => {
-                const s = p.trim();
-                if (s && !s.startsWith('wait')) {
-                    const coords = s.split(',');
-                    if (coords.length === 2) points.push({ x: parseFloat(coords[0]), y: parseFloat(coords[1]) });
-                }
-            });
-            if (points.length > 0) {
-                this.renderer.clickMovePathLine.material.color.setHex(0xe056fd);
-                const positions = this.renderer.clickMovePathLine.geometry.attributes.position.array;
-                let count = 0;
-                for (let i = 0; i < points.length; i++) {
-                    positions[count++] = points[i].x;
-                    positions[count++] = points[i].y;
-                    positions[count++] = eng.getTerrainZ(points[i].x, points[i].y) + 16;
-                    if (count >= 800 * 3) break;
-                }
-                this.renderer.clickMovePathLine.geometry.setDrawRange(0, count / 3);
-                this.renderer.clickMovePathLine.geometry.attributes.position.needsUpdate = true;
-                this.renderer.clickMovePathLine.visible = true;
-            } else {
-                this.renderer.clickMovePathLine.visible = false;
-            }
+      const inputEl = document.getElementById(eng.pathEditInputId);
+      if (inputEl && inputEl.value) {
+        const parts = inputEl.value.split(';');
+        const points = [];
+        parts.forEach(p => {
+          const s = p.trim();
+          if (s && !s.startsWith('wait')) {
+            const coords = s.split(',');
+            if (coords.length === 2) points.push({ x: parseFloat(coords[0]), y: parseFloat(coords[1]) });
+          }
+        });
+        if (points.length > 0) {
+          this.renderer.clickMovePathLine.material.color.setHex(0xe056fd);
+          const positions = this.renderer.clickMovePathLine.geometry.attributes.position.array;
+          let count = 0;
+          for (let i = 0; i < points.length; i++) {
+            positions[count++] = points[i].x;
+            positions[count++] = points[i].y;
+            positions[count++] = eng.getTerrainZ(points[i].x, points[i].y) + 16;
+            if (count >= 800 * 3) break;
+          }
+          this.renderer.clickMovePathLine.geometry.setDrawRange(0, count / 3);
+          this.renderer.clickMovePathLine.geometry.attributes.position.needsUpdate = true;
+          this.renderer.clickMovePathLine.visible = true;
+        } else {
+          this.renderer.clickMovePathLine.visible = false;
         }
+      }
     } else if (eng.clientSettings.clickToMove && eng.player && eng.player.moveTarget && eng.player.moveTarget.timer > 0 && eng.clientSettings.showClickMovePath !== false) {
       const cmZ = eng.getTerrainZ(eng.player.moveTarget.x, eng.player.moveTarget.y);
       this.renderer.clickMoveRing.position.set(eng.player.moveTarget.x, eng.player.moveTarget.y, cmZ + 2);

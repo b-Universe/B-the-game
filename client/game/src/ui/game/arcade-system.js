@@ -57,7 +57,7 @@ export class CameraManager {
 
   update(dt) {
     if (this.mode === 'transition_in' || this.mode === 'transition_out') {
-        this.transitionProgress += dt / 1000;
+      this.transitionProgress += dt / 1000;
       if (this.transitionProgress >= 1) {
         this.transitionProgress = 1;
         this.mode = this.mode === 'transition_in' ? 'arcade' : 'world';
@@ -314,10 +314,10 @@ export class ArcadeSystem {
         } else {
           this.overlayCanvas.style.display = 'none';
 
-            if (this.physicalScreen) {
-              this.physicalScreen.group.visible = true;
-              this.physicalScreen.texture.needsUpdate = true;
-            }
+          if (this.physicalScreen) {
+            this.physicalScreen.group.visible = true;
+            this.physicalScreen.texture.needsUpdate = true;
+          }
         }
       } catch (err) {
         console.error(`[ArcadeSystem] ${this.vm.constructor.name} crashed! Safely isolating...`, err);

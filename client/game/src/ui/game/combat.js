@@ -257,19 +257,19 @@ export class CombatManager {
     let targetType = null;
 
     if (powerId === 'dev-reset') {
-       directTargetId = eng.accountUuid; // Server will override to self
-       targetType = 'player';
+      directTargetId = eng.accountUuid; // Server will override to self
+      targetType = 'player';
     } else {
-       const combatParams = this.getCombatTargetParams(powerId);
-       if (combatParams.targetEntity) {
-         directTargetId = combatParams.targetEntity.id;
-         targetType = combatParams.targetEntity.type;
-       }
+      const combatParams = this.getCombatTargetParams(powerId);
+      if (combatParams.targetEntity) {
+        directTargetId = combatParams.targetEntity.id;
+        targetType = combatParams.targetEntity.type;
+      }
     }
 
     if (!directTargetId) {
-       eng.chat.addMessage('system', 'System', 'You need a target for this power.');
-       return;
+      eng.showFloatingText('Requires a Target', '#e74c3c');
+      return;
     }
 
     eng.network.sendCombatHit({

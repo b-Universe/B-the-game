@@ -40,18 +40,18 @@ export class AssetManager {
         this.renderer.needsVoxelUpdate = true;
 
         if (this.engine.mapManager) {
-            this.engine.mapManager.generatedChunks.clear();
-            this.engine.mapManager.mapCacheDirty = true;
-            for (const mesh of this.renderer.chunkMeshes.values()) {
-                this.renderer.scene.remove(mesh);
-                mesh.geometry.dispose();
-            }
-            this.renderer.chunkMeshes.clear();
-            for (const mesh of this.renderer.chunkTransparentMeshes.values()) {
-                this.renderer.scene.remove(mesh);
-                mesh.geometry.dispose();
-            }
-            this.renderer.chunkTransparentMeshes.clear();
+          this.engine.mapManager.generatedChunks.clear();
+          this.engine.mapManager.mapCacheDirty = true;
+          for (const mesh of this.renderer.chunkMeshes.values()) {
+            this.renderer.scene.remove(mesh);
+            mesh.geometry.dispose();
+          }
+          this.renderer.chunkMeshes.clear();
+          for (const mesh of this.renderer.chunkTransparentMeshes.values()) {
+            this.renderer.scene.remove(mesh);
+            mesh.geometry.dispose();
+          }
+          this.renderer.chunkTransparentMeshes.clear();
         }
       }
     }
@@ -68,7 +68,7 @@ export class AssetManager {
         tex.minFilter = THREE.NearestFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
         if (this.renderer && this.renderer.webgl) {
-            this.renderer.webgl.initTexture(tex);
+          this.renderer.webgl.initTexture(tex);
         }
         this.textures[key] = tex;
         if (callback) callback(tex);
@@ -145,13 +145,13 @@ export class AssetManager {
           const uvArray = geo.attributes.uv.array;
 
           for (let i = 0; i < uvArray.length; i += 2) {
-             uvArray[i + 1] = 1.0 - uvArray[i + 1]; // Align GLTF origin to Canvas origin
+            uvArray[i + 1] = 1.0 - uvArray[i + 1]; // Align GLTF origin to Canvas origin
 
-             // Apply Epsilon to prevent shader fract(1.0) rolling back to 0.0!
-             if (uvArray[i] >= 1.0) uvArray[i] -= 0.0001;
-             else if (uvArray[i] <= 0.0) uvArray[i] += 0.0001;
-             if (uvArray[i + 1] >= 1.0) uvArray[i + 1] -= 0.0001;
-             else if (uvArray[i + 1] <= 0.0) uvArray[i + 1] += 0.0001;
+            // Apply Epsilon to prevent shader fract(1.0) rolling back to 0.0!
+            if (uvArray[i] >= 1.0) uvArray[i] -= 0.0001;
+            else if (uvArray[i] <= 0.0) uvArray[i] += 0.0001;
+            if (uvArray[i + 1] >= 1.0) uvArray[i + 1] -= 0.0001;
+            else if (uvArray[i + 1] <= 0.0) uvArray[i + 1] += 0.0001;
           }
           geo.attributes.uv.needsUpdate = true;
           geo.scale(2, 2, 2);
@@ -207,7 +207,7 @@ export class AssetManager {
       loader.load(url, (tex) => {
         callback(tex);
         if (this.renderer && this.renderer.webgl) {
-            this.renderer.webgl.initTexture(tex);
+          this.renderer.webgl.initTexture(tex);
         }
         this.assetsPending--;
         this.checkComplete();
@@ -221,7 +221,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/4, 1);
+      tex.repeat.set(1 / 4, 1);
       this.textures['proj_airplane'] = tex;
       this.sequenceLibrary['proj_airplane'] = { name: 'Paper Airplane', path: 'assets/sprites/projectiles/paper-airplane-right.png', frames: 4, speed: 80, texture: tex };
     });
@@ -230,7 +230,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/8, 1);
+      tex.repeat.set(1 / 8, 1);
       this.textures['fx_teleport'] = tex;
       this.sequenceLibrary['fx_teleport'] = { name: 'FX Teleport', path: 'assets/sprites/fx/fx1.png', frames: 8, speed: 80, texture: tex };
     });
@@ -239,7 +239,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/8, 1);
+      tex.repeat.set(1 / 8, 1);
       this.textures['fx_teleport_2'] = tex;
       this.sequenceLibrary['fx_teleport_2'] = { name: 'FX Teleport 2', path: 'assets/sprites/fx/fx2.png', frames: 8, speed: 80, texture: tex };
     });
@@ -248,7 +248,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/9, 1);
+      tex.repeat.set(1 / 9, 1);
       this.textures['fx_speed_start'] = tex;
       this.sequenceLibrary['fx_speed_start'] = { name: 'FX Speed Start', path: 'assets/sprites/fx/fx3.png', frames: 9, speed: 80, texture: tex };
     });
@@ -257,7 +257,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/8, 1);
+      tex.repeat.set(1 / 8, 1);
       this.textures['fx_speed_step'] = tex;
       this.sequenceLibrary['fx_speed_step'] = { name: 'FX Speed Step', path: 'assets/sprites/fx/fx4.png', frames: 8, speed: 80, texture: tex };
     });
@@ -266,7 +266,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/6, 1);
+      tex.repeat.set(1 / 6, 1);
       this.textures['fx_heal'] = tex;
       this.sequenceLibrary['fx_heal'] = { name: 'FX Heal', path: 'assets/sprites/fx/fx5.png', frames: 6, speed: 100, texture: tex };
     });
@@ -275,7 +275,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/5, 1);
+      tex.repeat.set(1 / 5, 1);
       this.textures['fx_drone_explode'] = tex;
       this.sequenceLibrary['fx_drone_explode'] = { name: 'FX Drone Explode', path: 'assets/sprites/fx/fx6.png', frames: 5, speed: 100, texture: tex };
     });
@@ -284,7 +284,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/5, 1);
+      tex.repeat.set(1 / 5, 1);
       this.textures['fx_drone_circuit'] = tex;
       this.sequenceLibrary['fx_drone_circuit'] = { name: 'FX Drone Circuit', path: 'assets/sprites/fx/fx7.png', frames: 5, speed: 100, texture: tex };
     });
@@ -293,7 +293,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/4, 1);
+      tex.repeat.set(1 / 4, 1);
       this.textures['fx_stun'] = tex;
       this.sequenceLibrary['fx_stun'] = { name: 'FX Stun', path: 'assets/sprites/fx/fx8.png', frames: 4, speed: 100, texture: tex };
     });
@@ -302,7 +302,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/8, 1);
+      tex.repeat.set(1 / 8, 1);
       this.textures['fx_sparks'] = tex;
       this.sequenceLibrary['fx_sparks'] = { name: 'FX Sparks', path: 'assets/sprites/fx/fx10.png', frames: 8, speed: 60, texture: tex };
     });
@@ -311,7 +311,7 @@ export class AssetManager {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.repeat.set(1/9, 1);
+      tex.repeat.set(1 / 9, 1);
       this.textures['fx_electric_zap'] = tex;
       this.sequenceLibrary['fx_electric_zap'] = { name: 'FX Electric Zap', path: 'assets/sprites/fx/fx11.png', frames: 9, speed: 50, texture: tex };
     });
@@ -319,16 +319,16 @@ export class AssetManager {
     ['crumpled-cronched-paper-1', 'crumpled-cronched-paper-2', 'crumpled-cronched-paper-3'].forEach((name, i) => {
       loadTex(`assets/sprites/projectiles/${name}.png${cb}`, (tex) => {
         tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
-        this.textures[`cronched_${i+1}`] = tex;
-        this.sequenceLibrary[`cronched_${i+1}`] = { name: `Cronched Paper ${i+1}`, path: `assets/sprites/projectiles/${name}.png`, frames: 1, speed: 0, texture: tex };
+        this.textures[`cronched_${i + 1}`] = tex;
+        this.sequenceLibrary[`cronched_${i + 1}`] = { name: `Cronched Paper ${i + 1}`, path: `assets/sprites/projectiles/${name}.png`, frames: 1, speed: 0, texture: tex };
       });
     });
 
     ['crumpled-paper-1', 'crumpled-paper-2'].forEach((name, i) => {
       loadTex(`assets/sprites/projectiles/${name}.png${cb}`, (tex) => {
         tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
-        this.textures[`waste_${i+1}`] = tex;
-        this.sequenceLibrary[`waste_${i+1}`] = { name: `Waste Paper ${i+1}`, path: `assets/sprites/projectiles/${name}.png`, frames: 1, speed: 0, texture: tex };
+        this.textures[`waste_${i + 1}`] = tex;
+        this.sequenceLibrary[`waste_${i + 1}`] = { name: `Waste Paper ${i + 1}`, path: `assets/sprites/projectiles/${name}.png`, frames: 1, speed: 0, texture: tex };
       });
     });
 
@@ -360,7 +360,7 @@ export class AssetManager {
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.repeat.set(1/8, 1/config.rows);
+        tex.repeat.set(1 / 8, 1 / config.rows);
         tex.userData = { rows: config.rows };
         this.textures[config.state] = tex;
       });
@@ -368,12 +368,12 @@ export class AssetManager {
 
     const roboticsPath = 'assets/sprites/entities/robotics';
     ROBOTICS_SPRITES.forEach(config => {
-        loadTex(`${roboticsPath}/${config.file}.png${cb}`, (tex) => {
-            tex.magFilter = THREE.NearestFilter;
-            tex.minFilter = THREE.NearestFilter;
-            tex.colorSpace = THREE.SRGBColorSpace;
-            this.textures[config.state] = tex;
-        });
+      loadTex(`${roboticsPath}/${config.file}.png${cb}`, (tex) => {
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        this.textures[config.state] = tex;
+      });
     });
 
     this.loadPowerSprites();
@@ -541,12 +541,12 @@ export class AssetManager {
     let nextAtlasY = 8; // Start at row 8 to safely bypass all base block textures!
 
     for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
-       if (data.customTexture) {
-           this.atlasMap[id] = { x: nextAtlasX, y: nextAtlasY };
-           loadTile(id, data.customTexture);
-           nextAtlasX++;
-           if (nextAtlasX >= 32) { nextAtlasX = 0; nextAtlasY++; }
-       }
+      if (data.customTexture) {
+        this.atlasMap[id] = { x: nextAtlasX, y: nextAtlasY };
+        loadTile(id, data.customTexture);
+        nextAtlasX++;
+        if (nextAtlasX >= 32) { nextAtlasX = 0; nextAtlasY++; }
+      }
     }
 
     for (let i = 1; i <= 6; i++) {
@@ -569,9 +569,9 @@ export class AssetManager {
         for (let y = 0; y < 2; y++) {
           const subId = `arcade-carpet-${x}-${y}`;
           if (!this.atlasMap[subId]) {
-             this.atlasMap[subId] = { x: nextAtlasX, y: nextAtlasY };
-             nextAtlasX++;
-             if (nextAtlasX >= 32) { nextAtlasX = 0; nextAtlasY++; }
+            this.atlasMap[subId] = { x: nextAtlasX, y: nextAtlasY };
+            nextAtlasX++;
+            if (nextAtlasX >= 32) { nextAtlasX = 0; nextAtlasY++; }
           }
           const pos = this.atlasMap[subId];
           if (pos) {

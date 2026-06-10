@@ -20,26 +20,26 @@
     "lastSpawnTime": 1780935307227
   },
   {
-    "uuid": "58f1dd9b-30db-4757-b3ae-a4799b6bc583",
+    "uuid": "ab6c90dc-d694-4f59-b966-2ae9960d977d",
     "name": "New Spawner",
-    "x": 5883,
-    "y": 1575,
+    "x": 4270,
+    "y": 3490,
     "z": 16,
     "zone": "atlas-city",
     "radius": 300,
     "maxActive": 5,
     "respawnRate": 10,
-    "npcName": "Thug",
+    "npcName": "New NPC",
     "npcGroup": "Civilian",
-    "npcType": "generic",
+    "npcType": "none",
     "levelMin": 1,
     "levelMax": 1,
     "strength": 0,
     "aggroRadius": 500,
     "patrolRoute": "",
-    "lastSpawnTime": 1780935337462,
-    "npcPowers": [],
+    "lastSpawnTime": 0,
+    "currentFaction": null,
     "mobPack": "1",
-    "currentFaction": null
+    "npcPowers": []
   }
 ]

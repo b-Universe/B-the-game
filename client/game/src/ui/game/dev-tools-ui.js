@@ -58,104 +58,104 @@ export class DevToolsUIManager {
     this.updateBuildingMode();
 
     const setupPathEditor = (btnId, inputId, modalRef) => {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-            btn.onclick = () => {
-                this.engine.pathEditMode = true;
-                this.engine.pathEditInputId = inputId;
-                modalRef.close();
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.onclick = () => {
+          this.engine.pathEditMode = true;
+          this.engine.pathEditInputId = inputId;
+          modalRef.close();
 
-                let overlay = document.getElementById('path-edit-overlay');
-                if (!overlay) {
-                    overlay = document.createElement('div');
-                    overlay.id = 'path-edit-overlay';
-                    overlay.style.cssText = 'position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(5,7,10,0.9); border: 2px solid #e056fd; padding: 10px; border-radius: 8px; z-index: 100000; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); pointer-events: auto;';
+          let overlay = document.getElementById('path-edit-overlay');
+          if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'path-edit-overlay';
+            overlay.style.cssText = 'position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(5,7,10,0.9); border: 2px solid #e056fd; padding: 10px; border-radius: 8px; z-index: 100000; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); pointer-events: auto;';
 
-                    overlay.innerHTML = `
+            overlay.innerHTML = `
                         <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;"><b>Path Editor:</b> Right-Click map to add nodes.</span>
                         <label style="color: #f1c40f; font-family: var(--font-mono); font-size: 0.8rem; margin-left: 10px;">Wait (s):</label>
                         <input type="number" id="path-edit-wait" value="2" style="width: 50px; background: #000; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 2px 5px; outline: none;">
                         <button id="btn-path-edit-undo" class="b-btn btn-secondary" style="padding: 4px 10px; margin-left: 10px; border-color: #e74c3c; color: #e74c3c;">Undo Last</button>
                         <button id="btn-path-edit-done" class="b-btn btn-primary" style="padding: 4px 15px; margin-left: 5px;">Done</button>
                     `;
-                    document.body.appendChild(overlay);
-                }
-                overlay.style.display = 'flex';
+            document.body.appendChild(overlay);
+          }
+          overlay.style.display = 'flex';
 
-                document.getElementById('btn-path-edit-undo').onclick = () => {
-                    const inputEl = document.getElementById(this.engine.pathEditInputId);
-                    if (inputEl) {
-                        let parts = inputEl.value.split(';').map(s => s.trim()).filter(Boolean);
-                        if (parts.length > 0) {
-                            if (parts[parts.length - 1].startsWith('wait')) parts.pop();
-                            parts.pop();
-                            inputEl.value = parts.join('; ');
-                            inputEl.dispatchEvent(new Event('input'));
-                        }
-                    }
-                };
+          document.getElementById('btn-path-edit-undo').onclick = () => {
+            const inputEl = document.getElementById(this.engine.pathEditInputId);
+            if (inputEl) {
+              let parts = inputEl.value.split(';').map(s => s.trim()).filter(Boolean);
+              if (parts.length > 0) {
+                if (parts[parts.length - 1].startsWith('wait')) parts.pop();
+                parts.pop();
+                inputEl.value = parts.join('; ');
+                inputEl.dispatchEvent(new Event('input'));
+              }
+            }
+          };
 
-                document.getElementById('btn-path-edit-done').onclick = () => {
-                    this.engine.pathEditMode = false;
-                    overlay.style.display = 'none';
-                    if (this.engine.pathEditInputId.includes('spawner')) this.spawnerEditWindow.open();
-                    else this.npcEditWindow.open();
-                };
-            };
-        }
+          document.getElementById('btn-path-edit-done').onclick = () => {
+            this.engine.pathEditMode = false;
+            overlay.style.display = 'none';
+            if (this.engine.pathEditInputId.includes('spawner')) this.spawnerEditWindow.open();
+            else this.npcEditWindow.open();
+          };
+        };
+      }
     };
 
     setTimeout(() => {
-       setupPathEditor('btn-edit-npc-path', 'edit-npc-patrol', this.npcEditWindow);
-       setupPathEditor('btn-edit-spawner-path', 'edit-spawner-patrol', this.spawnerEditWindow);
+      setupPathEditor('btn-edit-npc-path', 'edit-npc-patrol', this.npcEditWindow);
+      setupPathEditor('btn-edit-spawner-path', 'edit-spawner-patrol', this.spawnerEditWindow);
     }, 1000);
   }
 
   openPowerSelector(onSelect) {
-      const allPowers = Object.entries(window.POWER_REGISTRY || {}).map(([pId, pDef]) => {
-          let assignedSetNames = [];
-          if (this.engine.powersetsData) {
-              for (const [setId, setDef] of Object.entries(this.engine.powersetsData)) {
-                  if (setDef.powers && setDef.powers.some(p => p.id === pId || p.name === pDef.name)) {
-                      assignedSetNames.push(setDef.name);
-                  }
-              }
+    const allPowers = Object.entries(window.POWER_REGISTRY || {}).map(([pId, pDef]) => {
+      let assignedSetNames = [];
+      if (this.engine.powersetsData) {
+        for (const [setId, setDef] of Object.entries(this.engine.powersetsData)) {
+          if (setDef.powers && setDef.powers.some(p => p.id === pId || p.name === pDef.name)) {
+            assignedSetNames.push(setDef.name);
           }
-          return { id: pId, name: pDef.name || pId, assignedSetNames };
+        }
+      }
+      return { id: pId, name: pDef.name || pId, assignedSetNames };
+    });
+
+    this.powerSelectorWindow.open();
+
+    const searchInput = document.getElementById('power-selector-search');
+    const listContainer = document.getElementById('power-selector-list');
+
+    const render = () => {
+      const filter = searchInput.value.toLowerCase();
+      listContainer.innerHTML = '';
+
+      let sortedPowers = [...allPowers].sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedPowers.forEach(p => {
+        const pName = p.name.toLowerCase();
+        const pId = p.id.toLowerCase();
+        let match = pName.includes(filter) || pId.includes(filter);
+
+        if (p.assignedSetNames) {
+          p.assignedSetNames.forEach(psName => { if (psName.toLowerCase().includes(filter)) match = true; });
+        }
+
+        if (!match) return;
+        const btn = document.createElement('button');
+        btn.className = 'b-btn btn-secondary';
+        btn.style.cssText = 'text-align: left; padding: 5px; font-size: 0.85rem; display: flex; flex-direction: column; border-color: var(--text-dim);';
+        btn.innerHTML = `<strong style="color: #fff;">${p.name}</strong><span style="color: #aaa; font-size: 0.7rem;">${p.assignedSetNames.join(', ')}</span>`;
+        btn.onclick = () => { onSelect(p.id); this.powerSelectorWindow.close(); };
+        listContainer.appendChild(btn);
       });
-
-      this.powerSelectorWindow.open();
-
-      const searchInput = document.getElementById('power-selector-search');
-      const listContainer = document.getElementById('power-selector-list');
-
-      const render = () => {
-          const filter = searchInput.value.toLowerCase();
-          listContainer.innerHTML = '';
-
-          let sortedPowers = [...allPowers].sort((a, b) => a.name.localeCompare(b.name));
-
-          sortedPowers.forEach(p => {
-              const pName = p.name.toLowerCase();
-              const pId = p.id.toLowerCase();
-              let match = pName.includes(filter) || pId.includes(filter);
-
-              if (p.assignedSetNames) {
-                  p.assignedSetNames.forEach(psName => { if (psName.toLowerCase().includes(filter)) match = true; });
-              }
-
-              if (!match) return;
-              const btn = document.createElement('button');
-              btn.className = 'b-btn btn-secondary';
-              btn.style.cssText = 'text-align: left; padding: 5px; font-size: 0.85rem; display: flex; flex-direction: column; border-color: var(--text-dim);';
-              btn.innerHTML = `<strong style="color: #fff;">${p.name}</strong><span style="color: #aaa; font-size: 0.7rem;">${p.assignedSetNames.join(', ')}</span>`;
-              btn.onclick = () => { onSelect(p.id); this.powerSelectorWindow.close(); };
-              listContainer.appendChild(btn);
-          });
-      };
-      searchInput.value = ''; searchInput.oninput = render;
-      document.getElementById('btn-power-selector-close').onclick = () => this.powerSelectorWindow.close();
-      render();
+    };
+    searchInput.value = ''; searchInput.oninput = render;
+    document.getElementById('btn-power-selector-close').onclick = () => this.powerSelectorWindow.close();
+    render();
   }
 
   setupSideHudButtons() {
@@ -221,511 +221,507 @@ export class DevToolsUIManager {
       });
     });
 
-      const setupDevBtn = (id, prop, color) => {
-        const btn = document.getElementById(id);
-        if (btn) {
+    const setupDevBtn = (id, prop, color) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.style.borderColor = eng.devOptions[prop] ? color : '';
+        btn.style.color = eng.devOptions[prop] ? color : '';
+        btn.onclick = () => {
+          eng.devOptions[prop] = !eng.devOptions[prop];
           btn.style.borderColor = eng.devOptions[prop] ? color : '';
           btn.style.color = eng.devOptions[prop] ? color : '';
-          btn.onclick = () => {
-            eng.devOptions[prop] = !eng.devOptions[prop];
-            btn.style.borderColor = eng.devOptions[prop] ? color : '';
-            btn.style.color = eng.devOptions[prop] ? color : '';
-            localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
-          };
-        }
-      };
-
-      setupDevBtn('btn-dev-player', 'showPlayerPos', '#ff4757');
-      setupDevBtn('btn-dev-entity', 'showEntityPos', '#ff4757');
-      setupDevBtn('btn-dev-dist-player-mouse', 'showDistPlayerToMouse', '#f1c40f');
-      setupDevBtn('btn-dev-dist-mouse', 'showDistNpcToMouse', '#f1c40f');
-      setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f');
-      setupDevBtn('btn-dev-aggro', 'showAggro', '#e67e22');
-      setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757');
-      setupDevBtn('btn-dev-los', 'showLoS', '#f1c40f');
-      setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757');
-      setupDevBtn('btn-dev-npc-paths', 'showNpcPaths', '#9b59b6');
-      setupDevBtn('btn-dev-spawners', 'showSpawners', '#2ecc71');
-      setupDevBtn('btn-dev-arcade-hover', 'showArcadeHover', '#3498db');
-      setupDevBtn('btn-dev-neighborhoods', 'showNeighborhoods', '#e056fd');
-
-      const editBtn = document.getElementById('btn-dev-los-edit');
-      if (editBtn) {
-        editBtn.onclick = () => {
-          document.getElementById('edit-los-dist').value = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400;
-          document.getElementById('edit-los-angle').value = eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60;
-          this.losEditWindow.open();
-        };
-      }
-
-      const tBtn = document.getElementById('btn-dev-tooltip-toggle');
-      if (tBtn) {
-        tBtn.style.background = eng.devOptions.useDebugTooltip ? 'rgba(241, 196, 15, 0.2)' : 'transparent';
-        tBtn.onclick = () => {
-          eng.devOptions.useDebugTooltip = !eng.devOptions.useDebugTooltip;
-          tBtn.style.background = eng.devOptions.useDebugTooltip ? 'rgba(241, 196, 15, 0.2)' : 'transparent';
           localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
         };
       }
+    };
 
-      const btnEditTarget = document.getElementById('btn-dev-edit-target');
-      if (btnEditTarget) {
-        btnEditTarget.style.borderColor = '#e056fd';
-        btnEditTarget.style.color = '#e056fd';
-        btnEditTarget.onclick = () => {
-          if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
-            const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
-            if (npc) {
-              document.getElementById('edit-npc-uuid').value = npc.uuid;
-              document.getElementById('edit-npc-name').value = npc.name;
-              document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
-              document.getElementById('edit-npc-maxhp').value = npc.maxHp;
-              document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
-              document.getElementById('edit-npc-battery').value = Math.floor(npc.synthEnergy || 1000);
-              document.getElementById('edit-npc-x').value = Math.round(npc.x);
-              document.getElementById('edit-npc-y').value = Math.round(npc.y);
-              document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
-              document.getElementById('edit-npc-type').value = npc.type || 'idle';
-              document.getElementById('edit-npc-dir').value = npc.dir || 'down';
-              document.getElementById('edit-npc-group').value = npc.group || 'Civilian';
-              document.getElementById('edit-npc-respawn').value = npc.respawnRate || 0;
-              document.getElementById('edit-npc-level').value = npc.level || 1;
-              document.getElementById('edit-npc-strength').value = npc.strength || 0;
-              document.getElementById('edit-npc-aggro').value = npc.aggroRadius !== undefined ? npc.aggroRadius : 500;
-              document.getElementById('edit-npc-patrol').value = npc.patrolRoute || '';
-              document.getElementById('edit-npc-powers').value = (npc.powers || []).join(', ');
+    setupDevBtn('btn-dev-player', 'showPlayerPos', '#ff4757');
+    setupDevBtn('btn-dev-entity', 'showEntityPos', '#ff4757');
+    setupDevBtn('btn-dev-dist-player-mouse', 'showDistPlayerToMouse', '#f1c40f');
+    setupDevBtn('btn-dev-dist-mouse', 'showDistNpcToMouse', '#f1c40f');
+    setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f');
+    setupDevBtn('btn-dev-aggro', 'showAggro', '#e67e22');
+    setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757');
+    setupDevBtn('btn-dev-los', 'showLoS', '#f1c40f');
+    setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757');
+    setupDevBtn('btn-dev-npc-paths', 'showNpcPaths', '#9b59b6');
+    setupDevBtn('btn-dev-spawners', 'showSpawners', '#2ecc71');
+    setupDevBtn('btn-dev-arcade-hover', 'showArcadeHover', '#3498db');
+    setupDevBtn('btn-dev-neighborhoods', 'showNeighborhoods', '#e056fd');
 
-              this.npcEditWindow.open();
-            }
+    const editBtn = document.getElementById('btn-dev-los-edit');
+    if (editBtn) {
+      editBtn.onclick = () => {
+        document.getElementById('edit-los-dist').value = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400;
+        document.getElementById('edit-los-angle').value = eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60;
+        this.losEditWindow.open();
+      };
+    }
+
+    const tBtn = document.getElementById('btn-dev-tooltip-toggle');
+    if (tBtn) {
+      tBtn.style.background = eng.devOptions.useDebugTooltip ? 'rgba(241, 196, 15, 0.2)' : 'transparent';
+      tBtn.onclick = () => {
+        eng.devOptions.useDebugTooltip = !eng.devOptions.useDebugTooltip;
+        tBtn.style.background = eng.devOptions.useDebugTooltip ? 'rgba(241, 196, 15, 0.2)' : 'transparent';
+        localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
+      };
+    }
+
+    const btnEditTarget = document.getElementById('btn-dev-edit-target');
+    if (btnEditTarget) {
+      btnEditTarget.style.borderColor = '#e056fd';
+      btnEditTarget.style.color = '#e056fd';
+      btnEditTarget.onclick = () => {
+        if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+          const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+          if (npc) {
+            document.getElementById('edit-npc-uuid').value = npc.uuid;
+            document.getElementById('edit-npc-name').value = npc.name;
+            document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
+            document.getElementById('edit-npc-maxhp').value = npc.maxHp;
+            document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
+            document.getElementById('edit-npc-battery').value = Math.floor(npc.synthEnergy || 1000);
+            document.getElementById('edit-npc-x').value = Math.round(npc.x);
+            document.getElementById('edit-npc-y').value = Math.round(npc.y);
+            document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
+            document.getElementById('edit-npc-type').value = npc.type || 'idle';
+            document.getElementById('edit-npc-dir').value = npc.dir || 'down';
+            document.getElementById('edit-npc-group').value = npc.group || 'Civilian';
+            document.getElementById('edit-npc-respawn').value = npc.respawnRate || 0;
+            document.getElementById('edit-npc-level').value = npc.level || 1;
+            document.getElementById('edit-npc-strength').value = npc.strength || 0;
+            document.getElementById('edit-npc-aggro').value = npc.aggroRadius !== undefined ? npc.aggroRadius : 500;
+            document.getElementById('edit-npc-patrol').value = npc.patrolRoute || '';
+            document.getElementById('edit-npc-powers').value = (npc.powers || []).join(', ');
+
+            this.npcEditWindow.open();
           }
-        };
-      }
+        }
+      };
+    }
 
-      const btnNpcManager = document.getElementById('btn-dev-npc-manager');
-      if (btnNpcManager) {
-        btnNpcManager.style.borderColor = '#e056fd';
-        btnNpcManager.style.color = '#e056fd';
-        btnNpcManager.onclick = () => {
-          if (this.npcManagerWindow.element.style.display === 'none') {
-            this.npcManagerWindow.open();
-            this.renderNpcManager();
-          } else {
-            this.npcManagerWindow.close();
+    const btnNpcManager = document.getElementById('btn-dev-npc-manager');
+    if (btnNpcManager) {
+      btnNpcManager.style.borderColor = '#e056fd';
+      btnNpcManager.style.color = '#e056fd';
+      btnNpcManager.onclick = () => {
+        if (this.npcManagerWindow.element.style.display === 'none') {
+          this.npcManagerWindow.open();
+          this.renderNpcManager();
+        } else {
+          this.npcManagerWindow.close();
+        }
+      };
+
+      document.getElementById('btn-edit-npc-tp-me').onclick = () => {
+        document.getElementById('edit-npc-x').value = Math.round(eng.player.x);
+        document.getElementById('edit-npc-y').value = Math.round(eng.player.y);
+        document.getElementById('edit-npc-z').value = Math.round(eng.player.z || 0);
+        emitNpcUpdate();
+      };
+
+      const emitNpcUpdate = () => {
+        const uuid = document.getElementById('edit-npc-uuid').value;
+        if (!uuid) return;
+        const energyVal = parseFloat(document.getElementById('edit-npc-energy').value);
+        const updates = {
+          name: document.getElementById('edit-npc-name').value,
+          hp: parseFloat(document.getElementById('edit-npc-hp').value),
+          maxHp: parseFloat(document.getElementById('edit-npc-maxhp').value),
+          energy: energyVal,
+          maxEnergy: energyVal,
+          synthEnergy: parseFloat(document.getElementById('edit-npc-battery').value) || 0,
+          maxSynthEnergy: parseFloat(document.getElementById('edit-npc-battery').value) || 0,
+          x: parseFloat(document.getElementById('edit-npc-x').value),
+          y: parseFloat(document.getElementById('edit-npc-y').value),
+          z: parseFloat(document.getElementById('edit-npc-z').value),
+          type: document.getElementById('edit-npc-type').value,
+          dir: document.getElementById('edit-npc-dir').value,
+          group: document.getElementById('edit-npc-group').value,
+          respawnRate: parseFloat(document.getElementById('edit-npc-respawn').value) || 0,
+          level: parseInt(document.getElementById('edit-npc-level').value, 10) || 1,
+          strength: parseInt(document.getElementById('edit-npc-strength').value, 10) || 0,
+          aggroRadius: parseFloat(document.getElementById('edit-npc-aggro').value) || 500,
+          patrolRoute: document.getElementById('edit-npc-patrol').value || '',
+          powers: document.getElementById('edit-npc-powers').value.split(',').map(s => s.trim()).filter(Boolean)
+        };
+        eng.network.sendEditNpc(uuid, updates);
+      };
+
+      ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-battery', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z', 'edit-npc-respawn', 'edit-npc-level', 'edit-npc-aggro', 'edit-npc-patrol', 'edit-npc-powers'].forEach(id => {
+        document.getElementById(id).addEventListener('input', emitNpcUpdate);
+      });
+      ['edit-npc-type', 'edit-npc-dir', 'edit-npc-group', 'edit-npc-strength'].forEach(id => {
+        document.getElementById(id).addEventListener('change', emitNpcUpdate);
+      });
+
+      document.getElementById('btn-save-npc-edit').onclick = () => this.npcEditWindow.close();
+
+      eng.socket.on('npc_deleted', (uuid) => {
+        const idx = eng.npcs.findIndex(n => n.uuid === uuid);
+        if (idx !== -1) eng.npcs.splice(idx, 1);
+        if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
+        if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
+      });
+      eng.socket.on('npc_spawned', () => {
+        if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
+        if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
+      });
+      eng.socket.on('npc_updated', (updatedNpc) => {
+        const idx = eng.npcs.findIndex(n => n.uuid === updatedNpc.uuid);
+        if (idx !== -1) {
+          Object.assign(eng.npcs[idx], updatedNpc);
+        }
+        if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
+        if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
+      });
+    }
+
+    const btnSpawnerManager = document.getElementById('btn-dev-spawner-manager');
+    if (btnSpawnerManager) {
+      btnSpawnerManager.onclick = () => {
+        if (this.spawnerManagerWindow.element.style.display === 'none') {
+          this.spawnerManagerWindow.open();
+          this.renderSpawnerManager();
+        } else {
+          this.spawnerManagerWindow.close();
+        }
+      };
+
+      document.getElementById('btn-edit-spawner-tp-me').onclick = () => {
+        document.getElementById('edit-spawner-x').value = Math.round(eng.player.x);
+        document.getElementById('edit-spawner-y').value = Math.round(eng.player.y);
+        document.getElementById('edit-spawner-z').value = Math.round(eng.player.z || 0);
+        emitSpawnerUpdate();
+      };
+
+      const emitSpawnerUpdate = () => {
+        const uuidEl = document.getElementById('edit-spawner-uuid');
+        if (!uuidEl || !uuidEl.value) return;
+        const uuid = uuidEl.value;
+        const updates = {
+          name: document.getElementById('edit-spawner-name')?.value || 'New Spawner',
+          x: parseFloat(document.getElementById('edit-spawner-x').value),
+          y: parseFloat(document.getElementById('edit-spawner-y').value),
+          z: parseFloat(document.getElementById('edit-spawner-z').value),
+          radius: parseFloat(document.getElementById('edit-spawner-radius').value) || 300,
+          respawnRate: parseFloat(document.getElementById('edit-spawner-rate').value) || 10,
+          patrolRoute: document.getElementById('edit-spawner-patrol').value || ''
+        };
+        eng.network.sendEditSpawner(uuid, updates);
+      };
+
+      ['edit-spawner-name', 'edit-spawner-x', 'edit-spawner-y', 'edit-spawner-z', 'edit-spawner-radius', 'edit-spawner-rate', 'edit-spawner-patrol'].forEach(id => {
+        document.getElementById(id).addEventListener('input', emitSpawnerUpdate);
+      });
+      document.getElementById('btn-save-spawner-edit').onclick = () => this.spawnerEditWindow.close();
+      const btnUpdateSpawner = document.getElementById('btn-update-spawner-edit');
+      if (btnUpdateSpawner) btnUpdateSpawner.onclick = emitSpawnerUpdate;
+
+      const wipeBtn = document.getElementById('btn-spawner-wipe-npcs');
+      if (wipeBtn) wipeBtn.onclick = () => {
+        const uuid = document.getElementById('edit-spawner-uuid').value;
+        if (uuid && confirm(`Wipe all currently spawned NPCs from this spawner?`)) {
+          this.engine.network.socket.emit('wipe_spawner_npcs', uuid);
+        }
+      };
+
+      eng.socket.on('spawner_deleted', (uuid) => {
+        const idx = eng.spawners.findIndex(s => s.uuid === uuid);
+        if (idx !== -1) eng.spawners.splice(idx, 1);
+        if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
+      });
+      eng.socket.on('spawner_spawned', (spawner) => {
+        eng.spawners.push(spawner);
+        if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
+      });
+      eng.socket.on('spawner_updated', (updated) => {
+        const idx = eng.spawners.findIndex(s => s.uuid === updated.uuid);
+        if (idx !== -1) Object.assign(eng.spawners[idx], updated);
+        if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
+      });
+    }
+
+    const btnGroupManager = document.getElementById('btn-dev-group-manager');
+    if (btnGroupManager) {
+      btnGroupManager.onclick = () => {
+        if (this.entityGroupManagerWindow.element.style.display === 'none') {
+          this.entityGroupManagerWindow.open();
+          this.engine.network.sendRequestEntityGroups();
+        } else {
+          this.entityGroupManagerWindow.close();
+        }
+      };
+    }
+
+    const btnMobPack = document.getElementById('btn-dev-mobpack-manager');
+    if (btnMobPack) {
+      btnMobPack.onclick = () => {
+        if (this.mobPackManagerWindow.element.style.display === 'none') {
+          if (this.mobPackManagerWindow.setTitle) {
+              this.mobPackManagerWindow.setTitle('Encounter Presets');
           }
-        };
+          this.mobPackManagerWindow.open();
+          this.engine.network.sendRequestEntityGroups();
+          this.engine.network.socket.emit('request_mob_packs');
+          this.renderMobPacks();
+        } else {
+          this.mobPackManagerWindow.close();
+        }
+      };
+    }
 
-        document.getElementById('btn-edit-npc-tp-me').onclick = () => {
-          document.getElementById('edit-npc-x').value = Math.round(eng.player.x);
-          document.getElementById('edit-npc-y').value = Math.round(eng.player.y);
-          document.getElementById('edit-npc-z').value = Math.round(eng.player.z || 0);
-          emitNpcUpdate();
-        };
+    const btnNpcTemplate = document.getElementById('btn-dev-npc-template-manager');
+    if (btnNpcTemplate) {
+      btnNpcTemplate.onclick = () => {
+        if (this.npcTemplateManagerWindow.element.style.display === 'none') {
+          this.npcTemplateManagerWindow.open();
+          this.engine.network.socket.emit('request_npc_templates');
+          this.engine.network.sendRequestEntityGroups();
+        } else {
+          this.npcTemplateManagerWindow.close();
+        }
+      };
+    }
 
-        const emitNpcUpdate = () => {
-          const uuid = document.getElementById('edit-npc-uuid').value;
-          if (!uuid) return;
-          const energyVal = parseFloat(document.getElementById('edit-npc-energy').value);
-          const updates = {
-            name: document.getElementById('edit-npc-name').value,
-            hp: parseFloat(document.getElementById('edit-npc-hp').value),
-            maxHp: parseFloat(document.getElementById('edit-npc-maxhp').value),
-            energy: energyVal,
-            maxEnergy: energyVal,
-            synthEnergy: parseFloat(document.getElementById('edit-npc-battery').value) || 0,
-            maxSynthEnergy: parseFloat(document.getElementById('edit-npc-battery').value) || 0,
-            x: parseFloat(document.getElementById('edit-npc-x').value),
-            y: parseFloat(document.getElementById('edit-npc-y').value),
-            z: parseFloat(document.getElementById('edit-npc-z').value),
-            type: document.getElementById('edit-npc-type').value,
-            dir: document.getElementById('edit-npc-dir').value,
-            group: document.getElementById('edit-npc-group').value,
-            respawnRate: parseFloat(document.getElementById('edit-npc-respawn').value) || 0,
-            level: parseInt(document.getElementById('edit-npc-level').value, 10) || 1,
-            strength: parseInt(document.getElementById('edit-npc-strength').value, 10) || 0,
-            aggroRadius: parseFloat(document.getElementById('edit-npc-aggro').value) || 500,
-            patrolRoute: document.getElementById('edit-npc-patrol').value || '',
-            powers: document.getElementById('edit-npc-powers').value.split(',').map(s => s.trim()).filter(Boolean)
-          };
-          eng.network.sendEditNpc(uuid, updates);
-        };
+    const btnEntityType = document.getElementById('btn-dev-entity-type-manager');
+    if (btnEntityType) {
+      btnEntityType.onclick = () => {
+        if (this.entityTypeManagerWindow.element.style.display === 'none') {
+          this.entityTypeManagerWindow.open();
+          this.engine.network.socket.emit('request_entity_types');
+        } else {
+          this.entityTypeManagerWindow.close();
+        }
+      };
+    }
 
-        ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-battery', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z', 'edit-npc-respawn', 'edit-npc-level', 'edit-npc-aggro', 'edit-npc-patrol', 'edit-npc-powers'].forEach(id => {
-          document.getElementById(id).addEventListener('input', emitNpcUpdate);
-        });
-        ['edit-npc-type', 'edit-npc-dir', 'edit-npc-group', 'edit-npc-strength'].forEach(id => {
-          document.getElementById(id).addEventListener('change', emitNpcUpdate);
-        });
+    const btnPlayerManager = document.getElementById('btn-dev-player-manager');
+    if (btnPlayerManager) btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
 
-        document.getElementById('btn-save-npc-edit').onclick = () => this.npcEditWindow.close();
+    const btnAccountManager = document.getElementById('btn-dev-account-manager');
+    if (btnAccountManager) btnAccountManager.onclick = () => eng.ui.playerModifier.openAccountManagerList();
 
-        eng.socket.on('npc_deleted', (uuid) => {
-          const idx = eng.npcs.findIndex(n => n.uuid === uuid);
-          if (idx !== -1) eng.npcs.splice(idx, 1);
-          if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
-          if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
-        });
-        eng.socket.on('npc_spawned', () => {
-          if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
-          if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
-        });
-        eng.socket.on('npc_updated', (updatedNpc) => {
-          const idx = eng.npcs.findIndex(n => n.uuid === updatedNpc.uuid);
-          if (idx !== -1) {
-            Object.assign(eng.npcs[idx], updatedNpc);
-          }
-          if (this.npcManagerWindow.element.style.display === 'flex') this.renderNpcManager();
-          if (this.spawnerEditWindow.element.style.display === 'flex') this.updateSpawnerEditNpcList();
-        });
-      }
+    const btnEditMode = document.getElementById('btn-dev-edit-mode');
+    if (btnEditMode) btnEditMode.onclick = () => eng.chat.commandHandler.processCommand('/editmode');
 
-      const btnSpawnerManager = document.getElementById('btn-dev-spawner-manager');
-      if (btnSpawnerManager) {
-        btnSpawnerManager.onclick = () => {
-          if (this.spawnerManagerWindow.element.style.display === 'none') {
-            this.spawnerManagerWindow.open();
-            this.renderSpawnerManager();
-          } else {
-            this.spawnerManagerWindow.close();
-          }
-        };
+    const btnZoneManager = document.getElementById('btn-dev-zone-manager');
+    if (btnZoneManager) {
+      btnZoneManager.onclick = () => {
+        if (this.zoneManagerWindow.element.style.display === 'none') {
+          this.zoneManagerWindow.open();
+          this.renderZoneManager();
+        } else {
+          this.zoneManagerWindow.close();
+        }
+      };
+    }
 
-        document.getElementById('btn-edit-spawner-tp-me').onclick = () => {
-          document.getElementById('edit-spawner-x').value = Math.round(eng.player.x);
-          document.getElementById('edit-spawner-y').value = Math.round(eng.player.y);
-          document.getElementById('edit-spawner-z').value = Math.round(eng.player.z || 0);
-          emitSpawnerUpdate();
-        };
+    const btnNeighborhoodManager = document.getElementById('btn-dev-neighborhood-manager');
+    if (btnNeighborhoodManager) {
+      btnNeighborhoodManager.onclick = () => {
+        if (this.neighborhoodManagerWindow.element.style.display === 'none') {
+          this.neighborhoodManagerWindow.open();
+          this.renderNeighborhoodManager();
+          this.engine.network.socket.emit('request_neighborhoods');
+        } else {
+          this.neighborhoodManagerWindow.close();
+        }
+      };
+    }
 
-        const emitSpawnerUpdate = () => {
-          const uuid = document.getElementById('edit-spawner-uuid').value;
-          if (!uuid) return;
-          const updates = {
-            name: document.getElementById('edit-spawner-name').value,
-            mobPack: document.getElementById('edit-spawner-mobpack').value || null,
-            maxActive: parseInt(document.getElementById('edit-spawner-max').value, 10) || 5,
-            x: parseFloat(document.getElementById('edit-spawner-x').value),
-            y: parseFloat(document.getElementById('edit-spawner-y').value),
-            z: parseFloat(document.getElementById('edit-spawner-z').value),
-            radius: parseFloat(document.getElementById('edit-spawner-radius').value) || 300,
-            respawnRate: parseFloat(document.getElementById('edit-spawner-rate').value) || 10,
-            npcName: document.getElementById('edit-spawner-npcname').value,
-            npcGroup: document.getElementById('edit-spawner-group').value,
-            npcType: document.getElementById('edit-spawner-type').value,
-            levelMin: parseInt(document.getElementById('edit-spawner-lvlmin').value, 10) || 1,
-            levelMax: parseInt(document.getElementById('edit-spawner-lvlmax').value, 10) || 1,
-            strength: parseInt(document.getElementById('edit-spawner-strength').value, 10) || 0,
-            aggroRadius: parseFloat(document.getElementById('edit-spawner-aggro').value) || 500,
-            patrolRoute: document.getElementById('edit-spawner-patrol').value || '',
-            npcPowers: document.getElementById('edit-spawner-powers').value.split(',').map(s => s.trim()).filter(Boolean)
-          };
-          eng.network.sendEditSpawner(uuid, updates);
-        };
+    const btnArcadeManager = document.getElementById('btn-dev-arcade-manager');
+    if (btnArcadeManager) {
+      btnArcadeManager.onclick = () => {
+        if (this.arcadeManagerWindow.element.style.display === 'none') {
+          this.arcadeManagerWindow.open();
+          this.renderArcadeManager();
+        } else {
+          this.arcadeManagerWindow.close();
+        }
+      };
+    }
 
-        ['edit-spawner-name', 'edit-spawner-max', 'edit-spawner-x', 'edit-spawner-y', 'edit-spawner-z', 'edit-spawner-radius', 'edit-spawner-rate', 'edit-spawner-npcname', 'edit-spawner-lvlmin', 'edit-spawner-lvlmax', 'edit-spawner-strength', 'edit-spawner-aggro', 'edit-spawner-patrol', 'edit-spawner-powers'].forEach(id => {
-          document.getElementById(id).addEventListener('input', emitSpawnerUpdate);
-        });
-        ['edit-spawner-group', 'edit-spawner-type', 'edit-spawner-mobpack'].forEach(id => {
-          document.getElementById(id).addEventListener('change', emitSpawnerUpdate);
-        });
-        document.getElementById('btn-save-spawner-edit').onclick = () => this.spawnerEditWindow.close();
-        const btnUpdateSpawner = document.getElementById('btn-update-spawner-edit');
-        if (btnUpdateSpawner) btnUpdateSpawner.onclick = emitSpawnerUpdate;
-
-        const wipeBtn = document.getElementById('btn-spawner-wipe-npcs');
-        if (wipeBtn) wipeBtn.onclick = () => {
-            const uuid = document.getElementById('edit-spawner-uuid').value;
-            if (uuid && confirm(`Wipe all currently spawned NPCs from this spawner?`)) {
-                this.engine.network.socket.emit('wipe_spawner_npcs', uuid);
-            }
-        };
-
-        eng.socket.on('spawner_deleted', (uuid) => {
-          const idx = eng.spawners.findIndex(s => s.uuid === uuid);
-          if (idx !== -1) eng.spawners.splice(idx, 1);
-          if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
-        });
-        eng.socket.on('spawner_spawned', (spawner) => {
-          eng.spawners.push(spawner);
-          if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
-        });
-        eng.socket.on('spawner_updated', (updated) => {
-          const idx = eng.spawners.findIndex(s => s.uuid === updated.uuid);
-          if (idx !== -1) Object.assign(eng.spawners[idx], updated);
-          if (this.spawnerManagerWindow.element.style.display === 'flex') this.renderSpawnerManager();
-        });
-      }
-
-      const btnGroupManager = document.getElementById('btn-dev-group-manager');
-      if (btnGroupManager) {
-        btnGroupManager.onclick = () => {
-           if (this.entityGroupManagerWindow.element.style.display === 'none') {
-              this.entityGroupManagerWindow.open();
-              this.engine.network.sendRequestEntityGroups();
-           } else {
-              this.entityGroupManagerWindow.close();
-           }
-        };
-      }
-
-      const btnMobPack = document.getElementById('btn-dev-mobpack-manager');
-      if (btnMobPack) {
-        btnMobPack.onclick = () => {
-           if (this.mobPackManagerWindow.element.style.display === 'none') {
-              this.mobPackManagerWindow.open();
-              this.engine.network.sendRequestEntityGroups();
-              this.engine.network.socket.emit('request_mob_packs');
-              this.renderMobPacks();
-           } else {
-              this.mobPackManagerWindow.close();
-           }
-        };
-      }
-
-      const btnNpcTemplate = document.getElementById('btn-dev-npc-template-manager');
-      if (btnNpcTemplate) {
-        btnNpcTemplate.onclick = () => {
-           if (this.npcTemplateManagerWindow.element.style.display === 'none') {
-              this.npcTemplateManagerWindow.open();
-              this.engine.network.socket.emit('request_npc_templates');
-              this.engine.network.sendRequestEntityGroups();
-           } else {
-              this.npcTemplateManagerWindow.close();
-           }
-        };
-      }
-
-      const btnEntityType = document.getElementById('btn-dev-entity-type-manager');
-      if (btnEntityType) {
-        btnEntityType.onclick = () => {
-           if (this.entityTypeManagerWindow.element.style.display === 'none') {
-              this.entityTypeManagerWindow.open();
-              this.engine.network.socket.emit('request_entity_types');
-           } else {
-              this.entityTypeManagerWindow.close();
-           }
-        };
-      }
-
-      const btnPlayerManager = document.getElementById('btn-dev-player-manager');
-      if (btnPlayerManager) btnPlayerManager.onclick = () => eng.chat.commandHandler.processCommand('/players');
-
-      const btnAccountManager = document.getElementById('btn-dev-account-manager');
-      if (btnAccountManager) btnAccountManager.onclick = () => eng.ui.playerModifier.openAccountManagerList();
-
-      const btnEditMode = document.getElementById('btn-dev-edit-mode');
-      if (btnEditMode) btnEditMode.onclick = () => eng.chat.commandHandler.processCommand('/editmode');
-
-      const btnZoneManager = document.getElementById('btn-dev-zone-manager');
-      if (btnZoneManager) {
-        btnZoneManager.onclick = () => {
-           if (this.zoneManagerWindow.element.style.display === 'none') {
-              this.zoneManagerWindow.open();
-              this.renderZoneManager();
-           } else {
-              this.zoneManagerWindow.close();
-           }
-        };
-      }
-
-      const btnNeighborhoodManager = document.getElementById('btn-dev-neighborhood-manager');
-      if (btnNeighborhoodManager) {
-        btnNeighborhoodManager.onclick = () => {
-           if (this.neighborhoodManagerWindow.element.style.display === 'none') {
-              this.neighborhoodManagerWindow.open();
-              this.renderNeighborhoodManager();
-              this.engine.network.socket.emit('request_neighborhoods');
-           } else {
-              this.neighborhoodManagerWindow.close();
-           }
-        };
-      }
-
-      const btnArcadeManager = document.getElementById('btn-dev-arcade-manager');
-      if (btnArcadeManager) {
-        btnArcadeManager.onclick = () => {
-           if (this.arcadeManagerWindow.element.style.display === 'none') {
-              this.arcadeManagerWindow.open();
-              this.renderArcadeManager();
-           } else {
-              this.arcadeManagerWindow.close();
-           }
-        };
-      }
-
-      this.setupLosModal();
+    this.setupLosModal();
   }
 
   setupMobPacks() {
-      this.engine.mobPacks = this.engine.mobPacks || {};
-      this.selectedMobPack = null;
+    this.engine.mobPacks = this.engine.mobPacks || {};
+    this.selectedMobPack = null;
 
-      document.getElementById('btn-mp-add').onclick = () => {
-          const input = document.getElementById('mp-new-input');
-          const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-          if (id && !this.engine.mobPacks[id]) {
-              this.engine.mobPacks[id] = [];
-              input.value = '';
-              this.selectedMobPack = id;
-              this.renderMobPacks();
-          }
-      };
-
-      document.getElementById('btn-mp-add-entry').onclick = () => {
-          if (!this.selectedMobPack) return;
-          this.engine.mobPacks[this.selectedMobPack].push({
-              weight: 1, intensityMin: 1, intensityMax: 5, levelMinOffset: 0, levelMaxOffset: 1, strengthOffset: 0
-          });
+    const btnAdd = document.getElementById('btn-mp-add');
+    if (btnAdd) {
+      btnAdd.onclick = () => {
+        const input = document.getElementById('mp-new-input');
+        if (!input) return;
+        const id = input.value.trim().replace(/[^a-zA-Z0-9- ]/g, '');
+        if (id && !this.engine.mobPacks[id]) {
+          const defaultPreset = { group: 'Civilian', intensityMin: 1, intensityMax: 5, weight: 10, spawns: [] };
+          this.engine.mobPacks[id] = defaultPreset;
+          this.engine.network.socket.emit('save_mob_pack', { id, data: defaultPreset });
+          input.value = '';
+          this.selectedMobPack = id;
           this.renderMobPacks();
+        }
       };
+    }
 
-      const btnBulkApply = document.getElementById('btn-mp-bulk-apply');
-      if (btnBulkApply) {
-          btnBulkApply.onclick = () => {
-              if (!this.selectedMobPack || !this.engine.mobPacks[this.selectedMobPack]) return;
-              const grp = document.getElementById('mp-bulk-group').value;
-              const iMin = parseInt(document.getElementById('mp-bulk-int-min').value, 10) || 1;
-              const iMax = parseInt(document.getElementById('mp-bulk-int-max').value, 10) || 5;
-              const lMin = parseInt(document.getElementById('mp-bulk-lvl-min').value, 10) || 0;
-              const lMax = parseInt(document.getElementById('mp-bulk-lvl-max').value, 10) || 1;
-              const sOff = parseInt(document.getElementById('mp-bulk-str').value, 10) || 0;
-
-              this.engine.mobPacks[this.selectedMobPack].forEach(ent => {
-                  if (grp) ent.group = grp;
-                  ent.intensityMin = iMin;
-                  ent.intensityMax = iMax;
-                  ent.levelMinOffset = lMin;
-                  ent.levelMaxOffset = lMax;
-                  ent.strengthOffset = sOff;
-              });
-              this.renderMobPacks();
-              this.engine.ui.showSystemMessage('Bulk properties applied to all NPCs in the pack.');
-          };
-      }
-
-      document.getElementById('btn-mp-save').onclick = () => {
-          if (!this.selectedMobPack) return;
-          this.engine.network.socket.emit('save_mob_pack', { id: this.selectedMobPack, data: this.engine.mobPacks[this.selectedMobPack] });
-          this.engine.ui.showSystemMessage(`Saved Mob Pack: ${this.selectedMobPack}.`);
-      };
+    document.getElementById('btn-mp-save').onclick = () => {
+      if (!this.selectedMobPack) return;
+      this.engine.network.socket.emit('save_mob_pack', { id: this.selectedMobPack, data: this.engine.mobPacks[this.selectedMobPack] });
+      this.engine.ui.showSystemMessage(`Saved Encounter Preset: ${this.selectedMobPack}.`);
+    };
   }
 
   renderMobPacks() {
-      const packList = document.getElementById('mp-list');
-      const entryList = document.getElementById('mp-entries-list');
-      if (!packList || !entryList) return;
+    const packList = document.getElementById('mp-list');
+    const entryList = document.getElementById('mp-entries-list');
+    if (!packList || !entryList) return;
 
-      packList.innerHTML = '';
-      const packKeys = Object.keys(this.engine.mobPacks || {});
-      if (!this.selectedMobPack && packKeys.length > 0) this.selectedMobPack = packKeys[0];
+    packList.innerHTML = '';
+    const packKeys = Object.keys(this.engine.mobPacks || {});
+    if (!this.selectedMobPack && packKeys.length > 0) this.selectedMobPack = packKeys[0];
 
-      packKeys.forEach(k => {
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; gap: 2px;';
-          const btn = document.createElement('button');
-          btn.className = 'b-btn ' + (this.selectedMobPack === k ? 'btn-primary' : 'btn-secondary');
-          btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
-          if (this.selectedMobPack === k) btn.style.borderColor = '#3498db';
-          btn.innerText = k;
-          btn.onclick = () => { this.selectedMobPack = k; this.renderMobPacks(); };
+    packKeys.forEach(k => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 2px;';
+      const btn = document.createElement('button');
+      btn.className = 'b-btn ' + (this.selectedMobPack === k ? 'btn-primary' : 'btn-secondary');
+      btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+      if (this.selectedMobPack === k) btn.style.borderColor = '#3498db';
+      btn.innerText = k;
+      btn.onclick = () => { this.selectedMobPack = k; this.renderMobPacks(); };
 
-          const editBtn = document.createElement('button');
-          editBtn.className = 'b-btn btn-secondary';
-          editBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem; border-color: #f1c40f; color: #f1c40f;';
-          editBtn.innerText = '✎';
-          editBtn.onclick = () => {
-              const newName = prompt('Enter new Mob Pack ID:', k);
-              if (newName && newName.trim() && newName !== k) {
-                  const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-                  if (this.engine.mobPacks[safeName]) {
-                      this.engine.ui.showSystemMessage('A pack with that ID already exists.');
-                  } else {
-                      this.engine.mobPacks[safeName] = this.engine.mobPacks[k];
-                      delete this.engine.mobPacks[k];
-                      this.engine.network.socket.emit('delete_mob_pack', k);
-                      this.engine.network.socket.emit('save_mob_pack', { id: safeName, data: this.engine.mobPacks[safeName] });
-                      if (this.selectedMobPack === k) this.selectedMobPack = safeName;
-                      this.renderMobPacks();
-                  }
-              }
-          };
+      const editBtn = document.createElement('button');
+      editBtn.className = 'b-btn btn-secondary';
+      editBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem; border-color: #f1c40f; color: #f1c40f;';
+      editBtn.innerText = '✎';
+      editBtn.onclick = () => {
+        const newName = prompt('Enter new Encounter Preset ID:', k);
+        if (newName && newName.trim() && newName !== k) {
+          const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+          if (this.engine.mobPacks[safeName]) {
+            this.engine.ui.showSystemMessage('A pack with that ID already exists.');
+          } else {
+            this.engine.mobPacks[safeName] = this.engine.mobPacks[k];
+            delete this.engine.mobPacks[k];
+            this.engine.network.socket.emit('delete_mob_pack', k);
+            this.engine.network.socket.emit('save_mob_pack', { id: safeName, data: this.engine.mobPacks[safeName] });
+            if (this.selectedMobPack === k) this.selectedMobPack = safeName;
+            this.renderMobPacks();
+          }
+        }
+      };
 
-          const delBtn = document.createElement('button');
-          delBtn.className = 'b-btn b-btn-danger';
-          delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
-          delBtn.innerText = 'X';
-          delBtn.onclick = () => {
-              if (confirm(`Delete Mob Pack: ${k}?`)) {
-                  delete this.engine.mobPacks[k];
-                  this.engine.network.socket.emit('delete_mob_pack', k);
-                  if (this.selectedMobPack === k) this.selectedMobPack = null;
-                  this.renderMobPacks();
-              }
-          };
-          row.appendChild(btn); row.appendChild(editBtn); row.appendChild(delBtn); packList.appendChild(row);
-      });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'b-btn b-btn-danger';
+      delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
+      delBtn.innerText = 'X';
+      delBtn.onclick = () => {
+        if (confirm(`Delete Encounter Preset: ${k}?`)) {
+          delete this.engine.mobPacks[k];
+          this.engine.network.socket.emit('delete_mob_pack', k);
+          if (this.selectedMobPack === k) this.selectedMobPack = null;
+          this.renderMobPacks();
+        }
+      };
+      row.appendChild(btn); row.appendChild(editBtn); row.appendChild(delBtn); packList.appendChild(row);
+    });
 
-      const spawnerDrop = document.getElementById('edit-spawner-mobpack');
-      if (spawnerDrop) {
-          const currentVal = spawnerDrop.value;
-          spawnerDrop.innerHTML = '<option value="">-- Use Custom Template Below --</option>';
-          packKeys.forEach(k => { spawnerDrop.innerHTML += `<option value="${k}">${k}</option>`; });
-          spawnerDrop.value = currentVal;
+    entryList.innerHTML = '';
+
+    let groupOptions = '<option value="">-- Select Group --</option>';
+    const groups = Object.keys(this.entityGroupsData || {}).sort();
+    if (groups.length === 0) {
+      ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+    } else {
+      groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+    }
+
+    const bulkContainer = document.getElementById('mp-bulk-edit-container');
+
+    if (this.selectedMobPack && this.engine.mobPacks[this.selectedMobPack]) {
+      if (Array.isArray(this.engine.mobPacks[this.selectedMobPack])) {
+          this.engine.mobPacks[this.selectedMobPack] = { group: 'Civilian', intensityMin: 1, intensityMax: 5, weight: 10, spawns: [] };
+      }
+      const preset = this.engine.mobPacks[this.selectedMobPack];
+
+      if (bulkContainer) {
+        bulkContainer.style.display = 'flex';
+        bulkContainer.style.flexDirection = 'column';
+        bulkContainer.style.gap = '10px';
+        bulkContainer.innerHTML = `
+            <div style="display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.5); padding: 8px; border: 1px solid var(--text-dim); border-radius: 4px;">
+                <div style="display: flex; flex-direction: column; flex: 1;">
+                    <label class="b-label" style="font-size: 0.75rem;">Faction</label>
+                    <select id="mp-preset-group" class="b-select">${groupOptions}</select>
+                </div>
+                <div style="display: flex; flex-direction: column; width: 60px;">
+                    <label class="b-label" style="font-size: 0.75rem;">Int Min</label>
+                    <input type="number" id="mp-preset-int-min" class="b-input" value="${preset.intensityMin || 1}">
+                </div>
+                <div style="display: flex; flex-direction: column; width: 60px;">
+                    <label class="b-label" style="font-size: 0.75rem;">Int Max</label>
+                    <input type="number" id="mp-preset-int-max" class="b-input" value="${preset.intensityMax || 5}">
+                </div>
+                <div style="display: flex; flex-direction: column; width: 60px;">
+                    <label class="b-label" style="font-size: 0.75rem;">Weight</label>
+                    <input type="number" id="mp-preset-weight" class="b-input" value="${preset.weight || 10}">
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #f1c40f; font-weight: bold; font-family: var(--font-mono); font-size: 0.85rem;">Encounter Spawns</span>
+                <button id="btn-mp-add-spawn" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.8rem; border-color: #2ecc71; color: #2ecc71;">+ Add NPC</button>
+            </div>
+        `;
+
+        document.getElementById('mp-preset-group').value = preset.group || 'Civilian';
+        document.getElementById('mp-preset-group').onchange = (e) => preset.group = e.target.value;
+        document.getElementById('mp-preset-int-min').oninput = (e) => preset.intensityMin = parseInt(e.target.value, 10) || 1;
+        document.getElementById('mp-preset-int-max').oninput = (e) => preset.intensityMax = parseInt(e.target.value, 10) || 5;
+        document.getElementById('mp-preset-weight').oninput = (e) => preset.weight = parseInt(e.target.value, 10) || 10;
+
+        document.getElementById('btn-mp-add-spawn').onclick = () => {
+            if (!preset.spawns) preset.spawns = [];
+            preset.spawns.push({ templateId: '', minCount: 1, maxCount: 3 });
+            this.renderMobPacks();
+        };
       }
 
       entryList.innerHTML = '';
+      let templateOptions = '<option value="">-- Select NPC Template --</option>';
+      Object.keys(this.engine.npcTemplates || {}).sort().forEach(t => templateOptions += `<option value="${t}">${t}</option>`);
 
-      let groupOptions = '<option value="">-- Select Group --</option>';
-      const groups = Object.keys(this.entityGroupsData || {}).sort();
-      if (groups.length === 0) {
-          ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
-      } else {
-          groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
-      }
-
-      const bulkContainer = document.getElementById('mp-bulk-edit-container');
-      if (bulkContainer) {
-          bulkContainer.style.display = (this.selectedMobPack && this.engine.mobPacks[this.selectedMobPack] && this.engine.mobPacks[this.selectedMobPack].length > 0) ? 'flex' : 'none';
-          const bulkGroupDrop = document.getElementById('mp-bulk-group');
-          if (bulkGroupDrop) {
-              const currentVal = bulkGroupDrop.value;
-              bulkGroupDrop.innerHTML = groupOptions;
-              if (currentVal) bulkGroupDrop.value = currentVal;
-          }
-      }
-
-      if (this.selectedMobPack && this.engine.mobPacks[this.selectedMobPack]) {
-          const entries = this.engine.mobPacks[this.selectedMobPack];
-          if (entries.length === 0) entryList.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 0.85rem;">No entries in this pack.</div>';
-          entries.forEach((ent, idx) => {
-              const row = document.createElement('div');
-              row.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem;';
-
-              const lvlMin = ent.levelMinOffset !== undefined ? ent.levelMinOffset : (ent.levelOffset || 0);
-              const lvlMax = ent.levelMaxOffset !== undefined ? ent.levelMaxOffset : ((ent.levelOffset || 0) + 1);
-
-              row.innerHTML = `<div style="display: flex; gap: 5px;">
-                  <select class="b-select mp-ent-group" style="flex: 2;">${groupOptions}</select>
-                  <div style="display: flex; align-items: center; gap: 2px;"><span title="Weight (Spawn Chance). E.g. A weight of 10 vs 5 means this mob spawns twice as often!" style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span><input type="number" class="b-input mp-ent-weight" value="${ent.weight}" style="flex: 0.5; width: 40px;"></div>
-                  <button class="b-btn b-btn-danger mp-ent-del" style="padding: 0 8px;">X</button>
-              </div>
-              <div style="display: flex; gap: 5px; color: #aaa; align-items: center; flex-wrap: wrap; font-size: 0.75rem;">
-                  <span title="Neighborhood Intensity Range (1-5). Defines which difficulty neighborhoods this mob can spawn in." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span> Int: <input type="number" class="b-input mp-ent-int-min" value="${ent.intensityMin}" min="1" max="5" style="width: 35px;"> to <input type="number" class="b-input mp-ent-int-max" value="${ent.intensityMax}" min="1" max="5" style="width: 35px;"> |
-                  <span title="Level Range Offset. Adds to the Zone's Base Level. Default: 0 to +1." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span> Lvl Range: <input type="number" class="b-input mp-ent-lvl-min" value="${lvlMin}" style="width: 35px;"> to <input type="number" class="b-input mp-ent-lvl-max" value="${lvlMax}" style="width: 35px;"> |
-                  <span title="Strength Offset. Modifies raw stats (+1 Strong, -1 Weak, etc)." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span> Str Offset: <input type="number" class="b-input mp-ent-str-off" value="${ent.strengthOffset}" style="width: 35px;">
-              </div>`;
-
-              row.querySelector('.mp-ent-group').value = ent.group || '';
-              row.querySelector('.mp-ent-group').onchange = e => ent.group = e.target.value;
-              row.querySelector('.mp-ent-weight').oninput = e => ent.weight = parseFloat(e.target.value) || 1;
-              row.querySelector('.mp-ent-int-min').oninput = e => ent.intensityMin = parseInt(e.target.value, 10) || 1;
-              row.querySelector('.mp-ent-int-max').oninput = e => ent.intensityMax = parseInt(e.target.value, 10) || 5;
-              row.querySelector('.mp-ent-lvl-min').oninput = e => ent.levelMinOffset = parseInt(e.target.value, 10) || 0;
-              row.querySelector('.mp-ent-lvl-max').oninput = e => ent.levelMaxOffset = parseInt(e.target.value, 10) || 1;
-              row.querySelector('.mp-ent-str-off').oninput = e => ent.strengthOffset = parseInt(e.target.value, 10) || 0;
-              row.querySelector('.mp-ent-del').onclick = () => { entries.splice(idx, 1); this.renderMobPacks(); };
-              entryList.appendChild(row);
-          });
-      }
+      (preset.spawns || []).forEach((spawn, idx) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 4px; padding: 8px; display: flex; gap: 10px; align-items: center;';
+        row.innerHTML = `
+            <div style="flex: 2; display: flex; flex-direction: column;">
+                <label class="b-label" style="font-size: 0.7rem;">NPC Template</label>
+                <select class="b-select mp-spawn-template" style="padding: 2px;">${templateOptions}</select>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <label class="b-label" style="font-size: 0.7rem;">Min</label>
+                <input type="number" class="b-input mp-spawn-min" value="${spawn.minCount}" min="0">
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <label class="b-label" style="font-size: 0.7rem;">Max</label>
+                <input type="number" class="b-input mp-spawn-max" value="${spawn.maxCount}" min="1">
+            </div>
+            <button class="b-btn b-btn-danger mp-spawn-del" style="padding: 0 8px; margin-top: 15px;">X</button>
+        `;
+        row.querySelector('.mp-spawn-template').value = spawn.templateId || '';
+        row.querySelector('.mp-spawn-template').onchange = (e) => spawn.templateId = e.target.value;
+        row.querySelector('.mp-spawn-min').oninput = (e) => spawn.minCount = parseInt(e.target.value, 10) || 0;
+        row.querySelector('.mp-spawn-max').oninput = (e) => spawn.maxCount = parseInt(e.target.value, 10) || 1;
+        row.querySelector('.mp-spawn-del').onclick = () => { preset.spawns.splice(idx, 1); this.renderMobPacks(); };
+        entryList.appendChild(row);
+      });
+    } else {
+        if (bulkContainer) bulkContainer.innerHTML = '';
+        entryList.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 0.85rem;">Select an Encounter Preset.</div>';
+    }
   }
 
   setupEntityGroupManager() {
@@ -750,216 +746,243 @@ export class DevToolsUIManager {
         if (!this.selectedEntityGroup) return;
         const checkboxes = document.querySelectorAll('.egm-hostile-cb:checked');
         const hostileTo = Array.from(checkboxes).map(cb => cb.value);
-        const powersInput = document.getElementById('egm-powers-input');
         this.entityGroupsData[this.selectedEntityGroup].hostileTo = hostileTo;
-        this.entityGroupsData[this.selectedEntityGroup].powers = powersInput ? powersInput.value.split(',').map(s=>s.trim()).filter(Boolean) : [];
         this.engine.network.sendSaveEntityGroup(this.selectedEntityGroup, this.entityGroupsData[this.selectedEntityGroup]);
         this.engine.ui.showSystemMessage(`Saved aggression list for ${this.selectedEntityGroup}`);
+      };
+    }
+
+    const btnAddPower = document.getElementById('btn-egm-add-power');
+    if (btnAddPower) {
+      btnAddPower.onclick = () => {
+        if (!this.selectedEntityGroup) return;
+        this.openPowerSelector((pId) => {
+          if (this.entityGroupsData[this.selectedEntityGroup]) {
+            this.entityGroupsData[this.selectedEntityGroup].powers = this.entityGroupsData[this.selectedEntityGroup].powers || [];
+            if (!this.entityGroupsData[this.selectedEntityGroup].powers.includes(pId)) {
+              this.entityGroupsData[this.selectedEntityGroup].powers.push(pId);
+              this.renderEntityGroupManager();
+            }
+          }
+        });
       };
     }
 
   }
 
   setupNpcTemplates() {
-      this.engine.npcTemplates = this.engine.npcTemplates || {};
-      this.selectedNpcTemplate = null;
+    this.engine.npcTemplates = this.engine.npcTemplates || {};
+    this.selectedNpcTemplate = null;
 
-      document.getElementById('btn-npct-add').onclick = () => {
-          const input = document.getElementById('npct-new-input');
-          const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-          if (id && !this.engine.npcTemplates[id]) {
-              this.engine.npcTemplates[id] = {
-                  name: 'New NPC',
-                  group: 'Civilian',
-                  strength: 0,
-                  type: 'generic',
-                  speedVariant: 1.0,
-                  aggroRadius: 500,
-                  powers: []
-              };
-              input.value = '';
-              this.selectedNpcTemplate = id;
-              this.renderNpcTemplates();
-          }
-      };
-
-      document.getElementById('btn-npct-save').onclick = () => {
-          if (!this.selectedNpcTemplate) return;
-          const data = {
-              name: document.getElementById('npct-name').value,
-              group: document.getElementById('npct-group').value,
-              strength: parseInt(document.getElementById('npct-strength').value, 10) || 0,
-              type: document.getElementById('npct-type').value,
-              speedVariant: parseFloat(document.getElementById('npct-speed').value) || 1.0,
-              aggroRadius: parseFloat(document.getElementById('npct-aggro').value) || 500,
-              baseExp: parseInt(document.getElementById('npct-exp').value, 10) || 20,
+    const btnAdd = document.getElementById('btn-npct-add');
+    if (btnAdd) {
+      btnAdd.onclick = () => {
+        const input = document.getElementById('npct-new-input');
+        if (!input) return;
+        const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        if (id && !this.engine.npcTemplates[id]) {
+          const newData = {
+            name: 'New NPC', group: 'Civilian', strength: 0,
+            type: 'generic', speedVariant: 1.0, aggroRadius: 500,
+            baseExp: 20, powers: []
           };
-          this.engine.npcTemplates[this.selectedNpcTemplate] = data;
-          this.engine.network.socket.emit('save_npc_template', { id: this.selectedNpcTemplate, data: data });
-          this.engine.ui.showSystemMessage(`Saved NPC Template: ${this.selectedNpcTemplate}.`);
+          this.engine.npcTemplates[id] = newData;
+          this.engine.network.socket.emit('save_npc_template', { id, data: newData });
+          input.value = '';
+          this.selectedNpcTemplate = id;
+          this.renderNpcTemplates();
+        }
       };
+    }
 
-      document.getElementById('btn-npct-add-power').onclick = () => {
-          if (!this.selectedNpcTemplate) return;
-          this.openPowerSelector((pId) => {
-              if (this.engine.npcTemplates[this.selectedNpcTemplate]) {
-                  this.engine.npcTemplates[this.selectedNpcTemplate].powers = this.engine.npcTemplates[this.selectedNpcTemplate].powers || [];
-                  if (!this.engine.npcTemplates[this.selectedNpcTemplate].powers.includes(pId)) {
-                      this.engine.npcTemplates[this.selectedNpcTemplate].powers.push(pId);
-                      this.renderNpcTemplates();
-                  }
-              }
-          });
+    document.getElementById('btn-npct-save').onclick = () => {
+      if (!this.selectedNpcTemplate) return;
+      const data = {
+        name: document.getElementById('npct-name').value,
+        group: document.getElementById('npct-group').value,
+        strength: parseInt(document.getElementById('npct-strength').value, 10) || 0,
+        type: document.getElementById('npct-type').value,
+        speedVariant: parseFloat(document.getElementById('npct-speed').value) || 1.0,
+        aggroRadius: parseFloat(document.getElementById('npct-aggro').value) || 500,
+        baseExp: parseInt(document.getElementById('npct-exp').value, 10) || 20,
+        powers: this.engine.npcTemplates[this.selectedNpcTemplate].powers || []
       };
+      this.engine.npcTemplates[this.selectedNpcTemplate] = data;
+      this.engine.network.socket.emit('save_npc_template', { id: this.selectedNpcTemplate, data: data });
+      this.engine.ui.showSystemMessage(`Saved NPC Template: ${this.selectedNpcTemplate}.`);
+    };
+
+    document.getElementById('btn-npct-add-power').onclick = () => {
+      if (!this.selectedNpcTemplate) return;
+      this.openPowerSelector((pId) => {
+        if (this.engine.npcTemplates[this.selectedNpcTemplate]) {
+          this.engine.npcTemplates[this.selectedNpcTemplate].powers = this.engine.npcTemplates[this.selectedNpcTemplate].powers || [];
+          if (!this.engine.npcTemplates[this.selectedNpcTemplate].powers.includes(pId)) {
+            this.engine.npcTemplates[this.selectedNpcTemplate].powers.push(pId);
+            this.renderNpcTemplates();
+          }
+        }
+      });
+    };
   }
 
   renderNpcTemplates() {
-      const list = document.getElementById('npct-list');
-      if (!list) return;
-      list.innerHTML = '';
-      const keys = Object.keys(this.engine.npcTemplates || {});
-      if (!this.selectedNpcTemplate && keys.length > 0) this.selectedNpcTemplate = keys[0];
+    const list = document.getElementById('npct-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const keys = Object.keys(this.engine.npcTemplates || {});
+    if (!this.selectedNpcTemplate && keys.length > 0) this.selectedNpcTemplate = keys[0];
 
-      let groupOptions = '';
-      const groups = Object.keys(this.entityGroupsData || {}).sort();
-      if (groups.length === 0) {
-          ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
-      } else {
-          groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
-      }
-      const groupDrop = document.getElementById('npct-group');
-      if (groupDrop) {
-          const val = groupDrop.value;
-          groupDrop.innerHTML = groupOptions;
-          if (val) groupDrop.value = val;
+    let groupOptions = '';
+    const groups = Object.keys(this.entityGroupsData || {}).sort();
+    if (groups.length === 0) {
+      ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+    } else {
+      groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+    }
+    const groupDrop = document.getElementById('npct-group');
+    if (groupDrop) {
+      const val = groupDrop.value;
+      groupDrop.innerHTML = groupOptions;
+      if (val) groupDrop.value = val;
+    }
+
+    keys.forEach(k => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 2px;';
+      const btn = document.createElement('button');
+      btn.className = 'b-btn ' + (this.selectedNpcTemplate === k ? 'btn-primary' : 'btn-secondary');
+      btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+      if (this.selectedNpcTemplate === k) btn.style.borderColor = '#3498db';
+      btn.innerText = k;
+      btn.onclick = () => { this.selectedNpcTemplate = k; this.renderNpcTemplates(); };
+      const dupBtn = document.createElement('button');
+      dupBtn.className = 'b-btn btn-secondary';
+      dupBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem; border-color: #3498db; color: #3498db;';
+      dupBtn.innerText = '⧉';
+      dupBtn.onclick = () => {
+        const newName = prompt('Enter ID for duplicated template:', k + '-copy');
+        if (newName && newName.trim() && newName !== k) {
+          const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+          if (this.engine.npcTemplates[safeName]) { this.engine.ui.showSystemMessage('A template with that ID already exists.'); }
+          else { this.engine.npcTemplates[safeName] = JSON.parse(JSON.stringify(this.engine.npcTemplates[k])); this.engine.network.socket.emit('save_npc_template', { id: safeName, data: this.engine.npcTemplates[safeName] }); this.selectedNpcTemplate = safeName; this.renderNpcTemplates(); }
+        }
+      };
+      const delBtn = document.createElement('button');
+      delBtn.className = 'b-btn b-btn-danger';
+      delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
+      delBtn.innerText = 'X';
+      delBtn.onclick = () => {
+        if (confirm(`Delete NPC Template: ${k}?`)) { delete this.engine.npcTemplates[k]; this.engine.network.socket.emit('delete_npc_template', k); if (this.selectedNpcTemplate === k) this.selectedNpcTemplate = null; this.renderNpcTemplates(); }
+      };
+      row.appendChild(btn); row.appendChild(dupBtn); row.appendChild(delBtn); list.appendChild(row);
+    });
+
+    if (this.selectedNpcTemplate && this.engine.npcTemplates[this.selectedNpcTemplate]) {
+      const t = this.engine.npcTemplates[this.selectedNpcTemplate];
+      if (this.npcTemplateManagerWindow.setTitle) {
+          this.npcTemplateManagerWindow.setTitle(`NPC Template: ${t.name || this.selectedNpcTemplate}`);
       }
 
-      keys.forEach(k => {
+      document.getElementById('npct-name').value = t.name || '';
+      document.getElementById('npct-group').value = t.group || 'Civilian';
+      document.getElementById('npct-strength').value = t.strength || 0;
+      document.getElementById('npct-type').value = t.type || 'generic';
+      document.getElementById('npct-speed').value = t.speedVariant || 1.0;
+      document.getElementById('npct-aggro').value = t.aggroRadius !== undefined ? t.aggroRadius : 500;
+      document.getElementById('npct-exp').value = t.baseExp !== undefined ? t.baseExp : 20;
+
+      const powersList = document.getElementById('npct-powers-list');
+      if (powersList) {
+        powersList.innerHTML = '';
+        (t.powers || []).forEach((pId, idx) => {
+          const pName = window.POWER_REGISTRY && window.POWER_REGISTRY[pId] ? window.POWER_REGISTRY[pId].name : pId;
           const row = document.createElement('div');
-          row.style.cssText = 'display: flex; gap: 2px;';
-          const btn = document.createElement('button');
-          btn.className = 'b-btn ' + (this.selectedNpcTemplate === k ? 'btn-primary' : 'btn-secondary');
-          btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
-          if (this.selectedNpcTemplate === k) btn.style.borderColor = '#3498db';
-          btn.innerText = k;
-          btn.onclick = () => { this.selectedNpcTemplate = k; this.renderNpcTemplates(); };
-          const dupBtn = document.createElement('button');
-          dupBtn.className = 'b-btn btn-secondary';
-          dupBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem; border-color: #3498db; color: #3498db;';
-          dupBtn.innerText = '⧉';
-          dupBtn.onclick = () => {
-              const newName = prompt('Enter ID for duplicated template:', k + '-copy');
-              if (newName && newName.trim() && newName !== k) {
-                  const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-                  if (this.engine.npcTemplates[safeName]) { this.engine.ui.showSystemMessage('A template with that ID already exists.'); }
-                  else { this.engine.npcTemplates[safeName] = JSON.parse(JSON.stringify(this.engine.npcTemplates[k])); this.engine.network.socket.emit('save_npc_template', { id: safeName, data: this.engine.npcTemplates[safeName] }); this.selectedNpcTemplate = safeName; this.renderNpcTemplates(); }
-              }
-          };
-          const delBtn = document.createElement('button');
-          delBtn.className = 'b-btn b-btn-danger';
-          delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
-          delBtn.innerText = 'X';
-          delBtn.onclick = () => {
-              if (confirm(`Delete NPC Template: ${k}?`)) { delete this.engine.npcTemplates[k]; this.engine.network.socket.emit('delete_npc_template', k); if (this.selectedNpcTemplate === k) this.selectedNpcTemplate = null; this.renderNpcTemplates(); }
-          };
-          row.appendChild(btn); row.appendChild(dupBtn); row.appendChild(delBtn); list.appendChild(row);
-      });
-
-      if (this.selectedNpcTemplate && this.engine.npcTemplates[this.selectedNpcTemplate]) {
-          const t = this.engine.npcTemplates[this.selectedNpcTemplate];
-          document.getElementById('npct-name').value = t.name || '';
-          document.getElementById('npct-group').value = t.group || 'Civilian';
-          document.getElementById('npct-strength').value = t.strength || 0;
-          document.getElementById('npct-type').value = t.type || 'generic';
-          document.getElementById('npct-speed').value = t.speedVariant || 1.0;
-          document.getElementById('npct-aggro').value = t.aggroRadius !== undefined ? t.aggroRadius : 500;
-          document.getElementById('npct-exp').value = t.baseExp !== undefined ? t.baseExp : 20;
-
-          const powersList = document.getElementById('npct-powers-list');
-          if (powersList) {
-              powersList.innerHTML = '';
-              (t.powers || []).forEach((pId, idx) => {
-                  const pName = window.POWER_REGISTRY && window.POWER_REGISTRY[pId] ? window.POWER_REGISTRY[pId].name : pId;
-                  const row = document.createElement('div');
-                  row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
-                  row.innerHTML = `<span style="color: #fff;">${pName}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;">X</button>`;
-                  row.querySelector('button').onclick = () => { t.powers.splice(idx, 1); this.renderNpcTemplates(); };
-                  powersList.appendChild(row);
-              });
-              if ((t.powers || []).length === 0) powersList.innerHTML = '<span style="color: #888; font-style: italic; font-size: 0.8rem; text-align: center;">No powers assigned.</span>';
-          }
+          row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
+          row.innerHTML = `<span style="color: #fff;">${pName}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;">X</button>`;
+          row.querySelector('button').onclick = () => { t.powers.splice(idx, 1); this.renderNpcTemplates(); };
+          powersList.appendChild(row);
+        });
+        if ((t.powers || []).length === 0) powersList.innerHTML = '<span style="color: #888; font-style: italic; font-size: 0.8rem; text-align: center;">No powers assigned.</span>';
       }
+    }
   }
 
   setupEntityTypes() {
-      this.engine.entityTypes = this.engine.entityTypes || {};
-      this.selectedEntityType = null;
+    this.engine.entityTypes = this.engine.entityTypes || {};
+    this.selectedEntityType = null;
 
-      document.getElementById('btn-et-add').onclick = () => {
-          const input = document.getElementById('et-new-input');
-          const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-          if (id && !this.engine.entityTypes[id]) {
-              this.engine.entityTypes[id] = { hpMult: 1.0, dmgMult: 1.0, expMult: 1.0, isTargetable: true };
-              input.value = '';
-              this.selectedEntityType = id;
-              this.renderEntityTypes();
-          }
+    const btnAdd = document.getElementById('btn-et-add');
+    if (btnAdd) {
+      btnAdd.onclick = () => {
+        const input = document.getElementById('et-new-input');
+        if (!input) return;
+        const id = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        if (id && !this.engine.entityTypes[id]) {
+          const newData = { hpMult: 1.0, dmgMult: 1.0, expMult: 1.0, isTargetable: true };
+          this.engine.entityTypes[id] = newData;
+          this.engine.network.socket.emit('save_entity_type', { id, data: newData });
+          input.value = '';
+          this.selectedEntityType = id;
+          this.renderEntityTypes();
+        }
       };
+    }
 
-      document.getElementById('btn-et-save').onclick = () => {
-          if (!this.selectedEntityType) return;
-          const data = {
-              hpMult: parseFloat(document.getElementById('et-hp-mult').value) || 1.0,
-              dmgMult: parseFloat(document.getElementById('et-dmg-mult').value) || 1.0,
-              expMult: parseFloat(document.getElementById('et-exp-mult').value) || 1.0,
-              isTargetable: document.getElementById('et-targetable').value === 'true'
-          };
-          this.engine.entityTypes[this.selectedEntityType] = data;
-          this.engine.network.socket.emit('save_entity_type', { id: this.selectedEntityType, data: data });
-          this.engine.ui.showSystemMessage(`Saved Entity Type: ${this.selectedEntityType}.`);
+    document.getElementById('btn-et-save').onclick = () => {
+      if (!this.selectedEntityType) return;
+      const data = {
+        hpMult: parseFloat(document.getElementById('et-hp-mult').value) || 1.0,
+        dmgMult: parseFloat(document.getElementById('et-dmg-mult').value) || 1.0,
+        expMult: parseFloat(document.getElementById('et-exp-mult').value) || 1.0,
+        isTargetable: document.getElementById('et-targetable').value === 'true'
       };
+      this.engine.entityTypes[this.selectedEntityType] = data;
+      this.engine.network.socket.emit('save_entity_type', { id: this.selectedEntityType, data: data });
+      this.engine.ui.showSystemMessage(`Saved Entity Type: ${this.selectedEntityType}.`);
+    };
   }
 
   renderEntityTypes() {
-      const list = document.getElementById('et-list');
-      if (!list) return;
-      list.innerHTML = '';
-      const keys = Object.keys(this.engine.entityTypes || {});
-      if (!this.selectedEntityType && keys.length > 0) this.selectedEntityType = keys[0];
+    const list = document.getElementById('et-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const keys = Object.keys(this.engine.entityTypes || {});
+    if (!this.selectedEntityType && keys.length > 0) this.selectedEntityType = keys[0];
 
-      keys.forEach(k => {
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; gap: 2px;';
-          const btn = document.createElement('button');
-          btn.className = 'b-btn ' + (this.selectedEntityType === k ? 'btn-primary' : 'btn-secondary');
-          btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
-          if (this.selectedEntityType === k) btn.style.borderColor = '#3498db';
-          btn.innerText = k;
-          btn.onclick = () => { this.selectedEntityType = k; this.renderEntityTypes(); };
+    keys.forEach(k => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 2px;';
+      const btn = document.createElement('button');
+      btn.className = 'b-btn ' + (this.selectedEntityType === k ? 'btn-primary' : 'btn-secondary');
+      btn.style.cssText = 'flex: 1; text-align: left; padding: 5px; font-size: 0.85rem; border-color: var(--text-dim);';
+      if (this.selectedEntityType === k) btn.style.borderColor = '#3498db';
+      btn.innerText = k;
+      btn.onclick = () => { this.selectedEntityType = k; this.renderEntityTypes(); };
 
-          const delBtn = document.createElement('button');
-          delBtn.className = 'b-btn b-btn-danger';
-          delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
-          delBtn.innerText = 'X';
-          delBtn.onclick = () => {
-              if (confirm(`Delete Entity Type: ${k}?`)) { delete this.engine.entityTypes[k]; this.engine.network.socket.emit('delete_entity_type', k); if (this.selectedEntityType === k) this.selectedEntityType = null; this.renderEntityTypes(); }
-          };
-          row.appendChild(btn); row.appendChild(delBtn); list.appendChild(row);
-      });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'b-btn b-btn-danger';
+      delBtn.style.cssText = 'padding: 0 8px; font-size: 0.8rem;';
+      delBtn.innerText = 'X';
+      delBtn.onclick = () => {
+        if (confirm(`Delete Entity Type: ${k}?`)) { delete this.engine.entityTypes[k]; this.engine.network.socket.emit('delete_entity_type', k); if (this.selectedEntityType === k) this.selectedEntityType = null; this.renderEntityTypes(); }
+      };
+      row.appendChild(btn); row.appendChild(delBtn); list.appendChild(row);
+    });
 
-      if (this.selectedEntityType && this.engine.entityTypes[this.selectedEntityType]) {
-          const t = this.engine.entityTypes[this.selectedEntityType];
-          document.getElementById('et-hp-mult').value = t.hpMult !== undefined ? t.hpMult : 1.0;
-          document.getElementById('et-dmg-mult').value = t.dmgMult !== undefined ? t.dmgMult : 1.0;
-          document.getElementById('et-exp-mult').value = t.expMult !== undefined ? t.expMult : 1.0;
-          document.getElementById('et-targetable').value = t.isTargetable !== false ? 'true' : 'false';
-      }
+    if (this.selectedEntityType && this.engine.entityTypes[this.selectedEntityType]) {
+      const t = this.engine.entityTypes[this.selectedEntityType];
+      document.getElementById('et-hp-mult').value = t.hpMult !== undefined ? t.hpMult : 1.0;
+      document.getElementById('et-dmg-mult').value = t.dmgMult !== undefined ? t.dmgMult : 1.0;
+      document.getElementById('et-exp-mult').value = t.expMult !== undefined ? t.expMult : 1.0;
+      document.getElementById('et-targetable').value = t.isTargetable !== false ? 'true' : 'false';
+    }
 
-      const options = keys.length > 0 ? keys.map(k => `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`).join('') : '<option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option>';
-      ['npct-type', 'edit-spawner-type', 'edit-npc-type'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) { const val = el.value; el.innerHTML = options; if (val) el.value = val; }
-      });
+    const options = keys.length > 0 ? keys.map(k => `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`).join('') : '<option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option>';
+    ['npct-type', 'edit-spawner-type', 'edit-npc-type'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { const val = el.value; el.innerHTML = options; if (val) el.value = val; }
+    });
   }
 
   renderEntityGroupManager(data) {
@@ -995,17 +1018,76 @@ export class DevToolsUIManager {
 
       const powersList = document.getElementById('egm-powers-list');
       if (powersList) {
-          powersList.innerHTML = '';
-          const gData = this.entityGroupsData[this.selectedEntityGroup];
-          (gData.powers || []).forEach((pId, idx) => {
-              const pName = window.POWER_REGISTRY && window.POWER_REGISTRY[pId] ? window.POWER_REGISTRY[pId].name : pId;
-              const row = document.createElement('div');
-              row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
-              row.innerHTML = `<span style="color: #fff;">${pName}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;">X</button>`;
-              row.querySelector('button').onclick = () => { gData.powers.splice(idx, 1); this.renderEntityGroupManager(); };
-              powersList.appendChild(row);
+        powersList.innerHTML = '';
+        const gData = this.entityGroupsData[this.selectedEntityGroup];
+        (gData.powers || []).forEach((pId, idx) => {
+          const pName = window.POWER_REGISTRY && window.POWER_REGISTRY[pId] ? window.POWER_REGISTRY[pId].name : pId;
+          const row = document.createElement('div');
+          row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
+          row.innerHTML = `<span style="color: #fff;">${pName}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;">X</button>`;
+          row.querySelector('button').onclick = () => { gData.powers.splice(idx, 1); this.renderEntityGroupManager(); };
+          powersList.appendChild(row);
+        });
+        if ((gData.powers || []).length === 0) powersList.innerHTML = '<span style="color: #888; font-style: italic; font-size: 0.8rem; text-align: center;">No powers assigned.</span>';
+      }
+
+      const npcList = document.getElementById('egm-npc-list');
+      if (npcList) {
+        npcList.innerHTML = '';
+        const groupNpcs = Object.entries(this.engine.npcTemplates || {}).filter(([k, t]) => t.group === this.selectedEntityGroup);
+        if (groupNpcs.length === 0) {
+          npcList.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 0.85rem; padding-top: 10px;">No NPCs assigned to this group.<br><br>Click "+ New NPC" to create a template for this faction.</div>';
+        } else {
+          groupNpcs.forEach(([k, t]) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.8rem;';
+            row.innerHTML = `<span style="color: #fff; font-weight: bold;">${t.name} <span style="color:#aaa; font-size:0.7rem;">(Str ${t.strength || 0})</span></span>
+              <div style="display: flex; gap: 5px;">
+                <button class="b-btn btn-secondary btn-dup-npc" style="padding: 2px 8px; font-size: 0.7rem; border-color: #f1c40f; color: #f1c40f;">⧉</button>
+                <button class="b-btn btn-secondary btn-edit-npc" style="padding: 2px 8px; font-size: 0.7rem; border-color: #3498db; color: #3498db;">Edit</button>
+                <button class="b-btn b-btn-danger btn-del-npc" style="padding: 2px 8px; font-size: 0.7rem;">X</button>
+              </div>`;
+            row.querySelector('.btn-edit-npc').onclick = () => {
+              this.npcTemplateManagerWindow.open();
+              this.selectedNpcTemplate = k;
+              this.renderNpcTemplates();
+            };
+            row.querySelector('.btn-dup-npc').onclick = () => {
+              const newName = prompt('Enter ID for duplicated template:', k + '-copy');
+              if (newName && newName.trim() && newName !== k) {
+                const safeName = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                if (this.engine.npcTemplates[safeName]) { this.engine.ui.showSystemMessage('A template with that ID already exists.'); }
+                else {
+                  this.engine.npcTemplates[safeName] = JSON.parse(JSON.stringify(this.engine.npcTemplates[k]));
+                  this.engine.network.socket.emit('save_npc_template', { id: safeName, data: this.engine.npcTemplates[safeName] });
+                  this.renderEntityGroupManager();
+                }
+              }
+            };
+            row.querySelector('.btn-del-npc').onclick = () => {
+              if (confirm(`Delete NPC Template: ${k}?`)) {
+                delete this.engine.npcTemplates[k];
+                this.engine.network.socket.emit('delete_npc_template', k);
+                this.renderEntityGroupManager();
+              }
+            };
+            npcList.appendChild(row);
           });
-          if ((gData.powers || []).length === 0) powersList.innerHTML = '<span style="color: #888; font-style: italic; font-size: 0.8rem; text-align: center;">No powers assigned.</span>';
+        }
+      }
+
+      const btnNewNpc = document.getElementById('btn-egm-new-npc');
+      if (btnNewNpc) {
+        btnNewNpc.onclick = () => {
+          if (!this.selectedEntityGroup) return this.engine.ui.showSystemMessage('Please select an Entity Group first.');
+          this.npcTemplateManagerWindow.open();
+          const id = 'new-' + this.selectedEntityGroup.toLowerCase().replace(/[^a-z0-9]/g, '') + '-' + Math.random().toString(36).substr(2, 4);
+          const newData = { name: 'New NPC', group: this.selectedEntityGroup, strength: 0, type: 'generic', speedVariant: 1.0, aggroRadius: 500, baseExp: 20, powers: [] };
+          this.engine.npcTemplates[id] = newData;
+          this.engine.network.socket.emit('save_npc_template', { id, data: newData });
+          this.selectedNpcTemplate = id;
+          this.renderNpcTemplates();
+        };
       }
 
       const strSelect = document.getElementById('egm-strength-select');
@@ -1015,173 +1097,175 @@ export class DevToolsUIManager {
 
   setupLosModal() {
     const eng = this.engine;
-      document.getElementById('btn-close-los').onclick = () => this.losEditWindow.close();
-      const btnSaveLos = document.getElementById('btn-save-los');
-      if (btnSaveLos) btnSaveLos.onclick = () => {
-        eng.devOptions.losDistance = parseInt(document.getElementById('edit-los-dist').value, 10) || 400;
-        eng.devOptions.losAngle = parseInt(document.getElementById('edit-los-angle').value, 10) || 60;
-        localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
-        this.losEditWindow.close();
-      };
+    document.getElementById('btn-close-los').onclick = () => this.losEditWindow.close();
+    const btnSaveLos = document.getElementById('btn-save-los');
+    if (btnSaveLos) btnSaveLos.onclick = () => {
+      eng.devOptions.losDistance = parseInt(document.getElementById('edit-los-dist').value, 10) || 400;
+      eng.devOptions.losAngle = parseInt(document.getElementById('edit-los-angle').value, 10) || 60;
+      localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
+      this.losEditWindow.close();
+    };
   }
 
   setupZoneManager() {
     const eng = this.engine;
-      document.getElementById('btn-zm-create').onclick = async () => {
-        const input = document.getElementById('zm-new-zone-input');
-        const newZone = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-        if (!newZone) return;
+    document.getElementById('btn-zm-create').onclick = async () => {
+      const input = document.getElementById('zm-new-zone-input');
+      const newZone = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      if (!newZone) return;
 
-        try {
-          const res = await fetch('/api/zones', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ zone: newZone })
-          });
-          if (res.ok) {
-            input.value = '';
-            this.renderZoneManager();
-          } else {
-             eng.ui.showSystemMessage('Failed to create zone.');
-          }
-        } catch (e) {
-          console.error(e);
+      try {
+        const res = await fetch('/api/zones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zone: newZone })
+        });
+        if (res.ok) {
+          input.value = '';
+          this.renderZoneManager();
+        } else {
+          eng.ui.showSystemMessage('Failed to create zone.');
         }
-      };
+      } catch (e) {
+        console.error(e);
+      }
+    };
   }
 
   setupNeighborhoodManager() {
-      const eng = this.engine;
+    const eng = this.engine;
 
-      document.getElementById('btn-new-nh').onclick = () => {
-          document.getElementById('edit-nh-id').value = '';
-          document.getElementById('edit-nh-name').value = '';
-          document.getElementById('edit-nh-level').value = 1;
-          document.getElementById('edit-nh-intensity').value = 1;
-          ['minx','miny','minz','maxx','maxy','maxz'].forEach(k => document.getElementById(`edit-nh-${k}`).value = '');
-          this.currentNeighborhoodFactions = [];
-          this.renderNeighborhoodFactions();
-      };
+    document.getElementById('btn-new-nh').onclick = () => {
+      const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      setVal('edit-nh-id', '');
+      setVal('edit-nh-name', '');
+      setVal('edit-nh-level', 1);
+      setVal('edit-nh-intensity', 1);
+      ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'].forEach(k => setVal(`edit-nh-${k}`, ''));
+      this.currentNeighborhoodFactions = [];
+      this.renderNeighborhoodFactions();
+    };
 
-      const btnAddFw = document.getElementById('btn-nh-add-faction');
-      if (btnAddFw) btnAddFw.onclick = () => {
-          this.currentNeighborhoodFactions = this.currentNeighborhoodFactions || [];
-          this.currentNeighborhoodFactions.push({ faction: 'Civilian', weight: 0 });
-          this.renderNeighborhoodFactions();
-      };
+    const btnAddFw = document.getElementById('btn-nh-add-faction');
+    if (btnAddFw) btnAddFw.onclick = () => {
+      this.currentNeighborhoodFactions = this.currentNeighborhoodFactions || [];
+      this.currentNeighborhoodFactions.push({ faction: 'Civilian', weight: 0 });
+      this.renderNeighborhoodFactions();
+    };
 
-      document.getElementById('btn-nh-set-min').onclick = () => {
-          document.getElementById('edit-nh-minx').value = Math.round(eng.player.x);
-          document.getElementById('edit-nh-miny').value = Math.round(eng.player.y);
-          document.getElementById('edit-nh-minz').value = Math.round(eng.player.z || 0);
-      };
+    document.getElementById('btn-nh-set-min').onclick = () => {
+      const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      setVal('edit-nh-minx', Math.round(eng.player.x));
+      setVal('edit-nh-miny', Math.round(eng.player.y));
+      setVal('edit-nh-minz', Math.round(eng.player.z || 0));
+    };
 
-      document.getElementById('btn-nh-set-max').onclick = () => {
-          document.getElementById('edit-nh-maxx').value = Math.round(eng.player.x);
-          document.getElementById('edit-nh-maxy').value = Math.round(eng.player.y);
-          document.getElementById('edit-nh-maxz').value = Math.round(eng.player.z || 0);
-      };
+    document.getElementById('btn-nh-set-max').onclick = () => {
+      const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      setVal('edit-nh-maxx', Math.round(eng.player.x));
+      setVal('edit-nh-maxy', Math.round(eng.player.y));
+      setVal('edit-nh-maxz', Math.round(eng.player.z || 0));
+    };
 
-      document.getElementById('btn-save-nh').onclick = () => {
-          const factionStr = document.getElementById('edit-nh-factions').value || '';
-          const factionWeights = [];
-          factionStr.split(',').forEach(part => {
-             const parts = part.split(':');
-             if (parts.length === 2 && parts[0] && parts[1]) {
-                 factionWeights.push({ faction: parts[0].trim(), weight: parseInt(parts[1], 10) || 1 });
-             }
-          });
+    const btnSaveNh = document.getElementById('btn-save-nh');
+    if (btnSaveNh) {
+      btnSaveNh.onclick = () => {
+        const idEl = document.getElementById('edit-nh-id');
+        if (!idEl) return;
 
-          const payload = {
-              id: document.getElementById('edit-nh-id').value || ('nh_' + Math.random().toString(36).substr(2, 9)),
-              zone: eng.currentZone || 'untitled',
-              name: document.getElementById('edit-nh-name').value.trim() || 'Unnamed Neighborhood',
-              baseLevel: parseInt(document.getElementById('edit-nh-level').value, 10) || 1,
-              intensity: parseInt(document.getElementById('edit-nh-intensity').value, 10) || 1,
-              factionWeights: factionWeights,
-              bounds: {
-                  minX: parseFloat(document.getElementById('edit-nh-minx').value) || 0,
-                  minY: parseFloat(document.getElementById('edit-nh-miny').value) || 0,
-                  minZ: parseFloat(document.getElementById('edit-nh-minz').value) || 0,
-                  maxX: parseFloat(document.getElementById('edit-nh-maxx').value) || 0,
-                  maxY: parseFloat(document.getElementById('edit-nh-maxy').value) || 0,
-                  maxZ: parseFloat(document.getElementById('edit-nh-maxz').value) || 0
-              }
-          };
-          eng.network.socket.emit('save_neighborhood', payload);
+        const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
 
-          if (!eng.neighborhoods) eng.neighborhoods = [];
-          if (Array.isArray(eng.neighborhoods)) {
-              const idx = eng.neighborhoods.findIndex(n => n.id === payload.id);
-              if (idx !== -1) eng.neighborhoods[idx] = payload;
-              else eng.neighborhoods.push(payload);
-          } else {
-              eng.neighborhoods[payload.id] = payload;
+        const payload = {
+          id: idEl.value || ('nh_' + Math.random().toString(36).substr(2, 9)),
+          zone: eng.currentZone || 'untitled',
+          name: getVal('edit-nh-name')?.trim() || 'Unnamed Neighborhood',
+          baseLevel: parseInt(getVal('edit-nh-level'), 10) || 1,
+          intensity: parseInt(getVal('edit-nh-intensity'), 10) || 1,
+          factionWeights: this.currentNeighborhoodFactions ? JSON.parse(JSON.stringify(this.currentNeighborhoodFactions)) : [],
+          bounds: {
+            minX: parseFloat(getVal('edit-nh-minx')) || 0,
+            minY: parseFloat(getVal('edit-nh-miny')) || 0,
+            minZ: parseFloat(getVal('edit-nh-minz')) || 0,
+            maxX: parseFloat(getVal('edit-nh-maxx')) || 0,
+            maxY: parseFloat(getVal('edit-nh-maxy')) || 0,
+            maxZ: parseFloat(getVal('edit-nh-maxz')) || 0
           }
-          this.renderNeighborhoodManager();
-          eng.ui.showSystemMessage('Neighborhood saved.');
+        };
+        eng.network.socket.emit('save_neighborhood', payload);
+
+        if (!eng.neighborhoods) eng.neighborhoods = [];
+        if (Array.isArray(eng.neighborhoods)) {
+          const idx = eng.neighborhoods.findIndex(n => n.id === payload.id);
+          if (idx !== -1) eng.neighborhoods[idx] = payload;
+          else eng.neighborhoods.push(payload);
+        } else {
+          eng.neighborhoods[payload.id] = payload;
+        }
+        this.renderNeighborhoodManager();
+        eng.ui.showSystemMessage('Neighborhood saved.');
       };
+    }
   }
 
   renderNeighborhoodFactions() {
-      const list = document.getElementById('nh-factions-list');
-      const totalSpan = document.getElementById('nh-faction-total');
-      if (!list || !totalSpan) return;
-      list.innerHTML = '';
-      let total = 0;
-      let groupOptions = '';
-      const groups = Object.keys(this.entityGroupsData || {}).sort();
-      if (groups.length === 0) {
-          ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
-      } else {
-          groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
-      }
-      (this.currentNeighborhoodFactions || []).forEach((fw, idx) => {
-          total += (fw.weight || 0);
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; gap: 5px; align-items: center;';
-          row.innerHTML = `
+    const list = document.getElementById('nh-factions-list');
+    const totalSpan = document.getElementById('nh-faction-total');
+    if (!list || !totalSpan) return;
+    list.innerHTML = '';
+    let total = 0;
+    let groupOptions = '';
+    const groups = Object.keys(this.entityGroupsData || {}).sort();
+    if (groups.length === 0) {
+      ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'].forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+    } else {
+      groups.forEach(g => { groupOptions += `<option value="${g}">${g}</option>`; });
+    }
+    (this.currentNeighborhoodFactions || []).forEach((fw, idx) => {
+      total += (fw.weight || 0);
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 5px; align-items: center;';
+      row.innerHTML = `
               <select class="b-select nh-fw-faction" style="flex: 2; font-size: 0.8rem; padding: 2px;">${groupOptions}</select>
               <input type="number" class="b-input nh-fw-weight" value="${fw.weight}" style="flex: 1; font-size: 0.8rem; padding: 2px;" min="0" max="100">
               <span style="color: var(--text-dim); font-size: 0.8rem;">%</span>
               <button class="b-btn b-btn-danger btn-nh-fw-del" style="padding: 2px 8px; font-size: 0.8rem;">X</button>
           `;
-          row.querySelector('.nh-fw-faction').value = fw.faction || '';
-          row.querySelector('.nh-fw-faction').onchange = (e) => { fw.faction = e.target.value; };
-          row.querySelector('.nh-fw-weight').oninput = (e) => {
-              fw.weight = parseInt(e.target.value, 10) || 0;
-              // Update total dynamically to prevent input unfocusing!
-              let newTotal = 0;
-              (this.currentNeighborhoodFactions || []).forEach(f => newTotal += (f.weight || 0));
-              if (totalSpan) {
-                  totalSpan.innerText = newTotal;
-                  totalSpan.style.color = newTotal === 100 ? '#2ecc71' : '#e74c3c';
-              }
-          };
+      row.querySelector('.nh-fw-faction').value = fw.faction || '';
+      row.querySelector('.nh-fw-faction').onchange = (e) => { fw.faction = e.target.value; };
+      row.querySelector('.nh-fw-weight').oninput = (e) => {
+        e.stopPropagation(); // Prevent external handlers from breaking focus!
+        fw.weight = parseInt(e.target.value, 10) || 0;
+        let newTotal = 0;
+        (this.currentNeighborhoodFactions || []).forEach(f => newTotal += (f.weight || 0));
+        if (totalSpan) {
+          totalSpan.innerText = newTotal;
+          totalSpan.style.color = newTotal === 100 ? '#2ecc71' : '#e74c3c';
+        }
+      };
           row.querySelector('.btn-nh-fw-del').onclick = () => { this.currentNeighborhoodFactions.splice(idx, 1); this.renderNeighborhoodFactions(); };
-          list.appendChild(row);
-      });
-      totalSpan.innerText = total;
-      totalSpan.style.color = total === 100 ? '#2ecc71' : '#e74c3c';
+      list.appendChild(row);
+    });
+    totalSpan.innerText = total;
+    totalSpan.style.color = total === 100 ? '#2ecc71' : '#e74c3c';
   }
 
   renderNeighborhoodManager() {
-      const list = document.getElementById('nh-manager-list');
-      if (!list) return;
-      list.innerHTML = '';
+    const list = document.getElementById('nh-manager-list');
+    if (!list) return;
+    list.innerHTML = '';
 
-      let nhList = this.engine.neighborhoods;
-      if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
+    let nhList = this.engine.neighborhoods;
+    if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
 
-      if (!nhList || nhList.length === 0) {
-          list.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-style: italic;">No neighborhoods in this zone.</div>';
-          return;
-      }
+    if (!nhList || nhList.length === 0) {
+      list.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-style: italic;">No neighborhoods in this zone.</div>';
+      return;
+    }
 
-      nhList.forEach(nh => {
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.85rem;';
-          row.innerHTML = `
+    nhList.forEach(nh => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; font-size: 0.85rem;';
+      row.innerHTML = `
               <span style="color: #fff; font-weight: bold;">${nh.name} <span style="color:#aaa; font-size:0.75rem;">(Lv.${nh.baseLevel} / Int.${nh.intensity})</span></span>
               <div>
                   <button class="b-btn btn-secondary btn-dup-nh" style="padding: 2px 8px; font-size: 0.7rem; border-color: #3498db; color: #3498db;" title="Duplicate">⧉ Dup</button>
@@ -1189,38 +1273,39 @@ export class DevToolsUIManager {
                   <button class="b-btn btn-danger btn-del-nh" style="padding: 2px 8px; font-size: 0.7rem; border-color: #e74c3c; color: #e74c3c;">X</button>
               </div>
           `;
-          row.querySelector('.btn-dup-nh').onclick = () => {
-              this.currentNeighborhoodFactions = nh.factionWeights ? JSON.parse(JSON.stringify(nh.factionWeights)) : [];
-              this.renderNeighborhoodFactions();
-              document.getElementById('edit-nh-id').value = '';
-              document.getElementById('edit-nh-name').value = nh.name + ' (Copy)';
-              document.getElementById('edit-nh-level').value = nh.baseLevel;
-              document.getElementById('edit-nh-intensity').value = nh.intensity;
-              ['minX','minY','minZ','maxX','maxY','maxZ'].forEach(k => document.getElementById(`edit-nh-${k.toLowerCase()}`).value = nh.bounds[k]);
-              this.engine.ui.showSystemMessage('Neighborhood duplicated in editor. Click Save to commit as a new record.');
-          };
-          row.querySelector('.btn-edit-nh').onclick = () => {
-              this.currentNeighborhoodFactions = nh.factionWeights ? JSON.parse(JSON.stringify(nh.factionWeights)) : [];
-              this.renderNeighborhoodFactions();
-              document.getElementById('edit-nh-id').value = nh.id;
-              document.getElementById('edit-nh-name').value = nh.name;
-              document.getElementById('edit-nh-level').value = nh.baseLevel;
-              document.getElementById('edit-nh-intensity').value = nh.intensity;
-              ['minX','minY','minZ','maxX','maxY','maxZ'].forEach(k => document.getElementById(`edit-nh-${k.toLowerCase()}`).value = nh.bounds[k]);
-          };
-          row.querySelector('.btn-del-nh').onclick = () => {
-              if (confirm(`Delete Neighborhood: ${nh.name}?`)) {
-                  this.engine.network.socket.emit('delete_neighborhood', nh.id);
-                  if (Array.isArray(this.engine.neighborhoods)) {
-                      this.engine.neighborhoods = this.engine.neighborhoods.filter(n => n.id !== nh.id);
-                  } else {
-                      delete this.engine.neighborhoods[nh.id];
-                  }
-                  this.renderNeighborhoodManager();
-              }
-          };
-          list.appendChild(row);
-      });
+      const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      row.querySelector('.btn-dup-nh').onclick = () => {
+        this.currentNeighborhoodFactions = nh.factionWeights ? JSON.parse(JSON.stringify(nh.factionWeights)) : [];
+        this.renderNeighborhoodFactions();
+        setVal('edit-nh-id', '');
+        setVal('edit-nh-name', nh.name + ' (Copy)');
+        setVal('edit-nh-level', nh.baseLevel);
+        setVal('edit-nh-intensity', nh.intensity);
+        if (nh.bounds) { ['minX', 'minY', 'minZ', 'maxX', 'maxY', 'maxZ'].forEach(k => setVal(`edit-nh-${k.toLowerCase()}`, nh.bounds[k])); }
+        this.engine.ui.showSystemMessage('Neighborhood duplicated in editor. Click Save to commit as a new record.');
+      };
+      row.querySelector('.btn-edit-nh').onclick = () => {
+        this.currentNeighborhoodFactions = nh.factionWeights ? JSON.parse(JSON.stringify(nh.factionWeights)) : [];
+        this.renderNeighborhoodFactions();
+        setVal('edit-nh-id', nh.id);
+        setVal('edit-nh-name', nh.name);
+        setVal('edit-nh-level', nh.baseLevel);
+        setVal('edit-nh-intensity', nh.intensity);
+        if (nh.bounds) { ['minX', 'minY', 'minZ', 'maxX', 'maxY', 'maxZ'].forEach(k => setVal(`edit-nh-${k.toLowerCase()}`, nh.bounds[k])); }
+      };
+      row.querySelector('.btn-del-nh').onclick = () => {
+        if (confirm(`Delete Neighborhood: ${nh.name}?`)) {
+          this.engine.network.socket.emit('delete_neighborhood', nh.id);
+          if (Array.isArray(this.engine.neighborhoods)) {
+            this.engine.neighborhoods = this.engine.neighborhoods.filter(n => n.id !== nh.id);
+          } else {
+            delete this.engine.neighborhoods[nh.id];
+          }
+          this.renderNeighborhoodManager();
+        }
+      };
+      list.appendChild(row);
+    });
   }
 
   async renderZoneManager() {
@@ -1265,15 +1350,21 @@ export class DevToolsUIManager {
   setupArcadeManager() {
     document.getElementById('btn-save-arcade-edit').onclick = () => {
       if (!this.currentEditCabinet) return;
+      const nameEl = document.getElementById('edit-arcade-name');
+      const xEl = document.getElementById('edit-arcade-x');
+      const yEl = document.getElementById('edit-arcade-y');
+      const zEl = document.getElementById('edit-arcade-z');
+      if (!nameEl || !xEl || !yEl || !zEl) return; // Prevent crashes if elements aren't rendered!
+
       const updatedVoxel = {
         ...this.currentEditCabinet.voxel,
-        customName: document.getElementById('edit-arcade-name').value.trim(),
-        gameId: document.getElementById('edit-arcade-game').value,
-        powerState: document.getElementById('edit-arcade-power').value
+        customName: nameEl.value.trim(),
+        gameId: document.getElementById('edit-arcade-game')?.value || 'pixel',
+        powerState: document.getElementById('edit-arcade-power')?.value || 'on'
       };
-      const nX = parseInt(document.getElementById('edit-arcade-x').value, 10), nY = parseInt(document.getElementById('edit-arcade-y').value, 10), nZ = parseInt(document.getElementById('edit-arcade-z').value, 10);
+      const nX = parseInt(xEl.value, 10), nY = parseInt(yEl.value, 10), nZ = parseInt(zEl.value, 10);
       if (nX !== this.currentEditCabinet.wx || nY !== this.currentEditCabinet.wy || nZ !== this.currentEditCabinet.wz) {
-          this.engine.mapManager.setVoxelAt(this.currentEditCabinet.wx, this.currentEditCabinet.wy, this.currentEditCabinet.wz, null, true);
+        this.engine.mapManager.setVoxelAt(this.currentEditCabinet.wx, this.currentEditCabinet.wy, this.currentEditCabinet.wz, null, true);
       }
       this.engine.mapManager.setVoxelAt(nX, nY, nZ, updatedVoxel, true);
       this.arcadeEditWindow.close();
@@ -1283,72 +1374,72 @@ export class DevToolsUIManager {
   }
 
   renderArcadeManager() {
-      const list = document.getElementById('arcade-manager-list');
-      if (!list) return;
-      list.innerHTML = '';
+    const list = document.getElementById('arcade-manager-list');
+    if (!list) return;
+    list.innerHTML = '';
 
-      const cabinets = [];
-      if (this.engine.mapManager && this.engine.mapManager.chunks) {
-          for (const [chunkKey, chunk] of this.engine.mapManager.chunks) {
-              for (const [voxelKey, voxel] of chunk) {
-                  if (voxel && voxel.shape === 'arcade-box-1') {
-                      const parts = voxelKey.split('_').map(Number);
-                      const wx = parts[0] * 32;
-                      const wy = parts[1] * 32;
-                      const wz = parts[2] * 32;
-                      cabinets.push({ wx, wy, wz, voxel });
-                  }
-              }
+    const cabinets = [];
+    if (this.engine.mapManager && this.engine.mapManager.chunks) {
+      for (const [chunkKey, chunk] of this.engine.mapManager.chunks) {
+        for (const [voxelKey, voxel] of chunk) {
+          if (voxel && voxel.shape === 'arcade-box-1') {
+            const parts = voxelKey.split('_').map(Number);
+            const wx = parts[0] * 32;
+            const wy = parts[1] * 32;
+            const wz = parts[2] * 32;
+            cabinets.push({ wx, wy, wz, voxel });
           }
+        }
       }
+    }
 
-      if (cabinets.length === 0) {
-          list.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 10px;">No arcade cabinets found in this zone.</div>';
-          return;
-      }
+    if (cabinets.length === 0) {
+      list.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 10px;">No arcade cabinets found in this zone.</div>';
+      return;
+    }
 
-      const availableGames = [
-          { id: 'pixel', name: 'Pixel (Platformer)' },
-          { id: 'pong', name: 'Bonk (Retro)' },
-          { id: 'invaders', name: 'Space Invaders' },
-          { id: 'b-man', name: 'B-Man' },
-          { id: 'flappy-bee', name: 'Flappy Bee' },
-          { id: 'pixel-cross', name: 'Pixel-Cross' },
-          { id: 'bepis', name: 'Bepis' },
-          { id: 'operius', name: 'Operius' },
-          { id: 'number-munchers', name: 'Num Munchers' }
-      ];
+    const availableGames = [
+      { id: 'pixel', name: 'Pixel (Platformer)' },
+      { id: 'pong', name: 'Bonk (Retro)' },
+      { id: 'invaders', name: 'Space Invaders' },
+      { id: 'b-man', name: 'B-Man' },
+      { id: 'flappy-bee', name: 'Flappy Bee' },
+      { id: 'pixel-cross', name: 'Pixel-Cross' },
+      { id: 'bepis', name: 'Bepis' },
+      { id: 'operius', name: 'Operius' },
+      { id: 'number-munchers', name: 'Num Munchers' }
+    ];
 
-      const lbContainer = document.getElementById('arcade-manager-leaderboard');
-      if (lbContainer) {
-          lbContainer.innerHTML = '';
-          const scores = this.engine.arcadeScores || {};
-          if (Object.keys(scores).length === 0) {
-              lbContainer.innerHTML = '<span style="color: var(--text-dim);">No high scores recorded yet.</span>';
-          } else {
-              availableGames.forEach(g => {
-                  const s = scores[g.id];
-                  if (s) {
-                      const row = document.createElement('div');
-                      row.style.cssText = 'display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;';
-                      row.innerHTML = `<span style="color: #fff;">${g.name}</span> <span style="color: #f1c40f;">${s.score} <span style="color: #7f8c8d; font-size: 0.7rem;">by ${s.player}</span></span>`;
-                      lbContainer.appendChild(row);
-                  }
-              });
+    const lbContainer = document.getElementById('arcade-manager-leaderboard');
+    if (lbContainer) {
+      lbContainer.innerHTML = '';
+      const scores = this.engine.arcadeScores || {};
+      if (Object.keys(scores).length === 0) {
+        lbContainer.innerHTML = '<span style="color: var(--text-dim);">No high scores recorded yet.</span>';
+      } else {
+        availableGames.forEach(g => {
+          const s = scores[g.id];
+          if (s) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;';
+            row.innerHTML = `<span style="color: #fff;">${g.name}</span> <span style="color: #f1c40f;">${s.score} <span style="color: #7f8c8d; font-size: 0.7rem;">by ${s.player}</span></span>`;
+            lbContainer.appendChild(row);
           }
+        });
       }
+    }
 
-      cabinets.forEach((cab, index) => {
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: 4px; gap: 10px;';
+    cabinets.forEach((cab, index) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: 4px; gap: 10px;';
 
-          const currentGame = cab.voxel.gameId || 'pixel';
-          const currentPower = cab.voxel.powerState || 'on';
-          const gameName = availableGames.find(g => g.id === currentGame)?.name || currentGame;
-          const statusDot = currentPower === 'on' ? '🟢' : '🔴';
-          const displayName = cab.voxel.customName ? `"${cab.voxel.customName}"` : `Cabinet #${index + 1}`;
+      const currentGame = cab.voxel.gameId || 'pixel';
+      const currentPower = cab.voxel.powerState || 'on';
+      const gameName = availableGames.find(g => g.id === currentGame)?.name || currentGame;
+      const statusDot = currentPower === 'on' ? '🟢' : '🔴';
+      const displayName = cab.voxel.customName ? `"${cab.voxel.customName}"` : `Cabinet #${index + 1}`;
 
-          row.innerHTML = `
+      row.innerHTML = `
               <div style="display: flex; flex-direction: column; gap: 3px; flex: 1;">
                   <span style="color: #fff; font-weight: bold; font-size: 0.85rem;">${displayName} <span style="font-size: 0.7rem; color: #aaa;">${statusDot} ${gameName}</span></span>
                   <span style="color: #aaa; font-family: var(--font-mono); font-size: 0.75rem;">X:${cab.wx} Y:${cab.wy} Z:${cab.wz}</span>
@@ -1360,42 +1451,42 @@ export class DevToolsUIManager {
               </div>
           `;
 
-          row.querySelector('.btn-tp-arcade').onclick = () => {
-              let offsetX = 0, offsetY = 0;
-              if (cab.voxel.dir === 'n') offsetY = -32;
-              else if (cab.voxel.dir === 's') offsetY = 32;
-              else if (cab.voxel.dir === 'e') offsetX = 32;
-              else if (cab.voxel.dir === 'w') offsetX = -32;
-              else { offsetY = 32; }
-              this.engine.player.x = cab.wx + offsetX;
-              this.engine.player.y = cab.wy + offsetY;
-              this.engine.player.z = this.engine.physics ? this.engine.physics.getTerrainZ(this.engine.player.x, this.engine.player.y) : cab.wz;
-              this.engine.camera.x = this.engine.player.x;
-              this.engine.camera.y = this.engine.player.y;
-          };
+      row.querySelector('.btn-tp-arcade').onclick = () => {
+        let offsetX = 0, offsetY = 0;
+        if (cab.voxel.dir === 'n') offsetY = -32;
+        else if (cab.voxel.dir === 's') offsetY = 32;
+        else if (cab.voxel.dir === 'e') offsetX = 32;
+        else if (cab.voxel.dir === 'w') offsetX = -32;
+        else { offsetY = 32; }
+        this.engine.player.x = cab.wx + offsetX;
+        this.engine.player.y = cab.wy + offsetY;
+        this.engine.player.z = this.engine.physics ? this.engine.physics.getTerrainZ(this.engine.player.x, this.engine.player.y) : cab.wz;
+        this.engine.camera.x = this.engine.player.x;
+        this.engine.camera.y = this.engine.player.y;
+      };
 
-          row.querySelector('.btn-edit-arcade').onclick = () => {
-              this.currentEditCabinet = cab;
-              document.getElementById('edit-arcade-name').value = cab.voxel.customName || '';
-              document.getElementById('edit-arcade-game').value = currentGame;
-              document.getElementById('edit-arcade-power').value = currentPower;
-              document.getElementById('edit-arcade-x').value = cab.wx;
-              document.getElementById('edit-arcade-y').value = cab.wy;
-              document.getElementById('edit-arcade-z').value = cab.wz;
-              document.getElementById('edit-arcade-zone').value = this.engine.currentZone || 'untitled';
-              this.arcadeEditWindow.open();
-          };
+      row.querySelector('.btn-edit-arcade').onclick = () => {
+        this.currentEditCabinet = cab;
+        document.getElementById('edit-arcade-name').value = cab.voxel.customName || '';
+        document.getElementById('edit-arcade-game').value = currentGame;
+        document.getElementById('edit-arcade-power').value = currentPower;
+        document.getElementById('edit-arcade-x').value = cab.wx;
+        document.getElementById('edit-arcade-y').value = cab.wy;
+        document.getElementById('edit-arcade-z').value = cab.wz;
+        document.getElementById('edit-arcade-zone').value = this.engine.currentZone || 'untitled';
+        this.arcadeEditWindow.open();
+      };
 
-          row.querySelector('.btn-del-arcade').onclick = () => {
-              if (confirm(`Are you sure you want to permanently delete Arcade Cabinet #${index + 1}?`)) {
-                  this.engine.mapManager.setVoxelAt(cab.wx, cab.wy, cab.wz, null, true);
-                  this.renderArcadeManager();
-                  this.engine.ui.showSystemMessage(`Arcade Cabinet #${index + 1} deleted.`);
-              }
-          };
+      row.querySelector('.btn-del-arcade').onclick = () => {
+        if (confirm(`Are you sure you want to permanently delete Arcade Cabinet #${index + 1}?`)) {
+          this.engine.mapManager.setVoxelAt(cab.wx, cab.wy, cab.wz, null, true);
+          this.renderArcadeManager();
+          this.engine.ui.showSystemMessage(`Arcade Cabinet #${index + 1} deleted.`);
+        }
+      };
 
-          list.appendChild(row);
-      });
+      list.appendChild(row);
+    });
   }
 
   renderNpcManager() {
@@ -1474,6 +1565,12 @@ export class DevToolsUIManager {
 
   renderSpawnerManager() {
     const list = document.getElementById('spawner-manager-list');
+
+    ['edit-spawner-mobpack', 'edit-spawner-max', 'edit-spawner-npcname', 'edit-spawner-group', 'edit-spawner-type', 'edit-spawner-lvlmin', 'edit-spawner-lvlmax', 'edit-spawner-strength', 'edit-spawner-aggro', 'edit-spawner-powers'].forEach(id => {
+       const el = document.getElementById(id);
+       if (el && el.parentElement) el.parentElement.style.display = 'none';
+    });
+
     if (!list) return;
     list.innerHTML = '';
 
@@ -1482,7 +1579,7 @@ export class DevToolsUIManager {
     btnCreate.style.cssText = 'width: 100%; margin-bottom: 10px; padding: 10px; font-weight: bold;';
     btnCreate.innerText = '+ Create New Spawner Here';
     btnCreate.onclick = () => {
-        this.engine.network.sendCreateSpawner({ x: this.engine.player.x, y: this.engine.player.y, z: this.engine.player.z || 0, maxActive: 0, npcType: 'none' });
+      this.engine.network.sendCreateSpawner({ x: this.engine.player.x, y: this.engine.player.y, z: this.engine.player.z || 0 });
     };
     list.appendChild(btnCreate);
 
@@ -1498,28 +1595,18 @@ export class DevToolsUIManager {
           <span>X:${Math.round(s.x)} Y:${Math.round(s.y)} Z:${Math.round(s.z || 0)}</span>
           <button class="btn-tp btn-secondary" style="padding: 2px 8px; font-size: 0.75rem; width: auto; height: auto;">TP</button>
         </div>
-        <div style="flex: 1.5; font-family: var(--font-mono); font-size: 0.85rem; color: #aaa;">NPC: ${s.npcName} (${s.maxActive})</div>
+        <div style="flex: 1.5; font-family: var(--font-mono); font-size: 0.85rem; color: #aaa;">Radius: ${s.radius}m</div>
         <button class="btn-del btn-secondary" style="width: auto; height: auto; padding: 5px 10px; border-color: #ff4757; color: #ff4757; font-weight: bold;">X</button>
       `;
       row.querySelector('.btn-edit').onclick = () => {
         document.getElementById('edit-spawner-uuid').value = s.uuid;
         document.getElementById('edit-spawner-name').value = s.name;
-        document.getElementById('edit-spawner-mobpack').value = s.mobPack || '';
-        document.getElementById('edit-spawner-max').value = s.maxActive;
         document.getElementById('edit-spawner-x').value = Math.round(s.x);
         document.getElementById('edit-spawner-y').value = Math.round(s.y);
         document.getElementById('edit-spawner-z').value = Math.round(s.z || 0);
         document.getElementById('edit-spawner-radius').value = Math.round(s.radius);
         document.getElementById('edit-spawner-rate').value = Math.round(s.respawnRate);
-        document.getElementById('edit-spawner-npcname').value = s.npcName;
-        document.getElementById('edit-spawner-group').value = s.npcGroup;
-        document.getElementById('edit-spawner-type').value = s.npcType;
-        document.getElementById('edit-spawner-lvlmin').value = s.levelMin;
-        document.getElementById('edit-spawner-lvlmax').value = s.levelMax;
-        document.getElementById('edit-spawner-strength').value = s.strength;
-        document.getElementById('edit-spawner-aggro').value = s.aggroRadius !== undefined ? s.aggroRadius : 500;
         document.getElementById('edit-spawner-patrol').value = s.patrolRoute || '';
-        document.getElementById('edit-spawner-powers').value = (s.npcPowers || []).join(', ');
 
         this.updateSpawnerEditNpcList(s.uuid);
 
@@ -1532,28 +1619,28 @@ export class DevToolsUIManager {
   }
 
   updateSpawnerEditNpcList(uuid = null) {
-      if (!uuid) uuid = document.getElementById('edit-spawner-uuid').value;
-      const npcListEl = document.getElementById('edit-spawner-npc-list');
-      if (!uuid || !npcListEl) return;
+    if (!uuid) uuid = document.getElementById('edit-spawner-uuid').value;
+    const npcListEl = document.getElementById('edit-spawner-npc-list');
+    if (!uuid || !npcListEl) return;
 
-      npcListEl.innerHTML = '';
-      const spawnerNpcs = this.engine.npcs.filter(n => n.spawnerUuid === uuid);
-      if (spawnerNpcs.length > 0) {
-          spawnerNpcs.forEach(npc => {
-              const r = document.createElement('div');
-              r.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; margin-bottom: 2px;';
-              r.innerHTML = `<span style="color: #fff; font-weight: bold;">${npc.name} <span style="color:#aaa; font-size:0.75rem;">(Lv.${npc.level || 1})</span></span>
+    npcListEl.innerHTML = '';
+    const spawnerNpcs = this.engine.npcs.filter(n => n.spawnerUuid === uuid);
+    if (spawnerNpcs.length > 0) {
+      spawnerNpcs.forEach(npc => {
+        const r = document.createElement('div');
+        r.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); border-radius: 3px; margin-bottom: 2px;';
+        r.innerHTML = `<span style="color: #fff; font-weight: bold;">${npc.name} <span style="color:#aaa; font-size:0.75rem;">(Lv.${npc.level || 1})</span></span>
                              <button class="b-btn btn-secondary btn-edit-spawner-npc" style="padding: 2px 8px; font-size: 0.7rem; border-color: #e056fd; color: #e056fd;">✎ Edit</button>`;
-              r.querySelector('.btn-edit-spawner-npc').onclick = () => {
-                  this.engine.selectedTarget = { type: 'npc', id: npc.uuid };
-                  const editTargetBtn = document.getElementById('btn-dev-edit-target');
-                  if (editTargetBtn) editTargetBtn.click();
-              };
-              npcListEl.appendChild(r);
-          });
-      } else {
-          npcListEl.innerHTML = '<div style="text-align: center; color: #888; font-style: italic;">No active NPCs spawned.</div>';
-      }
+        r.querySelector('.btn-edit-spawner-npc').onclick = () => {
+          this.engine.selectedTarget = { type: 'npc', id: npc.uuid };
+          const editTargetBtn = document.getElementById('btn-dev-edit-target');
+          if (editTargetBtn) editTargetBtn.click();
+        };
+        npcListEl.appendChild(r);
+      });
+    } else {
+      npcListEl.innerHTML = '<div style="text-align: center; color: #888; font-style: italic;">No active NPCs spawned.</div>';
+    }
   }
 
   setupBuilderTools() {
@@ -1565,7 +1652,7 @@ export class DevToolsUIManager {
       if (eng.clientSettings.lockBuilderPanel) {
         const savedPos = localStorage.getItem('b_builder_pos');
         if (savedPos) {
-          try { const pos = JSON.parse(savedPos); builderPanel.style.left = pos.left; builderPanel.style.top = pos.top; } catch(e) {}
+          try { const pos = JSON.parse(savedPos); builderPanel.style.left = pos.left; builderPanel.style.top = pos.top; } catch (e) { }
         }
       } else {
         builderPanel.style.top = '70px';
@@ -1592,14 +1679,14 @@ export class DevToolsUIManager {
 
       const btnToggleGrid = document.getElementById('btn-toggle-grid');
       if (btnToggleGrid) {
-      btnToggleGrid.className = eng.devOptions.showGrid ? 'b-btn btn-primary' : 'b-btn btn-secondary';
-      btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
-      btnToggleGrid.onclick = () => {
+        btnToggleGrid.className = eng.devOptions.showGrid ? 'b-btn btn-primary' : 'b-btn btn-secondary';
+        btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
+        btnToggleGrid.onclick = () => {
           eng.devOptions.showGrid = !eng.devOptions.showGrid;
           btnToggleGrid.className = eng.devOptions.showGrid ? 'b-btn btn-primary' : 'b-btn btn-secondary';
           btnToggleGrid.innerText = eng.devOptions.showGrid ? 'Builder Grid: ON' : 'Builder Grid: OFF';
           localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
-      };
+        };
       }
 
       const btnToggleHotbar = document.getElementById('btn-toggle-hotbar');
@@ -1610,8 +1697,8 @@ export class DevToolsUIManager {
           const isHidden = hb.style.display === 'none';
           if (isHidden) this.texturePaletteWindow.open(); else this.texturePaletteWindow.close();
           if (isHidden && ol) this.objectLibraryWindow.close();
-              this.updateBuildingMode();
-      };
+          this.updateBuildingMode();
+        };
       }
 
       const btnToggleObjLib = document.getElementById('btn-toggle-objlib');
@@ -1622,8 +1709,8 @@ export class DevToolsUIManager {
           const isHidden = ol.style.display === 'none';
           if (isHidden) this.objectLibraryWindow.open(); else this.objectLibraryWindow.close();
           if (isHidden && hb) this.texturePaletteWindow.close();
-              this.updateBuildingMode();
-      };
+          this.updateBuildingMode();
+        };
       }
     }
 
@@ -1631,73 +1718,73 @@ export class DevToolsUIManager {
   }
 
   updateBuildingMode() {
-      const eng = this.engine;
-      const hb = document.getElementById('builder-hotbar');
-      const ol = document.getElementById('object-library-panel');
-      const hbVisible = hb && hb.style.display !== 'none';
-      const olVisible = ol && ol.style.display !== 'none';
+    const eng = this.engine;
+    const hb = document.getElementById('builder-hotbar');
+    const ol = document.getElementById('object-library-panel');
+    const hbVisible = hb && hb.style.display !== 'none';
+    const olVisible = ol && ol.style.display !== 'none';
 
-      if (hbVisible) {
-          const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
-          let base = 'cube';
-          if (activeSlot && (activeSlot.dataset.tex === 'wood-door-bottom' || activeSlot.dataset.tex === 'wood-door-top')) base = 'door';
+    if (hbVisible) {
+      const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
+      let base = 'cube';
+      if (activeSlot && (activeSlot.dataset.tex === 'wood-door-bottom' || activeSlot.dataset.tex === 'wood-door-top')) base = 'door';
 
-          eng.editShapeBase = base;
-          eng.editShape = base;
+      eng.editShapeBase = base;
+      eng.editShape = base;
 
-          if (this.updateShapeUI) {
-              this.updateShapeUI();
-          } else {
-              const shapeBtn = document.getElementById('build-shape-btn');
-              if (shapeBtn) {
-                  if (shapeBtn.tagName === 'SELECT') {
-                      let hasOpt = Array.from(shapeBtn.options).some(o => o.value === base);
-                      if (!hasOpt) {
-                          shapeBtn.innerHTML = `<option value="${base}">SHAPE: ${base.toUpperCase()}</option>`;
-                      }
-                      shapeBtn.value = base;
-                  } else {
-                      shapeBtn.innerText = 'Shape: ' + base.toUpperCase();
-                  }
-              }
-          }
-          if (activeSlot && !activeSlot.classList.contains('active')) activeSlot.click();
-      } else if (olVisible) {
-          if (!FURNITURE_REGISTRY[eng.editShapeBase]) {
-              const firstObjId = Object.keys(FURNITURE_REGISTRY)[0];
-              const objBtn = document.getElementById(`btn-obj-${firstObjId}`);
-              if (objBtn) objBtn.click();
-          }
+      if (this.updateShapeUI) {
+        this.updateShapeUI();
       } else {
-          eng.editShapeBase = 'none';
-          eng.editShape = 'none';
-          const shapeBtn = document.getElementById('build-shape-btn');
-          if (shapeBtn) {
-              if (shapeBtn.tagName === 'SELECT') shapeBtn.innerHTML = '<option value="none">SHAPE: NONE</option>';
-              else shapeBtn.innerText = 'Shape: NONE';
+        const shapeBtn = document.getElementById('build-shape-btn');
+        if (shapeBtn) {
+          if (shapeBtn.tagName === 'SELECT') {
+            let hasOpt = Array.from(shapeBtn.options).some(o => o.value === base);
+            if (!hasOpt) {
+              shapeBtn.innerHTML = `<option value="${base}">SHAPE: ${base.toUpperCase()}</option>`;
+            }
+            shapeBtn.value = base;
+          } else {
+            shapeBtn.innerText = 'Shape: ' + base.toUpperCase();
           }
+        }
       }
+      if (activeSlot && !activeSlot.classList.contains('active')) activeSlot.click();
+    } else if (olVisible) {
+      if (!FURNITURE_REGISTRY[eng.editShapeBase]) {
+        const firstObjId = Object.keys(FURNITURE_REGISTRY)[0];
+        const objBtn = document.getElementById(`btn-obj-${firstObjId}`);
+        if (objBtn) objBtn.click();
+      }
+    } else {
+      eng.editShapeBase = 'none';
+      eng.editShape = 'none';
+      const shapeBtn = document.getElementById('build-shape-btn');
+      if (shapeBtn) {
+        if (shapeBtn.tagName === 'SELECT') shapeBtn.innerHTML = '<option value="none">SHAPE: NONE</option>';
+        else shapeBtn.innerText = 'Shape: NONE';
+      }
+    }
   }
 
   setupObjectLibrary() {
     const eng = this.engine;
     const objLibPanel = this.objectLibraryWindow.element;
 
-      if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-          const savedPos = localStorage.getItem('b_objlib_pos');
-          if (savedPos) {
-              try { const pos = JSON.parse(savedPos); objLibPanel.style.left = pos.left; objLibPanel.style.top = pos.top; } catch(e) {}
-          } else {
-              objLibPanel.style.top = '70px';
-              objLibPanel.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '570px' : '310px';
-          }
+    if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
+      const savedPos = localStorage.getItem('b_objlib_pos');
+      if (savedPos) {
+        try { const pos = JSON.parse(savedPos); objLibPanel.style.left = pos.left; objLibPanel.style.top = pos.top; } catch (e) { }
       } else {
-          objLibPanel.style.top = '70px';
-          objLibPanel.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '570px' : '310px';
+        objLibPanel.style.top = '70px';
+        objLibPanel.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '570px' : '310px';
       }
+    } else {
+      objLibPanel.style.top = '70px';
+      objLibPanel.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '570px' : '310px';
+    }
 
-      const objLibGrid = document.getElementById('obj-lib-grid');
-      if (objLibGrid) {
+    const objLibGrid = document.getElementById('obj-lib-grid');
+    if (objLibGrid) {
 
       for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
         const btnObj = document.createElement('button');
@@ -1753,14 +1840,14 @@ export class DevToolsUIManager {
           const flipBtn = document.getElementById('build-flip-btn');
 
           if (shapeBtn) {
-              if (shapeBtn.tagName === 'SELECT') {
-                  if (!Array.from(shapeBtn.options).some(o => o.value === id)) {
-                      shapeBtn.innerHTML = `<option value="${id}">SHAPE: ${data.name.toUpperCase()}</option>`;
-                  }
-                  shapeBtn.value = id;
-              } else {
-                  shapeBtn.innerText = `Shape: ${data.name.toUpperCase()}`;
+            if (shapeBtn.tagName === 'SELECT') {
+              if (!Array.from(shapeBtn.options).some(o => o.value === id)) {
+                shapeBtn.innerHTML = `<option value="${id}">SHAPE: ${data.name.toUpperCase()}</option>`;
               }
+              shapeBtn.value = id;
+            } else {
+              shapeBtn.innerText = `Shape: ${data.name.toUpperCase()}`;
+            }
           }
           if (dirBtn) { dirBtn.style.display = 'block'; dirBtn.innerText = eng.editShapeDir.toUpperCase(); }
           if (relBtn) relBtn.style.display = 'none';
@@ -1768,63 +1855,63 @@ export class DevToolsUIManager {
         };
         objLibGrid.appendChild(btnObj);
       }
-      }
+    }
 
-      const colorPickerContainer = document.getElementById('obj-lib-color-picker');
-      if (colorPickerContainer) {
-        this.appendColorPicker(colorPickerContainer);
-      }
+    const colorPickerContainer = document.getElementById('obj-lib-color-picker');
+    if (colorPickerContainer) {
+      this.appendColorPicker(colorPickerContainer);
+    }
   }
 
   setupBuilderHotbar() {
     const eng = this.engine;
     const builderHotbar = this.texturePaletteWindow.element;
 
-      if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-        const savedPos = localStorage.getItem('b_hotbar_pos');
-        if (savedPos) {
-          try {
-            const pos = JSON.parse(savedPos);
-            builderHotbar.style.left = pos.left; builderHotbar.style.top = pos.top;
-          } catch(e) {}
-        } else {
-          builderHotbar.style.top = '280px';
-          builderHotbar.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '290px' : '30px';
-        }
+    if (eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
+      const savedPos = localStorage.getItem('b_hotbar_pos');
+      if (savedPos) {
+        try {
+          const pos = JSON.parse(savedPos);
+          builderHotbar.style.left = pos.left; builderHotbar.style.top = pos.top;
+        } catch (e) { }
       } else {
         builderHotbar.style.top = '280px';
         builderHotbar.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '290px' : '30px';
       }
+    } else {
+      builderHotbar.style.top = '280px';
+      builderHotbar.style.right = (eng.clientSettings && eng.clientSettings.showMinimap) ? '290px' : '30px';
+    }
 
-      let builderTooltip = document.getElementById('builder-tooltip');
-      if (!builderTooltip) {
-        builderTooltip = document.createElement('div');
-        builderTooltip.id = 'builder-tooltip';
-        builderTooltip.style.cssText = TOOLTIP_STYLE;
-        document.body.appendChild(builderTooltip);
-      }
+    let builderTooltip = document.getElementById('builder-tooltip');
+    if (!builderTooltip) {
+      builderTooltip = document.createElement('div');
+      builderTooltip.id = 'builder-tooltip';
+      builderTooltip.style.cssText = TOOLTIP_STYLE;
+      document.body.appendChild(builderTooltip);
+    }
 
-      if (!document.getElementById('tooltip-spin-style')) {
-        const style = document.createElement('style');
-        style.id = 'tooltip-spin-style';
-        style.innerHTML = `
+    if (!document.getElementById('tooltip-spin-style')) {
+      const style = document.createElement('style');
+      style.id = 'tooltip-spin-style';
+      style.innerHTML = `
           @keyframes tooltipSpin {
             0% { transform: rotateX(-35.264deg) rotateY(-45deg) scale(0.85); }
             100% { transform: rotateX(-35.264deg) rotateY(315deg) scale(0.85); }
           }
         `;
-        document.head.appendChild(style);
-      }
+      document.head.appendChild(style);
+    }
 
-      const generateTooltipHTML = (text, isBlock, bgStyle, tColor) => {
-        if (!isBlock) return text;
-        const safeBg = bgStyle.replace(/"/g, "'");
-        const makeFace = (transform, brightness, border) => `
+    const generateTooltipHTML = (text, isBlock, bgStyle, tColor) => {
+      if (!isBlock) return text;
+      const safeBg = bgStyle.replace(/"/g, "'");
+      const makeFace = (transform, brightness, border) => `
           <div style="position: absolute; width: 32px; height: 32px; background: ${safeBg}; transform: ${transform}; border: 1px solid ${border}; filter: brightness(${brightness}); overflow: hidden;">
             <div style="position: absolute; inset: 0; background: ${tColor}; mix-blend-mode: multiply;"></div>
           </div>
         `;
-        return `
+      return `
           <div style="display: flex; align-items: center; gap: 15px; padding: 2px;">
             <div style="width: 32px; height: 32px; transform-style: preserve-3d; animation: tooltipSpin 4s infinite linear; margin: 5px;">
               ${makeFace('translateZ(16px)', 0.85, 'rgba(0,0,0,0.4)')}
@@ -1837,49 +1924,49 @@ export class DevToolsUIManager {
             <span>${text}</span>
           </div>
         `;
-      };
+    };
 
-      const setupTooltip = (el, text, isBlock = false, bgStyle = '') => {
-        el.onmouseenter = (e) => {
-          if (isBlock) {
-             const tColor = eng.buildColor || '#ffffff';
-             builderTooltip.innerHTML = generateTooltipHTML(text, isBlock, bgStyle, tColor);
-          } else {
-             builderTooltip.innerText = text;
-          }
-          builderTooltip.style.display = 'block';
-          builderTooltip.style.left = (e.clientX + 15) + 'px';
-          builderTooltip.style.top = (e.clientY + 15) + 'px';
-        };
-        el.onmousemove = (e) => {
-          builderTooltip.style.left = (e.clientX + 15) + 'px';
-          builderTooltip.style.top = (e.clientY + 15) + 'px';
-        };
-        el.onmouseleave = () => {
-          builderTooltip.style.display = 'none';
-        };
-      };
-
-      const showColorPreviewTooltip = (e, targetColor, label) => {
-        const activeSlot = document.querySelector('.hotbar-slot.active');
-        let isBlock = false;
-        let bgStyle = '';
-        let blockName = '';
-        if (activeSlot && activeSlot.dataset.tex !== 'picker' && activeSlot.dataset.tex !== 'erase') {
-          isBlock = true;
-          bgStyle = activeSlot.dataset.bg || '';
-          blockName = activeSlot.dataset.name || activeSlot.dataset.tex;
-        }
-        const tooltipText = isBlock ? `${blockName} (${label})` : label;
+    const setupTooltip = (el, text, isBlock = false, bgStyle = '') => {
+      el.onmouseenter = (e) => {
         if (isBlock) {
-          builderTooltip.innerHTML = generateTooltipHTML(tooltipText, isBlock, bgStyle, targetColor);
+          const tColor = eng.buildColor || '#ffffff';
+          builderTooltip.innerHTML = generateTooltipHTML(text, isBlock, bgStyle, tColor);
         } else {
-          builderTooltip.innerText = tooltipText;
+          builderTooltip.innerText = text;
         }
         builderTooltip.style.display = 'block';
         builderTooltip.style.left = (e.clientX + 15) + 'px';
         builderTooltip.style.top = (e.clientY + 15) + 'px';
       };
+      el.onmousemove = (e) => {
+        builderTooltip.style.left = (e.clientX + 15) + 'px';
+        builderTooltip.style.top = (e.clientY + 15) + 'px';
+      };
+      el.onmouseleave = () => {
+        builderTooltip.style.display = 'none';
+      };
+    };
+
+    const showColorPreviewTooltip = (e, targetColor, label) => {
+      const activeSlot = document.querySelector('.hotbar-slot.active');
+      let isBlock = false;
+      let bgStyle = '';
+      let blockName = '';
+      if (activeSlot && activeSlot.dataset.tex !== 'picker' && activeSlot.dataset.tex !== 'erase') {
+        isBlock = true;
+        bgStyle = activeSlot.dataset.bg || '';
+        blockName = activeSlot.dataset.name || activeSlot.dataset.tex;
+      }
+      const tooltipText = isBlock ? `${blockName} (${label})` : label;
+      if (isBlock) {
+        builderTooltip.innerHTML = generateTooltipHTML(tooltipText, isBlock, bgStyle, targetColor);
+      } else {
+        builderTooltip.innerText = tooltipText;
+      }
+      builderTooltip.style.display = 'block';
+      builderTooltip.style.left = (e.clientX + 15) + 'px';
+      builderTooltip.style.top = (e.clientY + 15) + 'px';
+    };
 
     const controlsContainer = document.getElementById('hotbar-controls-container');
     const tabsContainer = document.getElementById('builder-tabs-container');
@@ -1955,8 +2042,8 @@ export class DevToolsUIManager {
     eng.editFluid = 'still';
 
     fluidBtn.onclick = () => {
-        eng.editFluid = eng.editFluid === 'still' ? 'flow' : 'still';
-        fluidBtn.innerText = 'Fluid State: ' + eng.editFluid.toUpperCase();
+      eng.editFluid = eng.editFluid === 'still' ? 'flow' : 'still';
+      fluidBtn.innerText = 'Fluid State: ' + eng.editFluid.toUpperCase();
     };
 
     flipBtn.onclick = () => {
@@ -1965,17 +2052,17 @@ export class DevToolsUIManager {
     };
 
     uvBtn.onclick = () => {
-        if (eng.editShapeUV === 'auto') eng.editShapeUV = 'mesh';
-        else if (eng.editShapeUV === 'mesh') eng.editShapeUV = 'box';
-        else eng.editShapeUV = 'auto';
-        updateShapeUI();
+      if (eng.editShapeUV === 'auto') eng.editShapeUV = 'mesh';
+      else if (eng.editShapeUV === 'mesh') eng.editShapeUV = 'box';
+      else eng.editShapeUV = 'auto';
+      updateShapeUI();
     };
 
     const updateShapeUI = () => {
       if (eng.editShapeBase === 'none') {
         if (shapeBtn) {
-            if (shapeBtn.tagName === 'SELECT') shapeBtn.innerHTML = '<option value="none">SHAPE: NONE</option>';
-            else shapeBtn.innerText = 'Shape: NONE';
+          if (shapeBtn.tagName === 'SELECT') shapeBtn.innerHTML = '<option value="none">SHAPE: NONE</option>';
+          else shapeBtn.innerText = 'Shape: NONE';
         }
         if (dirBtn) dirBtn.style.display = 'none';
         if (relBtn) relBtn.style.display = 'none';
@@ -1992,25 +2079,25 @@ export class DevToolsUIManager {
       else if (FURNITURE_REGISTRY[eng.editShapeBase]) bases = [eng.editShapeBase, ...bases];
 
       if (shapeBtn && shapeBtn.tagName === 'SELECT') {
-          const currentOptions = Array.from(shapeBtn.options).map(o => o.value).join(',');
-          if (currentOptions !== bases.join(',')) {
-              shapeBtn.innerHTML = '';
-              bases.forEach(b => {
-                  const opt = document.createElement('option');
-                  opt.value = b;
-                  let displayName = b;
-                  if (FURNITURE_REGISTRY[b]) displayName = FURNITURE_REGISTRY[b].name;
-                  else displayName = b.replace(/_/g, ' ');
-                  opt.innerText = 'SHAPE: ' + displayName.toUpperCase();
-                  shapeBtn.appendChild(opt);
-              });
-          }
-          if (bases.includes(eng.editShapeBase)) {
-              shapeBtn.value = eng.editShapeBase;
-          } else {
-              eng.editShapeBase = bases[0];
-              shapeBtn.value = bases[0];
-          }
+        const currentOptions = Array.from(shapeBtn.options).map(o => o.value).join(',');
+        if (currentOptions !== bases.join(',')) {
+          shapeBtn.innerHTML = '';
+          bases.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            let displayName = b;
+            if (FURNITURE_REGISTRY[b]) displayName = FURNITURE_REGISTRY[b].name;
+            else displayName = b.replace(/_/g, ' ');
+            opt.innerText = 'SHAPE: ' + displayName.toUpperCase();
+            shapeBtn.appendChild(opt);
+          });
+        }
+        if (bases.includes(eng.editShapeBase)) {
+          shapeBtn.value = eng.editShapeBase;
+        } else {
+          eng.editShapeBase = bases[0];
+          shapeBtn.value = bases[0];
+        }
       }
 
       if (eng.editShapeBase === 'door') {
@@ -2024,14 +2111,14 @@ export class DevToolsUIManager {
         flipBtn.style.display = eng.editShapeBase.includes('door') ? 'block' : 'none';
         uvBtn.style.display = 'block';
         if (eng.editShapeUV === 'auto') {
-            uvBtn.innerText = 'Auto UV';
-            uvBtn.style.background = 'transparent';
+          uvBtn.innerText = 'Auto UV';
+          uvBtn.style.background = 'transparent';
         } else if (eng.editShapeUV === 'mesh') {
-            uvBtn.innerText = 'Mesh UV';
-            uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
+          uvBtn.innerText = 'Mesh UV';
+          uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
         } else {
-            uvBtn.innerText = 'Box UV';
-            uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
+          uvBtn.innerText = 'Box UV';
+          uvBtn.style.background = 'rgba(230, 126, 34, 0.2)';
         }
       } else if (eng.editShapeBase === 'ramp' || eng.editShapeBase === 'half_ramp' || eng.editShapeBase === 'top_half_ramp' || eng.editShapeBase === 'stair' || eng.editShapeBase === 'decal') {
         dirBtn.style.display = eng.editShapeRelative ? 'none' : 'block';
@@ -2052,15 +2139,15 @@ export class DevToolsUIManager {
 
       let finalShape = eng.editShapeBase;
       if (finalShape === 'ramp' || finalShape === 'half_ramp' || finalShape === 'top_half_ramp' || finalShape === 'stair' || finalShape === 'door') {
-          if (eng.editShapeRelative && finalShape !== 'door') {
-            eng.editShape = finalShape + '_player';
-          } else {
-            eng.editShape = finalShape + '_' + eng.editShapeDir + (finalShape === 'door' && eng.editShapeFlip ? '_flip' : '');
-          }
+        if (eng.editShapeRelative && finalShape !== 'door') {
+          eng.editShape = finalShape + '_player';
+        } else {
+          eng.editShape = finalShape + '_' + eng.editShapeDir + (finalShape === 'door' && eng.editShapeFlip ? '_flip' : '');
+        }
       } else if (FURNITURE_REGISTRY[finalShape]) {
-          eng.editShape = finalShape + (finalShape.includes('door') && eng.editShapeFlip ? '_flip' : '');
+        eng.editShape = finalShape + (finalShape.includes('door') && eng.editShapeFlip ? '_flip' : '');
       } else {
-          eng.editShape = finalShape;
+        eng.editShape = finalShape;
       }
     };
 
@@ -2118,252 +2205,252 @@ export class DevToolsUIManager {
     addCategory('lines', 'Street Lines');
 
     const ensureActionSlot = (catId, id, text, title, action) => {
-        const cat = categories[catId];
-        if (!cat) return;
-        const grid = cat.grid;
+      const cat = categories[catId];
+      if (!cat) return;
+      const grid = cat.grid;
 
-        const slot = document.createElement('div');
-        slot.className = 'hotbar-action-slot';
-        slot.style.cssText = 'background: rgba(52, 152, 219, 0.2); border-radius: 4px; border: 2px solid #3498db; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #fff; font-size: 1rem; transition: background 0.2s;';
-        slot.innerHTML = text;
+      const slot = document.createElement('div');
+      slot.className = 'hotbar-action-slot';
+      slot.style.cssText = 'background: rgba(52, 152, 219, 0.2); border-radius: 4px; border: 2px solid #3498db; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #fff; font-size: 1rem; transition: background 0.2s;';
+      slot.innerHTML = text;
 
-        slot.onmouseenter = (e) => {
-            slot.style.background = 'rgba(52, 152, 219, 0.4)';
-            builderTooltip.innerText = title;
-            builderTooltip.style.display = 'block';
-            builderTooltip.style.left = (e.clientX + 15) + 'px';
-            builderTooltip.style.top = (e.clientY + 15) + 'px';
-        };
-        slot.onmousemove = (e) => {
-            builderTooltip.style.left = (e.clientX + 15) + 'px';
-            builderTooltip.style.top = (e.clientY + 15) + 'px';
-        };
-        slot.onmouseleave = () => {
-            slot.style.background = 'rgba(52, 152, 219, 0.2)';
-            builderTooltip.style.display = 'none';
-        };
+      slot.onmouseenter = (e) => {
+        slot.style.background = 'rgba(52, 152, 219, 0.4)';
+        builderTooltip.innerText = title;
+        builderTooltip.style.display = 'block';
+        builderTooltip.style.left = (e.clientX + 15) + 'px';
+        builderTooltip.style.top = (e.clientY + 15) + 'px';
+      };
+      slot.onmousemove = (e) => {
+        builderTooltip.style.left = (e.clientX + 15) + 'px';
+        builderTooltip.style.top = (e.clientY + 15) + 'px';
+      };
+      slot.onmouseleave = () => {
+        slot.style.background = 'rgba(52, 152, 219, 0.2)';
+        builderTooltip.style.display = 'none';
+      };
 
-        slot.onclick = action;
-        grid.appendChild(slot);
+      slot.onclick = action;
+      grid.appendChild(slot);
     };
 
     const ensureSlot = (catId, tex, bgStyle, text = '', title = '') => {
-        const cat = categories[catId];
-        if (!cat) return;
-        const grid = cat.grid;
+      const cat = categories[catId];
+      if (!cat) return;
+      const grid = cat.grid;
 
-        if (!grid.querySelector(`[data-tex="${tex}"]`)) {
-          const slot = document.createElement('div');
-          slot.className = 'hotbar-slot';
-          slot.dataset.tex = tex;
-          slot.dataset.bg = bgStyle;
-          slot.dataset.name = title || tex.toUpperCase();
-          slot.dataset.cat = cat.name;
-          slot.style.background = bgStyle;
-          slot.style.borderRadius = '4px';
-          slot.style.border = '2px solid #444';
-          slot.style.cursor = 'pointer';
-          slot.style.display = 'flex';
-          slot.style.alignItems = 'center';
-          slot.style.justifyContent = 'center';
-          slot.style.width = '36px';
-          slot.style.height = '36px';
-          slot.innerHTML = text;
-          const isBlock = tex !== 'picker' && tex !== 'erase';
-          setupTooltip(slot, title || tex.toUpperCase(), isBlock, bgStyle);
-          grid.appendChild(slot);
+      if (!grid.querySelector(`[data-tex="${tex}"]`)) {
+        const slot = document.createElement('div');
+        slot.className = 'hotbar-slot';
+        slot.dataset.tex = tex;
+        slot.dataset.bg = bgStyle;
+        slot.dataset.name = title || tex.toUpperCase();
+        slot.dataset.cat = cat.name;
+        slot.style.background = bgStyle;
+        slot.style.borderRadius = '4px';
+        slot.style.border = '2px solid #444';
+        slot.style.cursor = 'pointer';
+        slot.style.display = 'flex';
+        slot.style.alignItems = 'center';
+        slot.style.justifyContent = 'center';
+        slot.style.width = '36px';
+        slot.style.height = '36px';
+        slot.innerHTML = text;
+        const isBlock = tex !== 'picker' && tex !== 'erase';
+        setupTooltip(slot, title || tex.toUpperCase(), isBlock, bgStyle);
+        grid.appendChild(slot);
 
-          slot.addEventListener('click', () => {
-            gridsWrapper.querySelectorAll('.hotbar-slot').forEach(s => s.classList.remove('active'));
-            slot.classList.add('active');
+        slot.addEventListener('click', () => {
+          gridsWrapper.querySelectorAll('.hotbar-slot').forEach(s => s.classList.remove('active'));
+          slot.classList.add('active');
 
-            const ol = document.getElementById('object-library-panel');
-            const olVisible = ol && ol.style.display !== 'none';
+          const ol = document.getElementById('object-library-panel');
+          const olVisible = ol && ol.style.display !== 'none';
 
-            if (tex === 'wood-door-bottom' || tex === 'wood-door-top') {
-               eng.editShapeBase = 'door';
-               eng.editShapeFlip = false;
-               updateShapeUI();
-            } else if (FURNITURE_REGISTRY[tex]) {
-               eng.editShapeBase = tex;
-               eng.editShapeFlip = false;
-               updateShapeUI();
-            } else if (tex.startsWith('line-')) {
-               eng.editShapeBase = 'decal';
-               eng.editShapeFlip = false;
-               updateShapeUI();
-            } else if (eng.editShapeBase === 'door' || (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'top_slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'half_ramp' && eng.editShapeBase !== 'top_half_ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence')) {
-               eng.editShapeBase = 'cube';
-               eng.editShapeFlip = false;
-               updateShapeUI();
-            } else {
-               if (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'top_slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'half_ramp' && eng.editShapeBase !== 'top_half_ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence') {
-                 eng.editShapeBase = 'cube';
-                 eng.editShapeFlip = false;
-                 updateShapeUI();
-               }
+          if (tex === 'wood-door-bottom' || tex === 'wood-door-top') {
+            eng.editShapeBase = 'door';
+            eng.editShapeFlip = false;
+            updateShapeUI();
+          } else if (FURNITURE_REGISTRY[tex]) {
+            eng.editShapeBase = tex;
+            eng.editShapeFlip = false;
+            updateShapeUI();
+          } else if (tex.startsWith('line-')) {
+            eng.editShapeBase = 'decal';
+            eng.editShapeFlip = false;
+            updateShapeUI();
+          } else if (eng.editShapeBase === 'door' || (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'top_slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'half_ramp' && eng.editShapeBase !== 'top_half_ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence')) {
+            eng.editShapeBase = 'cube';
+            eng.editShapeFlip = false;
+            updateShapeUI();
+          } else {
+            if (!olVisible && eng.editShapeBase !== 'cube' && eng.editShapeBase !== 'slab' && eng.editShapeBase !== 'top_slab' && eng.editShapeBase !== 'ramp' && eng.editShapeBase !== 'half_ramp' && eng.editShapeBase !== 'top_half_ramp' && eng.editShapeBase !== 'stair' && eng.editShapeBase !== 'decal' && eng.editShapeBase !== 'fence') {
+              eng.editShapeBase = 'cube';
+              eng.editShapeFlip = false;
+              updateShapeUI();
+            }
+          }
+
+          if (slot.dataset.tex === 'picker') {
+            eng.selectedTiles = [];
+            eng.isDraggingSelection = false;
+            eng.renderer.needsVoxelUpdate = true;
+            return;
+          }
+
+          const isFluid = ['water', 'lava', 'acid'].includes(slot.dataset.tex);
+          fluidBtn.style.display = isFluid ? 'block' : 'none';
+          if (isFluid) {
+            eng.editFluid = 'still';
+            fluidBtn.innerText = 'Fluid State: STILL';
+          }
+
+          if (eng.selectedTiles.length > 0) {
+            const isErase = slot.dataset.tex === 'erase' || eng.input.isActionDown('buildDelete');
+            let placeShape = eng.editShape || 'cube';
+            if (placeShape.endsWith('_player')) {
+              const base = placeShape.split('_')[0];
+              const pDir = eng.player.dir;
+              if (pDir.includes('up')) placeShape = base + '_n';
+              else if (pDir.includes('down')) placeShape = base + '_s';
+              else if (pDir.includes('right')) placeShape = base + '_e';
+              else if (pDir.includes('left')) placeShape = base + '_w';
+              else placeShape = base + '_s';
             }
 
-            if (slot.dataset.tex === 'picker') {
-               eng.selectedTiles = [];
-               eng.isDraggingSelection = false;
-               eng.renderer.needsVoxelUpdate = true;
-               return;
-            }
+            let baseTex = slot.dataset.tex;
+            if (baseTex === 'water' && eng.editFluid === 'flow') baseTex = 'water_flow';
 
-            const isFluid = ['water', 'lava', 'acid'].includes(slot.dataset.tex);
-            fluidBtn.style.display = isFluid ? 'block' : 'none';
-            if (isFluid) {
-                eng.editFluid = 'still';
-                fluidBtn.innerText = 'Fluid State: STILL';
-            }
+            const finalUVMode = eng.editShapeUV === 'auto' ? undefined : (eng.editShapeUV === 'mesh');
+            const updates = [];
+            const previousStates = [];
+            eng.selectedTiles.forEach(tile => {
+              const clickedVoxelOld = eng.mapManager.getVoxelAt(tile.x, tile.y, tile.z);
+              previousStates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: clickedVoxelOld ? { ...clickedVoxelOld } : null });
 
-            if (eng.selectedTiles.length > 0) {
-              const isErase = slot.dataset.tex === 'erase' || eng.input.isActionDown('buildDelete');
-              let placeShape = eng.editShape || 'cube';
-              if (placeShape.endsWith('_player')) {
-                const base = placeShape.split('_')[0];
-                const pDir = eng.player.dir;
-                if (pDir.includes('up')) placeShape = base + '_n';
-                else if (pDir.includes('down')) placeShape = base + '_s';
-                else if (pDir.includes('right')) placeShape = base + '_e';
-                else if (pDir.includes('left')) placeShape = base + '_w';
-                else placeShape = base + '_s';
+              let finalTex = baseTex;
+              if (slot.dataset.tex === 'arcade-carpet') {
+                const wx = Math.round(tile.x / 32);
+                const wy = Math.round(tile.y / 32);
+                const rx = ((wx % 2) + 2) % 2;
+                const ry = ((wy % 2) + 2) % 2;
+                finalTex = `arcade-carpet-${rx}-${ry}`;
               }
 
-              let baseTex = slot.dataset.tex;
-              if (baseTex === 'water' && eng.editFluid === 'flow') baseTex = 'water_flow';
+              if (isErase) {
+                eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, null, false);
+                updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: null });
+                for (let i = 0; i < 5; i++) {
+                  eng.spawnParticle({
+                    x: tile.x, y: tile.y, z: tile.z,
+                    vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, vz: (Math.random() - 0.5) * 100,
+                    life: 0.3 + Math.random() * 0.3, maxLife: 0.6, color: 'rgba(200, 200, 200, 0.7)', size: 1 + Math.random()
+                  });
+                }
+              } else {
+                eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode }, false);
+                updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode } });
+                for (let i = 0; i < 3; i++) {
+                  eng.spawnParticle({
+                    x: tile.x + (Math.random() - 0.5) * 32, y: tile.y + (Math.random() - 0.5) * 32, z: tile.z + (Math.random() - 0.5) * 32,
+                    life: 0.2 + Math.random() * 0.2, maxLife: 0.4, color: eng.buildColor, size: 1 + Math.random()
+                  });
+                }
+              }
+            });
 
-              const finalUVMode = eng.editShapeUV === 'auto' ? undefined : (eng.editShapeUV === 'mesh');
-              const updates = [];
-              const previousStates = [];
-                eng.selectedTiles.forEach(tile => {
-                  const clickedVoxelOld = eng.mapManager.getVoxelAt(tile.x, tile.y, tile.z);
-                  previousStates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: clickedVoxelOld ? { ...clickedVoxelOld } : null });
+            eng.history = eng.history || [];
+            if (previousStates.length > 0) eng.history.push(previousStates);
+            if (eng.history.length > 30) eng.history.shift();
+            eng.redoHistory = [];
 
-                  let finalTex = baseTex;
-                  if (slot.dataset.tex === 'arcade-carpet') {
-                      const wx = Math.round(tile.x / 32);
-                      const wy = Math.round(tile.y / 32);
-                      const rx = ((wx % 2) + 2) % 2;
-                      const ry = ((wy % 2) + 2) % 2;
-                      finalTex = `arcade-carpet-${rx}-${ry}`;
-                  }
-
-                  if (isErase) {
-                    eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, null, false);
-                    updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: null });
-                    for (let i = 0; i < 5; i++) {
-                      eng.spawnParticle({
-                        x: tile.x, y: tile.y, z: tile.z,
-                        vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, vz: (Math.random() - 0.5) * 100,
-                        life: 0.3 + Math.random() * 0.3, maxLife: 0.6, color: 'rgba(200, 200, 200, 0.7)', size: 1 + Math.random()
-                      });
-                    }
-                  } else {
-                    eng.mapManager.setVoxelAt(tile.x, tile.y, tile.z, { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode }, false);
-                    updates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: { tex: finalTex, color: eng.buildColor, shape: placeShape, dir: eng.editShapeDir, useMeshUV: finalUVMode } });
-                    for (let i = 0; i < 3; i++) {
-                      eng.spawnParticle({
-                        x: tile.x + (Math.random() - 0.5) * 32, y: tile.y + (Math.random() - 0.5) * 32, z: tile.z + (Math.random() - 0.5) * 32,
-                        life: 0.2 + Math.random() * 0.2, maxLife: 0.4, color: eng.buildColor, size: 1 + Math.random()
-                      });
-                    }
-                  }
-                });
-
-                eng.history = eng.history || [];
-                if (previousStates.length > 0) eng.history.push(previousStates);
-                if (eng.history.length > 30) eng.history.shift();
-                eng.redoHistory = [];
-
-                eng.selectedTiles = [];
-                eng.isDraggingSelection = false;
-                eng.renderer.needsVoxelUpdate = true;
-                updates.forEach(u => eng.network.sendUpdateBlock(u));
-            }
-          });
-        }
+            eng.selectedTiles = [];
+            eng.isDraggingSelection = false;
+            eng.renderer.needsVoxelUpdate = true;
+            updates.forEach(u => eng.network.sendUpdateBlock(u));
+          }
+        });
+      }
     };
 
-      ensureSlot('tools', 'picker', 'rgba(155, 89, 182, 0.5)', '🔍', 'Picker Tool');
-      ensureSlot('tools', 'erase', 'rgba(231, 76, 60, 0.5)', 'X', 'Erase Tool');
-      ensureActionSlot('tools', 'undo', '↶', 'Undo (Ctrl+Z)', () => { if (eng.undo) eng.undo(); });
-      ensureActionSlot('tools', 'redo', '↷', 'Redo (Ctrl+Y)', () => { if (eng.redo) eng.redo(); });
+    ensureSlot('tools', 'picker', 'rgba(155, 89, 182, 0.5)', '🔍', 'Picker Tool');
+    ensureSlot('tools', 'erase', 'rgba(231, 76, 60, 0.5)', 'X', 'Erase Tool');
+    ensureActionSlot('tools', 'undo', '↶', 'Undo (Ctrl+Z)', () => { if (eng.undo) eng.undo(); });
+    ensureActionSlot('tools', 'redo', '↷', 'Redo (Ctrl+Y)', () => { if (eng.redo) eng.redo(); });
 
-      ensureSlot('naturals', 'grass', '#51852E', '', 'Grass');
-      ensureSlot('naturals', 'dirt', 'url("assets/tiles/base/all-facing/dirt.png") center/cover', '', 'Dirt');
-      ensureSlot('naturals', 'stone', 'url("assets/tiles/base/all-facing/stone.png") center/cover', '', 'Stone');
-      ensureSlot('naturals', 'stone-bricks', 'url("assets/tiles/base/all-facing/stone-bricks1.png") center/cover', '', 'Stone Bricks');
-      ensureSlot('naturals', 'cobblestone', 'url("assets/tiles/base/all-facing/cobblestone.png") center/cover', '', 'Cobblestone');
-      ensureSlot('naturals', 'cobbled_deepslate', 'url("assets/tiles/base/all-facing/cobbled_deepslate.png") center/cover', '', 'Cobbled Deepslate');
-      ensureSlot('naturals', 'gravel', 'url("assets/tiles/base/all-facing/gravel.png") center/cover', '', 'Gravel');
-      ensureSlot('naturals', 'sand', 'url("assets/tiles/base/all-facing/sand.png") center/cover', '', 'Sand');
-      ensureSlot('naturals', 'clay', 'url("assets/tiles/base/all-facing/clay.png") center/cover', '', 'Clay');
-      ensureSlot('naturals', 'mud', 'url("assets/tiles/base/all-facing/packed_mud1.png") center/cover', '', 'Mud');
-      ensureSlot('naturals', 'ice', 'url("assets/tiles/base/all-facing/ice.png") center/cover', '', 'Ice');
+    ensureSlot('naturals', 'grass', '#51852E', '', 'Grass');
+    ensureSlot('naturals', 'dirt', 'url("assets/tiles/base/all-facing/dirt.png") center/cover', '', 'Dirt');
+    ensureSlot('naturals', 'stone', 'url("assets/tiles/base/all-facing/stone.png") center/cover', '', 'Stone');
+    ensureSlot('naturals', 'stone-bricks', 'url("assets/tiles/base/all-facing/stone-bricks1.png") center/cover', '', 'Stone Bricks');
+    ensureSlot('naturals', 'cobblestone', 'url("assets/tiles/base/all-facing/cobblestone.png") center/cover', '', 'Cobblestone');
+    ensureSlot('naturals', 'cobbled_deepslate', 'url("assets/tiles/base/all-facing/cobbled_deepslate.png") center/cover', '', 'Cobbled Deepslate');
+    ensureSlot('naturals', 'gravel', 'url("assets/tiles/base/all-facing/gravel.png") center/cover', '', 'Gravel');
+    ensureSlot('naturals', 'sand', 'url("assets/tiles/base/all-facing/sand.png") center/cover', '', 'Sand');
+    ensureSlot('naturals', 'clay', 'url("assets/tiles/base/all-facing/clay.png") center/cover', '', 'Clay');
+    ensureSlot('naturals', 'mud', 'url("assets/tiles/base/all-facing/packed_mud1.png") center/cover', '', 'Mud');
+    ensureSlot('naturals', 'ice', 'url("assets/tiles/base/all-facing/ice.png") center/cover', '', 'Ice');
 
-      ensureSlot('glass', 'glass', 'url("assets/tiles/base/all-facing/glass.png") center/cover', '', 'Glass');
-      ensureSlot('glass', 'glass-stained', 'url("assets/tiles/base/all-facing/glass-stained.png") center/cover', '', 'Stained Glass');
-      ensureSlot('glass', 'clear_stained_glass_edges', 'url("assets/tiles/base/all-facing/clear_stained_glass_edges.png") center/cover', '', 'Clear Stained Glass (Edges)');
-      ensureSlot('glass', 'clear_stained_glass_edgeless', 'url("assets/tiles/base/all-facing/clear_stained_glass_edgeless.png") center/cover', '', 'Clear Stained Glass (Edgeless)');
+    ensureSlot('glass', 'glass', 'url("assets/tiles/base/all-facing/glass.png") center/cover', '', 'Glass');
+    ensureSlot('glass', 'glass-stained', 'url("assets/tiles/base/all-facing/glass-stained.png") center/cover', '', 'Stained Glass');
+    ensureSlot('glass', 'clear_stained_glass_edges', 'url("assets/tiles/base/all-facing/clear_stained_glass_edges.png") center/cover', '', 'Clear Stained Glass (Edges)');
+    ensureSlot('glass', 'clear_stained_glass_edgeless', 'url("assets/tiles/base/all-facing/clear_stained_glass_edgeless.png") center/cover', '', 'Clear Stained Glass (Edgeless)');
 
-      const cb = '?v=' + Date.now();
-      ensureSlot('liquid', 'water', `url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Water');
-      ensureSlot('liquid', 'lava', `linear-gradient(rgba(255, 93, 0, 0.6), rgba(255, 93, 0, 0.6)), url("assets/tiles/base/fluid/lava_still.png${cb}") center/cover`, '', 'Lava');
-      ensureSlot('liquid', 'acid', `linear-gradient(rgba(46, 204, 113, 0.6), rgba(46, 204, 113, 0.6)), url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Acid');
+    const cb = '?v=' + Date.now();
+    ensureSlot('liquid', 'water', `url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Water');
+    ensureSlot('liquid', 'lava', `linear-gradient(rgba(255, 93, 0, 0.6), rgba(255, 93, 0, 0.6)), url("assets/tiles/base/fluid/lava_still.png${cb}") center/cover`, '', 'Lava');
+    ensureSlot('liquid', 'acid', `linear-gradient(rgba(46, 204, 113, 0.6), rgba(46, 204, 113, 0.6)), url("assets/tiles/base/fluid/water_still.png${cb}") center/cover`, '', 'Acid');
 
-      ensureSlot('light', 'block-lamp-on-0', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/8 Spread)');
-      ensureSlot('light', 'block-lamp-on-1', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/4 Spread)');
-      ensureSlot('light', 'block-lamp-on-2', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/2 Spread)');
-      ensureSlot('light', 'block-lamp-on-3', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (3/4 Spread)');
-      ensureSlot('light', 'block-lamp-on', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (Max Spread)');
-      ensureSlot('light', 'light_block', 'rgba(241, 196, 15, 0.4)', '', 'Light Block (Invisible)');
+    ensureSlot('light', 'block-lamp-on-0', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/8 Spread)');
+    ensureSlot('light', 'block-lamp-on-1', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/4 Spread)');
+    ensureSlot('light', 'block-lamp-on-2', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (1/2 Spread)');
+    ensureSlot('light', 'block-lamp-on-3', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (3/4 Spread)');
+    ensureSlot('light', 'block-lamp-on', `url("assets/tiles/base/all-facing/block-lamp-on.png${cb}") center/cover`, '', 'Lantern (Max Spread)');
+    ensureSlot('light', 'light_block', 'rgba(241, 196, 15, 0.4)', '', 'Light Block (Invisible)');
 
-      ensureSlot('wood', 'wood-planks', '#8B5A2B url("assets/tiles/base/all-facing/wood-planks.png") center/cover', '', 'Wood Planks');
-      ensureSlot('wood', 'wood-stripped', '#A0522D url("assets/tiles/base/all-facing/wood-stripped.png") center/cover', '', 'Stripped Wood');
-      ensureSlot('wood', 'bark-log', '#5c4033 url("assets/tiles/base/all-facing/bark-log.png") center/cover', '', 'Bark Log');
-      ensureSlot('wood', 'bark-birch', '#d4b79b url("assets/tiles/base/all-facing/bark-birch.png") center/cover', '', 'Birch Bark');
-      ensureSlot('wood', 'wooden-door-1', '#6b4c3a url("assets/tiles/base/interactable/wooden-door-1.png") center/cover', '', 'Custom Door 1');
-      ensureSlot('wood', 'wooden-door-2', '#6b4c3a url("assets/tiles/base/interactable/wooden-door-2.png") center/cover', '', 'Custom Door 2');
+    ensureSlot('wood', 'wood-planks', '#8B5A2B url("assets/tiles/base/all-facing/wood-planks.png") center/cover', '', 'Wood Planks');
+    ensureSlot('wood', 'wood-stripped', '#A0522D url("assets/tiles/base/all-facing/wood-stripped.png") center/cover', '', 'Stripped Wood');
+    ensureSlot('wood', 'bark-log', '#5c4033 url("assets/tiles/base/all-facing/bark-log.png") center/cover', '', 'Bark Log');
+    ensureSlot('wood', 'bark-birch', '#d4b79b url("assets/tiles/base/all-facing/bark-birch.png") center/cover', '', 'Birch Bark');
+    ensureSlot('wood', 'wooden-door-1', '#6b4c3a url("assets/tiles/base/interactable/wooden-door-1.png") center/cover', '', 'Custom Door 1');
+    ensureSlot('wood', 'wooden-door-2', '#6b4c3a url("assets/tiles/base/interactable/wooden-door-2.png") center/cover', '', 'Custom Door 2');
 
-      ensureSlot('industrial', 'concrete', 'url("assets/tiles/base/all-facing/concrete.png") center/cover', '', 'Concrete');
-      ensureSlot('industrial', 'paint', 'url("assets/tiles/base/side/rough-paint.png") center/cover', '', 'Paint');
-      ensureSlot('industrial', 'carpet', 'url("assets/tiles/base/all-facing/carpet.png") center/cover', '', 'Carpet');
-      ensureSlot('industrial', 'arcade-carpet', 'url("assets/tiles/base/all-facing/arcade-carpet.png") center/cover', '', 'Arcade Carpet');
+    ensureSlot('industrial', 'concrete', 'url("assets/tiles/base/all-facing/concrete.png") center/cover', '', 'Concrete');
+    ensureSlot('industrial', 'paint', 'url("assets/tiles/base/side/rough-paint.png") center/cover', '', 'Paint');
+    ensureSlot('industrial', 'carpet', 'url("assets/tiles/base/all-facing/carpet.png") center/cover', '', 'Carpet');
+    ensureSlot('industrial', 'arcade-carpet', 'url("assets/tiles/base/all-facing/arcade-carpet.png") center/cover', '', 'Arcade Carpet');
 
-      ensureSlot('lines', 'line-dashed', 'url("assets/tiles/base/all-facing/line-dashed.png") center/cover', '', 'Line (Dashed)');
-      ensureSlot('lines', 'line-solid', 'url("assets/tiles/base/all-facing/line-solid.png") center/cover', '', 'Line (Solid)');
-      ensureSlot('lines', 'line-double-solid', 'url("assets/tiles/base/all-facing/line-double-solid.png") center/cover', '', 'Line (Double Solid)');
-      ensureSlot('lines', 'line-sidewalk-2', 'url("assets/tiles/base/all-facing/line-sidewalk-2.png") center/cover', '', 'Sidewalk Lines (2)');
-      ensureSlot('lines', 'line-sidewalk-4', 'url("assets/tiles/base/all-facing/line-sidewalk-4.png") center/cover', '', 'Sidewalk Lines (4)');
+    ensureSlot('lines', 'line-dashed', 'url("assets/tiles/base/all-facing/line-dashed.png") center/cover', '', 'Line (Dashed)');
+    ensureSlot('lines', 'line-solid', 'url("assets/tiles/base/all-facing/line-solid.png") center/cover', '', 'Line (Solid)');
+    ensureSlot('lines', 'line-double-solid', 'url("assets/tiles/base/all-facing/line-double-solid.png") center/cover', '', 'Line (Double Solid)');
+    ensureSlot('lines', 'line-sidewalk-2', 'url("assets/tiles/base/all-facing/line-sidewalk-2.png") center/cover', '', 'Sidewalk Lines (2)');
+    ensureSlot('lines', 'line-sidewalk-4', 'url("assets/tiles/base/all-facing/line-sidewalk-4.png") center/cover', '', 'Sidewalk Lines (4)');
 
-      ensureSlot('lines', 'line-edge-1-dashed', 'url("assets/tiles/base/all-facing/line-edge-1-dashed.png") center/cover', '', 'Line (Edge 1 Dashed)');
-      ensureSlot('lines', 'line-edge-2-dashed', 'url("assets/tiles/base/all-facing/line-edge-2-dashed.png") center/cover', '', 'Line (Edge 2 Dashed)');
-      ensureSlot('lines', 'line-double-dashed-solid', 'url("assets/tiles/base/all-facing/line-double-dashed-solid.png") center/cover', '', 'Line (Dashed & Solid)');
-      ensureSlot('lines', 'line-corner-3-dashed', 'url("assets/tiles/base/all-facing/line-corner-3-dashed.png") center/cover', '', 'Line (Corner 3 Dashed)');
-      ensureSlot('lines', 'line-t-dashed', 'url("assets/tiles/base/all-facing/line-t-dashed.png") center/cover', '', 'Line (T Dashed)');
+    ensureSlot('lines', 'line-edge-1-dashed', 'url("assets/tiles/base/all-facing/line-edge-1-dashed.png") center/cover', '', 'Line (Edge 1 Dashed)');
+    ensureSlot('lines', 'line-edge-2-dashed', 'url("assets/tiles/base/all-facing/line-edge-2-dashed.png") center/cover', '', 'Line (Edge 2 Dashed)');
+    ensureSlot('lines', 'line-double-dashed-solid', 'url("assets/tiles/base/all-facing/line-double-dashed-solid.png") center/cover', '', 'Line (Dashed & Solid)');
+    ensureSlot('lines', 'line-corner-3-dashed', 'url("assets/tiles/base/all-facing/line-corner-3-dashed.png") center/cover', '', 'Line (Corner 3 Dashed)');
+    ensureSlot('lines', 'line-t-dashed', 'url("assets/tiles/base/all-facing/line-t-dashed.png") center/cover', '', 'Line (T Dashed)');
 
-      ensureSlot('lines', 'line-split-1', 'url("assets/tiles/base/all-facing/line-split-1.png") center/cover', '', 'Line (Split 1)');
-      ensureSlot('lines', 'line-split-2', 'url("assets/tiles/base/all-facing/line-split-2.png") center/cover', '', 'Line (Split 2)');
-      ensureSlot('lines', 'line-t-1', 'url("assets/tiles/base/all-facing/line-t-1.png") center/cover', '', 'Line (T 1)');
-      ensureSlot('lines', 'line-t-2', 'url("assets/tiles/base/all-facing/line-t-2.png") center/cover', '', 'Line (T 2)');
-      ensureSlot('lines', 'line-x', 'url("assets/tiles/base/all-facing/line-x.png") center/cover', '', 'Line (X)');
+    ensureSlot('lines', 'line-split-1', 'url("assets/tiles/base/all-facing/line-split-1.png") center/cover', '', 'Line (Split 1)');
+    ensureSlot('lines', 'line-split-2', 'url("assets/tiles/base/all-facing/line-split-2.png") center/cover', '', 'Line (Split 2)');
+    ensureSlot('lines', 'line-t-1', 'url("assets/tiles/base/all-facing/line-t-1.png") center/cover', '', 'Line (T 1)');
+    ensureSlot('lines', 'line-t-2', 'url("assets/tiles/base/all-facing/line-t-2.png") center/cover', '', 'Line (T 2)');
+    ensureSlot('lines', 'line-x', 'url("assets/tiles/base/all-facing/line-x.png") center/cover', '', 'Line (X)');
 
-      ensureSlot('lines', 'line-corner-1', 'url("assets/tiles/base/all-facing/line-corner-1.png") center/cover', '', 'Line (Corner 1)');
-      ensureSlot('lines', 'line-corner-2', 'url("assets/tiles/base/all-facing/line-corner-2.png") center/cover', '', 'Line (Corner 2)');
-      ensureSlot('lines', 'line-corner-3', 'url("assets/tiles/base/all-facing/line-corner-3.png") center/cover', '', 'Line (Corner 3)');
-      ensureSlot('lines', 'line-corner-4', 'url("assets/tiles/base/all-facing/line-corner-4.png") center/cover', '', 'Line (Corner 4)');
-      ensureSlot('lines', 'line-corner-5', 'url("assets/tiles/base/all-facing/line-corner-5.png") center/cover', '', 'Line (Corner 5)');
+    ensureSlot('lines', 'line-corner-1', 'url("assets/tiles/base/all-facing/line-corner-1.png") center/cover', '', 'Line (Corner 1)');
+    ensureSlot('lines', 'line-corner-2', 'url("assets/tiles/base/all-facing/line-corner-2.png") center/cover', '', 'Line (Corner 2)');
+    ensureSlot('lines', 'line-corner-3', 'url("assets/tiles/base/all-facing/line-corner-3.png") center/cover', '', 'Line (Corner 3)');
+    ensureSlot('lines', 'line-corner-4', 'url("assets/tiles/base/all-facing/line-corner-4.png") center/cover', '', 'Line (Corner 4)');
+    ensureSlot('lines', 'line-corner-5', 'url("assets/tiles/base/all-facing/line-corner-5.png") center/cover', '', 'Line (Corner 5)');
 
-      ensureSlot('lines', 'line-edge-1', 'url("assets/tiles/base/all-facing/line-edge-1.png") center/cover', '', 'Line (Edge 1)');
-      ensureSlot('lines', 'line-edge-2', 'url("assets/tiles/base/all-facing/line-edge-2.png") center/cover', '', 'Line (Edge 2)');
-      ensureSlot('lines', 'line-edge-end-1', 'url("assets/tiles/base/all-facing/line-edge-end-1.png") center/cover', '', 'Line (Edge End 1)');
-      ensureSlot('lines', 'line-edge-end-2', 'url("assets/tiles/base/all-facing/line-edge-end-2.png") center/cover', '', 'Line (Edge End 2)');
+    ensureSlot('lines', 'line-edge-1', 'url("assets/tiles/base/all-facing/line-edge-1.png") center/cover', '', 'Line (Edge 1)');
+    ensureSlot('lines', 'line-edge-2', 'url("assets/tiles/base/all-facing/line-edge-2.png") center/cover', '', 'Line (Edge 2)');
+    ensureSlot('lines', 'line-edge-end-1', 'url("assets/tiles/base/all-facing/line-edge-end-1.png") center/cover', '', 'Line (Edge End 1)');
+    ensureSlot('lines', 'line-edge-end-2', 'url("assets/tiles/base/all-facing/line-edge-end-2.png") center/cover', '', 'Line (Edge End 2)');
 
-      if (categories['naturals']) categories['naturals'].btn.click();
-      const firstSlot = gridsWrapper.querySelector('.hotbar-slot[data-tex="stone"]');
-      if (firstSlot) firstSlot.click();
+    if (categories['naturals']) categories['naturals'].btn.click();
+    const firstSlot = gridsWrapper.querySelector('.hotbar-slot[data-tex="stone"]');
+    if (firstSlot) firstSlot.click();
   }
 
   setupPlayerManager() {
@@ -2392,10 +2479,10 @@ export class DevToolsUIManager {
     // Deduplicate by name (preferring online status if there are dupes)
     const uniquePlayers = new Map();
     this.allPlayersList.forEach(p => {
-        const name = p.name.toLowerCase();
-        if (!uniquePlayers.has(name) || (p.online && !uniquePlayers.get(name).online)) {
-            uniquePlayers.set(name, p);
-        }
+      const name = p.name.toLowerCase();
+      if (!uniquePlayers.has(name) || (p.online && !uniquePlayers.get(name).online)) {
+        uniquePlayers.set(name, p);
+      }
     });
 
     const filtered = Array.from(uniquePlayers.values()).filter(p => p.name.toLowerCase().includes(searchVal));
@@ -2446,7 +2533,7 @@ export class DevToolsUIManager {
       kickBtn.style.cssText = 'padding: 2px 8px; font-size: 0.7rem; margin-right: 5px; border-color: #e74c3c; color: #e74c3c;';
       kickBtn.innerText = 'Kick';
       kickBtn.onclick = () => {
-          if (confirm(`Kick ${p.name}?`)) this.engine.network.sendAdminKickPlayer(p.name);
+        if (confirm(`Kick ${p.name}?`)) this.engine.network.sendAdminKickPlayer(p.name);
       };
       row.insertBefore(kickBtn, row.lastElementChild);
 
@@ -2455,26 +2542,26 @@ export class DevToolsUIManager {
       };
 
       row.oncontextmenu = (e) => {
-          e.preventDefault();
-          const pmCtx = document.getElementById('player-manager-ctx');
-          if (!pmCtx) return;
-          pmCtx.innerHTML = `
+        e.preventDefault();
+        const pmCtx = document.getElementById('player-manager-ctx');
+        if (!pmCtx) return;
+        pmCtx.innerHTML = `
             <button class="btn-secondary" id="pm-ctx-copy-name" style="text-align: left; padding: 5px; border: none; background: transparent; color: #fff; cursor: pointer;">Copy Name</button>
             <button class="btn-secondary" id="pm-ctx-copy-uuid" style="text-align: left; padding: 5px; border: none; background: transparent; color: #fff; cursor: pointer;">Copy Account UUID</button>
           `;
-          pmCtx.style.left = e.clientX + 'px';
-          pmCtx.style.top = e.clientY + 'px';
-          pmCtx.style.display = 'flex';
+        pmCtx.style.left = e.clientX + 'px';
+        pmCtx.style.top = e.clientY + 'px';
+        pmCtx.style.display = 'flex';
 
-          document.getElementById('pm-ctx-copy-name').onclick = () => {
-            navigator.clipboard.writeText(p.name);
-            this.engine.ui.showSystemMessage('Copied name to clipboard: ' + p.name);
-          };
-          document.getElementById('pm-ctx-copy-uuid').onclick = () => {
-            const uuidToCopy = p.accountUuid || 'Unknown UUID';
-            navigator.clipboard.writeText(uuidToCopy);
-            this.engine.ui.showSystemMessage('Copied UUID to clipboard: ' + uuidToCopy);
-          };
+        document.getElementById('pm-ctx-copy-name').onclick = () => {
+          navigator.clipboard.writeText(p.name);
+          this.engine.ui.showSystemMessage('Copied name to clipboard: ' + p.name);
+        };
+        document.getElementById('pm-ctx-copy-uuid').onclick = () => {
+          const uuidToCopy = p.accountUuid || 'Unknown UUID';
+          navigator.clipboard.writeText(uuidToCopy);
+          this.engine.ui.showSystemMessage('Copied UUID to clipboard: ' + uuidToCopy);
+        };
       };
 
       list.appendChild(row);
@@ -2505,7 +2592,7 @@ export class DevToolsUIManager {
     colorPicker.addEventListener('input', (e) => {
       eng.buildColor = e.target.value;
       document.querySelectorAll('.shared-color-picker').forEach(cp => {
-          if (cp !== colorPicker) cp.value = e.target.value;
+        if (cp !== colorPicker) cp.value = e.target.value;
       });
     });
 
@@ -2535,57 +2622,57 @@ export class DevToolsUIManager {
     const eng = this.engine;
     let presets = [];
     if (category === 'industrial') {
-       presets = [
-         { name: 'Asphalt Dark', hex: '#222222' }, { name: 'Asphalt', hex: '#333333' }, { name: 'Road Grey', hex: '#444444' }, { name: 'Faded Road', hex: '#555555' },
-         { name: 'Dark Concrete', hex: '#7f8c8d' }, { name: 'Concrete', hex: '#95a5a6' }, { name: 'Sidewalk', hex: '#bdc3c7' }, { name: 'Light Concrete', hex: '#d0d3d4' },
-         { name: 'Plaster White', hex: '#ecf0f1' }, { name: 'Office White', hex: '#fdfefe' }, { name: 'Eggshell', hex: '#f4f6f6' }, { name: 'Putty', hex: '#eaeded' },
-         { name: 'Dark Brick', hex: '#922b21' }, { name: 'Industrial Red', hex: '#a93226' }, { name: 'Cinder', hex: '#c0392b' }, { name: 'Rust', hex: '#e74c3c' },
-         { name: 'Hazard Yellow', hex: '#f1c40f' }, { name: 'Warning Orange', hex: '#f39c12' }, { name: 'Safety Gold', hex: '#d4ac0d' }, { name: 'Mustard', hex: '#b7950b' },
-         { name: 'Steel', hex: '#34495e' }, { name: 'Dark Metal', hex: '#2c3e50' }, { name: 'Gunmetal', hex: '#273746' }, { name: 'Iron', hex: '#1c2833' }
-       ];
+      presets = [
+        { name: 'Asphalt Dark', hex: '#222222' }, { name: 'Asphalt', hex: '#333333' }, { name: 'Road Grey', hex: '#444444' }, { name: 'Faded Road', hex: '#555555' },
+        { name: 'Dark Concrete', hex: '#7f8c8d' }, { name: 'Concrete', hex: '#95a5a6' }, { name: 'Sidewalk', hex: '#bdc3c7' }, { name: 'Light Concrete', hex: '#d0d3d4' },
+        { name: 'Plaster White', hex: '#ecf0f1' }, { name: 'Office White', hex: '#fdfefe' }, { name: 'Eggshell', hex: '#f4f6f6' }, { name: 'Putty', hex: '#eaeded' },
+        { name: 'Dark Brick', hex: '#922b21' }, { name: 'Industrial Red', hex: '#a93226' }, { name: 'Cinder', hex: '#c0392b' }, { name: 'Rust', hex: '#e74c3c' },
+        { name: 'Hazard Yellow', hex: '#f1c40f' }, { name: 'Warning Orange', hex: '#f39c12' }, { name: 'Safety Gold', hex: '#d4ac0d' }, { name: 'Mustard', hex: '#b7950b' },
+        { name: 'Steel', hex: '#34495e' }, { name: 'Dark Metal', hex: '#2c3e50' }, { name: 'Gunmetal', hex: '#273746' }, { name: 'Iron', hex: '#1c2833' }
+      ];
     } else if (category === 'lines') {
-       presets = [
-         { name: 'Standard White', hex: '#ffffff' }, { name: 'Warning Yellow', hex: '#f1c40f' }, { name: 'Handicap Blue', hex: '#3498db' }, { name: 'Fire Lane Red', hex: '#e74c3c' },
-         { name: 'Faded White', hex: '#bdc3c7' }, { name: 'Faded Yellow', hex: '#f39c12' }, { name: 'Faded Blue', hex: '#2980b9' }, { name: 'Faded Red', hex: '#c0392b' }
-       ];
+      presets = [
+        { name: 'Standard White', hex: '#ffffff' }, { name: 'Warning Yellow', hex: '#f1c40f' }, { name: 'Handicap Blue', hex: '#3498db' }, { name: 'Fire Lane Red', hex: '#e74c3c' },
+        { name: 'Faded White', hex: '#bdc3c7' }, { name: 'Faded Yellow', hex: '#f39c12' }, { name: 'Faded Blue', hex: '#2980b9' }, { name: 'Faded Red', hex: '#c0392b' }
+      ];
     } else {
-       presets = [
-         { name: 'Default', hex: '#ffffff' }, { name: 'Birch', hex: '#e1d4b6' }, { name: 'Pine', hex: '#d9c593' }, { name: 'Bamboo', hex: '#d5d48c' },
-         { name: 'Alder', hex: '#d4b79b' }, { name: 'Ash', hex: '#c2bba8' }, { name: 'Driftwood', hex: '#8c8c83' }, { name: 'Maple', hex: '#c58d55' },
-         { name: 'Oak', hex: '#a08153' }, { name: 'Teak', hex: '#9d6736' }, { name: 'Jungle', hex: '#b07c57' }, { name: 'Acacia', hex: '#ba643b' },
-         { name: 'Cherry', hex: '#c9786a' }, { name: 'Red Cedar', hex: '#8c3c2f' }, { name: 'Mangrove', hex: '#77353b' }, { name: 'Chestnut', hex: '#7d492e' },
-         { name: 'Spruce', hex: '#7a5840' }, { name: 'Hickory', hex: '#8a5c3a' }, { name: 'Mahogany', hex: '#5a2523' }, { name: 'Rosewood', hex: '#63251c' },
-         { name: 'Walnut', hex: '#5c4033' }, { name: 'Dark Oak', hex: '#452c16' }, { name: 'Ironwood', hex: '#3e342b' }, { name: 'Ebony', hex: '#26221f' }
-       ];
+      presets = [
+        { name: 'Default', hex: '#ffffff' }, { name: 'Birch', hex: '#e1d4b6' }, { name: 'Pine', hex: '#d9c593' }, { name: 'Bamboo', hex: '#d5d48c' },
+        { name: 'Alder', hex: '#d4b79b' }, { name: 'Ash', hex: '#c2bba8' }, { name: 'Driftwood', hex: '#8c8c83' }, { name: 'Maple', hex: '#c58d55' },
+        { name: 'Oak', hex: '#a08153' }, { name: 'Teak', hex: '#9d6736' }, { name: 'Jungle', hex: '#b07c57' }, { name: 'Acacia', hex: '#ba643b' },
+        { name: 'Cherry', hex: '#c9786a' }, { name: 'Red Cedar', hex: '#8c3c2f' }, { name: 'Mangrove', hex: '#77353b' }, { name: 'Chestnut', hex: '#7d492e' },
+        { name: 'Spruce', hex: '#7a5840' }, { name: 'Hickory', hex: '#8a5c3a' }, { name: 'Mahogany', hex: '#5a2523' }, { name: 'Rosewood', hex: '#63251c' },
+        { name: 'Walnut', hex: '#5c4033' }, { name: 'Dark Oak', hex: '#452c16' }, { name: 'Ironwood', hex: '#3e342b' }, { name: 'Ebony', hex: '#26221f' }
+      ];
     }
 
     this.presetContainers.forEach(container => {
-       container.innerHTML = '';
-       presets.forEach(p => {
-         const pBtn = document.createElement('button');
-         pBtn.style.cssText = `width: 22px; height: 22px; background: ${p.hex}; border: 1px solid #000; border-radius: 2px; cursor: pointer; padding: 0; box-sizing: border-box;`;
+      container.innerHTML = '';
+      presets.forEach(p => {
+        const pBtn = document.createElement('button');
+        pBtn.style.cssText = `width: 22px; height: 22px; background: ${p.hex}; border: 1px solid #000; border-radius: 2px; cursor: pointer; padding: 0; box-sizing: border-box;`;
 
-         pBtn.onmouseenter = (e) => {
-             const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
-             let isBlock = false;
-             let bgStyle = '';
-             let blockName = '';
-             if (activeSlot && activeSlot.dataset.tex !== 'picker' && activeSlot.dataset.tex !== 'erase') {
-                 isBlock = true;
-                 bgStyle = activeSlot.dataset.bg || '';
-                 blockName = activeSlot.dataset.name || activeSlot.dataset.tex;
-             }
-             const builderTooltip = document.getElementById('builder-tooltip');
-             if (builderTooltip) {
-                 const tooltipText = isBlock ? `${blockName} (${p.name})` : p.name;
-                 if (isBlock) {
-                     const safeBg = bgStyle.replace(/"/g, "'");
-                     const makeFace = (transform, brightness, border) => `
+        pBtn.onmouseenter = (e) => {
+          const activeSlot = document.querySelector('.hotbar-slot.active') || document.querySelector('.hotbar-slot[data-tex="stone"]');
+          let isBlock = false;
+          let bgStyle = '';
+          let blockName = '';
+          if (activeSlot && activeSlot.dataset.tex !== 'picker' && activeSlot.dataset.tex !== 'erase') {
+            isBlock = true;
+            bgStyle = activeSlot.dataset.bg || '';
+            blockName = activeSlot.dataset.name || activeSlot.dataset.tex;
+          }
+          const builderTooltip = document.getElementById('builder-tooltip');
+          if (builderTooltip) {
+            const tooltipText = isBlock ? `${blockName} (${p.name})` : p.name;
+            if (isBlock) {
+              const safeBg = bgStyle.replace(/"/g, "'");
+              const makeFace = (transform, brightness, border) => `
                        <div style="position: absolute; width: 32px; height: 32px; background: ${safeBg}; transform: ${transform}; border: 1px solid ${border}; filter: brightness(${brightness}); overflow: hidden;">
                          <div style="position: absolute; inset: 0; background: ${p.hex}; mix-blend-mode: multiply;"></div>
                        </div>
                      `;
-                     builderTooltip.innerHTML = `
+              builderTooltip.innerHTML = `
                        <div style="display: flex; align-items: center; gap: 15px; padding: 2px;">
                          <div style="width: 32px; height: 32px; transform-style: preserve-3d; animation: tooltipSpin 4s infinite linear; margin: 5px;">
                            ${makeFace('translateZ(16px)', 0.85, 'rgba(0,0,0,0.4)')}
@@ -2598,32 +2685,32 @@ export class DevToolsUIManager {
                          <span>${tooltipText}</span>
                        </div>
                      `;
-                 } else {
-                     builderTooltip.innerText = tooltipText;
-                 }
-                 builderTooltip.style.display = 'block';
-                 builderTooltip.style.left = (e.clientX + 15) + 'px';
-                 builderTooltip.style.top = (e.clientY + 15) + 'px';
-             }
-         };
-         pBtn.onmousemove = (e) => {
-             const builderTooltip = document.getElementById('builder-tooltip');
-             if (builderTooltip) {
-                 builderTooltip.style.left = (e.clientX + 15) + 'px';
-                 builderTooltip.style.top = (e.clientY + 15) + 'px';
-             }
-         };
-         pBtn.onmouseleave = () => {
-             const builderTooltip = document.getElementById('builder-tooltip');
-             if (builderTooltip) builderTooltip.style.display = 'none';
-         };
+            } else {
+              builderTooltip.innerText = tooltipText;
+            }
+            builderTooltip.style.display = 'block';
+            builderTooltip.style.left = (e.clientX + 15) + 'px';
+            builderTooltip.style.top = (e.clientY + 15) + 'px';
+          }
+        };
+        pBtn.onmousemove = (e) => {
+          const builderTooltip = document.getElementById('builder-tooltip');
+          if (builderTooltip) {
+            builderTooltip.style.left = (e.clientX + 15) + 'px';
+            builderTooltip.style.top = (e.clientY + 15) + 'px';
+          }
+        };
+        pBtn.onmouseleave = () => {
+          const builderTooltip = document.getElementById('builder-tooltip');
+          if (builderTooltip) builderTooltip.style.display = 'none';
+        };
 
-         pBtn.onclick = () => {
-             eng.buildColor = p.hex;
-             document.querySelectorAll('.shared-color-picker').forEach(cp => cp.value = p.hex);
-         };
-         container.appendChild(pBtn);
-       });
+        pBtn.onclick = () => {
+          eng.buildColor = p.hex;
+          document.querySelectorAll('.shared-color-picker').forEach(cp => cp.value = p.hex);
+        };
+        container.appendChild(pBtn);
+      });
     });
   }
 }

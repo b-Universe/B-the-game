@@ -480,7 +480,7 @@ export class PowerEditorUIManager {
             <option value="stun" ${effect.statusType === 'stun' ? 'selected' : ''}>Stun</option>
             <option value="slow" ${effect.statusType === 'slow' ? 'selected' : ''}>Slow</option>
             <option value="hold" ${effect.statusType === 'hold' ? 'selected' : ''}>Hold</option>
-            <option value="root" ${effect.statusType === 'root' ? 'selected' : ''}>Root</option>
+            <option value="snare" ${effect.statusType === 'snare' || effect.statusType === 'root' ? 'selected' : ''}>Snare</option>
             <option value="blind" ${effect.statusType === 'blind' ? 'selected' : ''}>Blind</option>
           </select>
         </div>
@@ -564,6 +564,20 @@ export class PowerEditorUIManager {
            <label style="font-size: 0.75rem; color: var(--accent);">Sequence</label>
            <select class="b-select sprite-event-select" data-index="${index}">${optionsHtml}</select>
         </div>
+        <div style="flex: 1.5; display: flex; flex-direction: column; gap: 5px;">
+           <label style="font-size: 0.75rem; color: var(--accent);">Particle</label>
+           <select class="b-select sprite-event-particle" data-index="${index}">
+             <option value="none" ${event.particle === 'none' ? 'selected' : ''}>None</option>
+             <option value="sparks" ${event.particle === 'sparks' ? 'selected' : ''}>Sparks</option>
+             <option value="smoke" ${event.particle === 'smoke' ? 'selected' : ''}>Smoke</option>
+             <option value="aura" ${event.particle === 'aura' ? 'selected' : ''}>Glow Aura</option>
+             <option value="explosion" ${event.particle === 'explosion' ? 'selected' : ''}>Explosion</option>
+           </select>
+        </div>
+        <div style="flex: 0.8; display: flex; flex-direction: column; gap: 5px;">
+           <label style="font-size: 0.75rem; color: var(--accent);">Color</label>
+           <input type="color" class="b-input sprite-event-color" data-index="${index}" value="${event.color || '#ffffff'}" style="padding: 0; height: 24px; cursor: pointer;">
+        </div>
         <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
            <label style="font-size: 0.75rem; color: var(--accent);">Height Offset</label>
            <input type="number" class="b-input sprite-event-offset" data-index="${index}" value="${event.offsetZ || 0}">
@@ -575,6 +589,17 @@ export class PowerEditorUIManager {
         <button class="b-btn b-btn-danger btn-remove-sprite-event" data-index="${index}" style="padding: 0 10px; height: 35px; margin-top: auto;">X</button>
       `;
       listEl.appendChild(row);
+    });
+
+    listEl.querySelectorAll('.sprite-event-particle').forEach(el => {
+      el.addEventListener('change', (e) => {
+        dataArray[e.target.dataset.index].particle = e.target.value;
+      });
+    });
+    listEl.querySelectorAll('.sprite-event-color').forEach(el => {
+      el.addEventListener('input', (e) => {
+        dataArray[e.target.dataset.index].color = e.target.value;
+      });
     });
 
     listEl.querySelectorAll('.sprite-event-select').forEach(el => {
@@ -732,11 +757,64 @@ export class PowerEditorUIManager {
     this.renderEffectsList();
 
     const vis = power.visuals || { casterVisuals: [], projectileVisuals: [], targetVisuals: [] };
+
+    // Cache advanced/hidden visual properties so we don't delete them when saving!
+    this.cachedVisualsData = JSON.parse(JSON.stringify(vis));
+    delete this.cachedVisualsData.tint;
+    delete this.cachedVisualsData.icon;
+    delete this.cachedVisualsData.animation;
+    delete this.cachedVisualsData.casterVisuals;
+    delete this.cachedVisualsData.projectileVisuals;
+    delete this.cachedVisualsData.targetVisuals;
+    delete this.cachedVisualsData.projectileSpeed;
+    delete this.cachedVisualsData.projectileArc;
+    delete this.cachedVisualsData.projectileStyle;
+    delete this.cachedVisualsData.trailColor;
+    delete this.cachedVisualsData.trailSize;
+
     document.getElementById('pe-visual-tint').value = vis.tint || '#ffffff';
     document.getElementById('pe-visual-icon').value = vis.icon || '';
     document.getElementById('pe-visual-anim').value = vis.animation || 'idle';
     document.getElementById('pe-proj-speed').value = vis.projectileSpeed !== undefined ? vis.projectileSpeed : 400;
     document.getElementById('pe-proj-arc').value = vis.projectileArc !== undefined ? vis.projectileArc : 0;
+
+    const speedInput = document.getElementById('pe-proj-speed');
+    if (speedInput && !document.getElementById('pe-projectile-style')) {
+        const row = speedInput.parentNode.parentNode;
+
+        const oldLaserRow = document.getElementById('pe-is-laser')?.closest('.pe-input-row')?.parentNode;
+        if (oldLaserRow) oldLaserRow.remove();
+
+        const styleRow = document.createElement('div');
+        styleRow.style.cssText = 'display: flex; gap: 10px; margin-top: 5px;';
+        styleRow.innerHTML = `
+            <div class="pe-input-row" style="flex: 1.5; margin: 0; display: flex; align-items: center; gap: 10px; padding: 5px; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); border-radius: 4px;">
+                <label style="font-size: 0.75rem;">Projectile Style</label>
+                <select id="pe-projectile-style" class="b-select">
+                    <option value="sprite">Sprite (Default)</option>
+                    <option value="laser">Fast Laser/Tracer</option>
+                    <option value="bullet">Speeding Bullet</option>
+                    <option value="lightning">Instant Lightning/Beam</option>
+                </select>
+            </div>
+            <div class="pe-input-row" style="flex: 1; margin: 0; background: rgba(0,0,0,0.3); padding: 5px; border: 1px solid var(--text-dim); border-radius: 4px;">
+                <label style="font-size: 0.75rem;">Tracer Color</label>
+                <input type="color" id="pe-trail-color" class="b-input" style="padding: 0; height: 24px; cursor: pointer;">
+            </div>
+            <div class="pe-input-row" style="flex: 1; margin: 0; background: rgba(0,0,0,0.3); padding: 5px; border: 1px solid var(--text-dim); border-radius: 4px;">
+                <label style="font-size: 0.75rem;">Trail Size</label>
+                <input type="number" id="pe-trail-size" class="b-input" style="padding: 0 5px; height: 24px;" min="1" max="10" step="0.5">
+            </div>
+        `;
+        row.parentNode.insertBefore(styleRow, row.nextSibling);
+    }
+
+    const styleEl = document.getElementById('pe-projectile-style');
+    const trailColorEl = document.getElementById('pe-trail-color');
+    const trailSizeEl = document.getElementById('pe-trail-size');
+    if (styleEl) styleEl.value = vis.projectileStyle || (vis.isLaser ? 'laser' : 'sprite');
+    if (trailColorEl) trailColorEl.value = vis.trailColor || '#f1c40f';
+    if (trailSizeEl) trailSizeEl.value = vis.trailSize !== undefined ? vis.trailSize : 2.5;
 
     this.currentCasterVisuals = vis.casterVisuals ? JSON.parse(JSON.stringify(vis.casterVisuals)) : [];
     this.currentProjectileVisuals = vis.projectileVisuals ? JSON.parse(JSON.stringify(vis.projectileVisuals)) : [];
@@ -804,6 +882,7 @@ export class PowerEditorUIManager {
       },
       effects: this.currentEffects,
       visuals: {
+        ...this.cachedVisualsData,
         tint: document.getElementById('pe-visual-tint').value,
         icon: document.getElementById('pe-visual-icon').value,
         animation: document.getElementById('pe-visual-anim').value,
@@ -811,7 +890,10 @@ export class PowerEditorUIManager {
         projectileVisuals: this.currentProjectileVisuals,
         targetVisuals: this.currentTargetVisuals,
         projectileSpeed: isNaN(projSVal) ? 400 : projSVal,
-        projectileArc: isNaN(projAVal) ? 0 : projAVal
+        projectileArc: isNaN(projAVal) ? 0 : projAVal,
+        projectileStyle: document.getElementById('pe-projectile-style')?.value || 'sprite',
+        trailColor: document.getElementById('pe-trail-color')?.value || '#f1c40f',
+        trailSize: parseFloat(document.getElementById('pe-trail-size')?.value) || 2.5
       }
     };
 

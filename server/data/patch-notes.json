@@ -1,5 +1,18 @@
 [
   {
+    "version": "v2.5.1",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "Engine", "text": "Integrated the universal Combat Calculator. All attacks from players, NPCs, and drones now use unified math for accuracy, critical hits, and damage." },
+      { "type": "Engine", "text": "Completely un-hardcoded legacy projectile scripts. Abilities like Slug and Drone Attacks now read directly from the Power Customizer." },
+      { "type": "Design", "text": "Upgraded the Power Editor with a new 'Projectile Style' system! You can now freely assign Sprites, Fast Lasers, Speeding Bullets, or Instant Lightning beams to any power." },
+      { "type": "Design", "text": "Added 'Projectile Arc' and 'Trail Size' controls to the Power Editor, allowing for perfectly arcing grenades and thicker laser blasts." },
+      { "type": "Design", "text": "Ultra-fast projectiles (4000+ speed) now mathematically interpolate their flight paths to ensure their visual trails render beautifully before impact." },
+      { "type": "Gameplay", "text": "Implemented Tab Targeting! Pressing 'Tab' will now cleanly cycle your active selection through nearby hostile targets." },
+      { "type": "Gameplay", "text": "NPCs now utilize strict Animation Locks during combat, completely eliminating jittering and 'double-swinging' for a much smoother combat rhythm." }
+    ]
+  },
+  {
     "version": "v2.5.0",
     "color": "#00d2ff",
     "changes": [

@@ -223,7 +223,7 @@ export class SpawnerEditWindow extends BaseWindow {
       <div class="b-input-row">
         <div class="b-input-group" style="flex: 1;">
           <label class="b-label">NPC Name</label>
-          <input type="text" id="edit-spawner-npcname" class="b-input" value="Thug">
+          <input type="text" id="edit-spawner-npcname" class="b-input" value="New NPC">
         </div>
         <div class="b-input-group" style="flex: 1;">
           <label class="b-label">NPC Group</label>
@@ -330,30 +330,35 @@ export class MobPackManagerWindow extends BaseWindow {
 
 export class EntityGroupManagerWindow extends BaseWindow {
   constructor() {
-    super('entity-group-manager-panel', 'Entity Group Manager', { width: 600, height: 550, x: window.innerWidth / 2 - 300, y: 150 });
+    super('entity-group-manager-panel', 'Entity Group Manager', { width: 900, height: 550, x: window.innerWidth / 2 - 450, y: 150 });
 
     this.setContent(`
       <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
         <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px;">
           <h4 class="b-label" style="margin: 0;">Entity Groups</h4>
           <div id="egm-group-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;">
-            <!-- JS populated in Phase 3 -->
           </div>
           <div style="display: flex; gap: 5px;">
             <input type="text" id="egm-new-group-input" class="b-input" placeholder="New Group..." style="flex: 1;">
             <button id="btn-egm-add-group" class="b-btn" style="padding: 0 10px;">Add</button>
           </div>
         </div>
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; padding-left: 5px;">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; padding-left: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px;">
           <h4 class="b-label" style="margin: 0;">Hostile Towards (Aggro List)</h4>
           <div id="egm-hostile-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;">
-            <!-- JS populated in Phase 3 -->
           </div>
           <div class="b-input-group" style="margin-top: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><label class="b-label" style="margin: 0;">Group Powers</label><button id="btn-egm-add-power" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ Add Power</button></div>
             <div id="egm-powers-list" style="display: flex; flex-direction: column; gap: 2px; max-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); padding: 5px; border-radius: var(--border-radius);"></div>
           </div>
           <button id="btn-egm-save" class="b-btn" style="margin-top: auto;">Save Group Settings</button>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; padding-left: 5px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h4 class="b-label" style="margin: 0;">Faction NPCs</h4>
+            <button id="btn-egm-new-npc" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ New NPC</button>
+          </div>
+          <div id="egm-npc-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 5px; padding: 5px;"></div>
         </div>
       </div>
     `);

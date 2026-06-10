@@ -72,8 +72,8 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
         }
         charObj.accountUsername = accountUsername;
         socket.emit('player_data_received', charObj);
-      } catch(e) { socket.emit('chat_message', { type: 'system', name: 'System', text: `Character ${data.targetName} file is corrupted.` }); }
-    } else { socket.emit('chat_message', { type: 'system', name: 'System', text: `Character ${data.targetName} not found.` }); }
+      } catch(e) { socket.emit('system_dialog', `Character ${data.targetName} file is corrupted.`); }
+    } else { socket.emit('system_dialog', `Character ${data.targetName} not found.`); }
   });
 
   socket.on('admin_update_player', (data) => {
@@ -245,7 +245,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
 
   socket.on('create_spawner', (data) => {
     const player = activePlayers[socket.id]; if (!player) return;
-    const newSpawner = { uuid: randomUUID(), name: data.name || 'New Spawner', x: data.x, y: data.y, z: data.z || 0, zone: player.zone || 'untitled', radius: data.radius || 300, maxActive: data.maxActive !== undefined ? data.maxActive : 0, respawnRate: data.respawnRate || 10, npcName: data.npcName || 'Thug', npcGroup: data.npcGroup || 'Civilian', npcType: data.npcType || 'none', levelMin: data.levelMin || 1, levelMax: data.levelMax || 1, strength: data.strength || 0, aggroRadius: data.aggroRadius || 500, patrolRoute: data.patrolRoute || '' };
+    const newSpawner = { uuid: randomUUID(), name: data.name || 'New Spawner', x: data.x, y: data.y, z: data.z || 0, zone: player.zone || 'untitled', radius: data.radius || 300, maxActive: data.maxActive !== undefined ? data.maxActive : 0, respawnRate: data.respawnRate || 10, npcName: data.npcName || 'New NPC', npcGroup: data.npcGroup || 'Civilian', npcType: data.npcType || 'none', levelMin: data.levelMin || 1, levelMax: data.levelMax || 1, strength: data.strength || 0, aggroRadius: data.aggroRadius || 500, patrolRoute: data.patrolRoute || '' };
     spawnersCatalog.push(newSpawner); fs.writeFileSync(SPAWNERS_INDEX, JSON.stringify(spawnersCatalog, null, 2)); io.to(player.zone || 'untitled').emit('spawner_spawned', newSpawner); logSystem(`SPAWNER CREATED: ${newSpawner.name} by ${player.name}`);
   });
 

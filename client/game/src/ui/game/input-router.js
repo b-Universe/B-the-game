@@ -36,30 +36,54 @@ export class InputRouter {
     }
 
     if (key === 'escape') {
-        if (eng.ui && eng.ui.panelStack && eng.ui.panelStack.length > 0) {
-            const el = eng.ui.panelStack.pop();
+      if (eng.ui && eng.ui.panelStack && eng.ui.panelStack.length > 0) {
+        const el = eng.ui.panelStack.pop();
 
-            // Specific handling so we actually exit edit mode cleanly when it closes!
-            if (el.id === 'builder-panel' || el.id === 'builder-hotbar' || el.id === 'object-library-panel') {
-                if (eng.editMode) {
-                    eng.chat.commandHandler.processCommand('/editmode');
-                }
-            } else {
-                el.style.display = 'none';
-            }
-            e.preventDefault();
-            return;
+        if (el.id === 'builder-panel' || el.id === 'builder-hotbar' || el.id === 'object-library-panel') {
+          if (eng.editMode) {
+            eng.chat.commandHandler.processCommand('/editmode');
+          }
+        } else {
+          el.style.display = 'none';
         }
+        e.preventDefault();
+        return;
+      }
 
-        if (eng.targetingPower) {
-            eng.targetingPower = null;
-            document.body.style.cursor = '';
-            if (eng.canvas) eng.canvas.style.cursor = '';
-            e.preventDefault();
-            return;
-        }
+      if (eng.targetingPower) {
+        eng.targetingPower = null;
+        document.body.style.cursor = '';
+        if (eng.canvas) eng.canvas.style.cursor = '';
+        e.preventDefault();
+        return;
+      }
     }
     if (chatInput && activeEl === chatInput) return;
+
+    if (key === 'tab') {
+      e.preventDefault();
+      const possibleTargets = [];
+      eng.npcs.forEach(npc => {
+        if (npc.state !== 'dead' && npc.type !== 'civilian' && npc.type !== 'trainer') {
+          const dist = Math.hypot(npc.x - eng.player.x, npc.y - eng.player.y);
+          if (dist < 1500) {
+            possibleTargets.push({ type: 'npc', id: npc.uuid, dist: dist });
+          }
+        }
+      });
+
+      if (possibleTargets.length > 0) {
+        possibleTargets.sort((a, b) => a.dist - b.dist);
+        let currentIndex = -1;
+        if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+          currentIndex = possibleTargets.findIndex(t => t.id === eng.selectedTarget.id);
+        }
+        let nextIndex = (currentIndex + 1) % possibleTargets.length;
+        eng.selectedTarget = { type: possibleTargets[nextIndex].type, id: possibleTargets[nextIndex].id };
+        eng.ui.update();
+      }
+      return;
+    }
 
     this.input.keys[key] = true;
     if (e.ctrlKey) this.input.keys['control'] = true;
@@ -125,9 +149,9 @@ export class InputRouter {
           const opts = Array.from(shapeBtn.options);
           const curIdx = shapeBtn.selectedIndex;
           if (opts.length > 0) {
-             const nextIdx = e.shiftKey ? (curIdx - 1 + opts.length) % opts.length : (curIdx + 1) % opts.length;
-             shapeBtn.selectedIndex = nextIdx;
-             shapeBtn.dispatchEvent(new Event('change'));
+            const nextIdx = e.shiftKey ? (curIdx - 1 + opts.length) % opts.length : (curIdx + 1) % opts.length;
+            shapeBtn.selectedIndex = nextIdx;
+            shapeBtn.dispatchEvent(new Event('change'));
           }
         } else if (shapeBtn) {
           shapeBtn.click();
@@ -139,16 +163,16 @@ export class InputRouter {
       e.preventDefault();
       let trainerDist = eng.nearestTrainer && !eng.activeTrainer ? Math.hypot(eng.player.x - eng.nearestTrainer.x, eng.player.y - eng.nearestTrainer.y) : Infinity;
       let arcadeDist = eng.arcadeSystem && eng.arcadeSystem.nearestCabinet && !eng.arcadeSystem.isActive && eng.arcadeSystem.nearestCabinet.powerState !== 'off'
-          ? Math.hypot(eng.player.x - eng.arcadeSystem.nearestCabinet.x, eng.player.y - eng.arcadeSystem.nearestCabinet.y)
-          : Infinity;
+        ? Math.hypot(eng.player.x - eng.arcadeSystem.nearestCabinet.x, eng.player.y - eng.arcadeSystem.nearestCabinet.y)
+        : Infinity;
 
       if (trainerDist < Infinity || arcadeDist < Infinity) {
-          if (trainerDist < arcadeDist) {
-              eng.ui.trainer.openTrainerUI(eng.nearestTrainer);
-          } else {
-              const cab = eng.arcadeSystem.nearestCabinet;
-              eng.arcadeSystem.interact(cab.x, cab.y, cab.z, cab.dir, cab.gameId);
-          }
+        if (trainerDist < arcadeDist) {
+          eng.ui.trainer.openTrainerUI(eng.nearestTrainer);
+        } else {
+          const cab = eng.arcadeSystem.nearestCabinet;
+          eng.arcadeSystem.interact(cab.x, cab.y, cab.z, cab.dir, cab.gameId);
+        }
       }
     }
 

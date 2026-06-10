@@ -76,8 +76,11 @@
   "Maple Gang": {
     "hostileTo": [
       "APD",
-      "hero",
-      "Corporate Extractors"
+      "Corporate Extractors",
+      "hero"
+    ],
+    "powers": [
+      "stamina"
     ]
   }
 }

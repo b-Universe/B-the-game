@@ -174,7 +174,7 @@ export class ParticleManager {
       if (proj.isCritLoop && proj.loopPitch !== undefined) {
         const v1 = this.vec1.set(proj.startX, proj.startY, proj.startZ).project(renderer.camera);
         const v2 = this.vec2.set(proj.targetX, proj.targetY, proj.targetZ).project(renderer.camera);
-        const baseAngle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
+        const baseAngle = Math.atan2((v2.y - v1.y) * window.innerHeight, (v2.x - v1.x) * window.innerWidth);
 
         isLeft = Math.abs(baseAngle) > Math.PI / 2;
         rotAngle = baseAngle + (isLeft ? -proj.loopPitch : proj.loopPitch);
@@ -182,8 +182,8 @@ export class ParticleManager {
       } else if (proj.lastX !== undefined) {
         const v1 = this.vec1.set(proj.lastX, proj.lastY, proj.lastZ).project(renderer.camera);
         const v2 = this.vec2.set(proj.x, proj.y, proj.z).project(renderer.camera);
-        const dxScreen = v2.x - v1.x;
-        const dyScreen = v2.y - v1.y;
+        const dxScreen = (v2.x - v1.x) * window.innerWidth;
+        const dyScreen = (v2.y - v1.y) * window.innerHeight;
         if (Math.abs(dxScreen) > 0.00001 || Math.abs(dyScreen) > 0.00001) {
           rotAngle = Math.atan2(dyScreen, dxScreen);
           isLeft = Math.abs(rotAngle) > Math.PI / 2;
@@ -195,7 +195,7 @@ export class ParticleManager {
       } else {
         const v1 = this.vec1.set(proj.startX, proj.startY, proj.startZ).project(renderer.camera);
         const v2 = this.vec2.set(proj.targetX, proj.targetY, proj.targetZ).project(renderer.camera);
-        rotAngle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
+        rotAngle = Math.atan2((v2.y - v1.y) * window.innerHeight, (v2.x - v1.x) * window.innerWidth);
         isLeft = Math.abs(rotAngle) > Math.PI / 2;
         proj.lastAngle = rotAngle;
       }
@@ -204,10 +204,18 @@ export class ParticleManager {
       proj.lastY = proj.y;
       proj.lastZ = proj.z;
 
-      if (proj.isLaser) {
-          sprite.scale.set(120, 6, 1);
+      const pSize = proj.trailSize !== undefined ? proj.trailSize : 2.5;
+      if (proj.projectileStyle === 'lightning') {
+          group.visible = false;
+          sprite.visible = false;
+      } else if (proj.projectileStyle === 'laser') {
+          sprite.scale.set(120, pSize * 2, 1);
           sprite.material.color.setHex(0x000000);
           sprite.material.emissive.setStyle(proj.trailColor || '#f39c12');
+      } else if (proj.projectileStyle === 'bullet') {
+          sprite.scale.set(24, pSize * 1.5, 1);
+          sprite.material.color.setHex(0x000000);
+          sprite.material.emissive.setStyle(proj.trailColor || '#bdc3c7');
       } else {
           sprite.scale.set(64, 64, 1);
           sprite.material.color.setHex(0xffffff);
@@ -226,9 +234,9 @@ export class ParticleManager {
         shadow.position.set(0, 0, tz - proj.z + 0.5);
       }
 
-      let seqId = 'proj_airplane';
-      let frameCount = 4;
-      let animSpeed = 80;
+      let seqId = 'None';
+      let frameCount = 1;
+      let animSpeed = 100;
       let offsetZ = 0;
 
       if (proj.powerId && window.POWER_REGISTRY && window.POWER_REGISTRY[proj.powerId]) {
@@ -249,8 +257,10 @@ export class ParticleManager {
 
       sprite.position.set(0, 0, offsetZ);
 
-      const tex = proj.isLaser ? renderer.dummyTexture : (renderer.assetManager.textures[seqId] || renderer.assetManager.textures['proj_airplane']);
+      const useDummy = proj.projectileStyle === 'laser' || proj.projectileStyle === 'bullet' || proj.projectileStyle === 'lightning';
+      const tex = useDummy ? renderer.dummyTexture : (seqId !== 'None' ? renderer.assetManager.textures[seqId] : null);
       if (tex) {
+        group.visible = true;
         if (sprite.userData.mapUuid !== tex.uuid) {
           if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
               sprite.material.map.dispose();
@@ -258,10 +268,13 @@ export class ParticleManager {
           sprite.material.map = tex.clone();
           if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
           sprite.userData.mapUuid = tex.uuid;
-          sprite.userData.tex = proj.isLaser ? 'laser' : seqId;
+          sprite.userData.tex = useDummy ? proj.projectileStyle : seqId;
         }
 
-        if (!proj.isLaser) {
+        if (useDummy) {
+            sprite.material.map.repeat.set(1, 1);
+            sprite.material.map.offset.set(0, 0);
+        } else {
             const frameIndex = Math.floor(performance.now() / animSpeed) % frameCount;
             if (isLeft) {
               sprite.material.map.repeat.set(1 / frameCount, -1);
@@ -270,10 +283,9 @@ export class ParticleManager {
               sprite.material.map.repeat.set(1 / frameCount, 1);
               sprite.material.map.offset.set(frameIndex / frameCount, 0);
             }
-        } else {
-            sprite.material.map.repeat.set(1, 1);
-            sprite.material.map.offset.set(0, 0);
         }
+      } else {
+        group.visible = false;
       }
     });
 

@@ -27,7 +27,7 @@ export class NetworkManager {
       const sysDialog = document.getElementById('system-message-dialog');
       const sysMsgText = document.getElementById('sys-msg-text');
       if (sysDialog && sysDialog.style.display !== 'none' && sysMsgText && sysMsgText.innerText.includes('Lost connection')) {
-          sysDialog.style.display = 'none';
+        sysDialog.style.display = 'none';
       }
 
       this.sendRequestFullMap();
@@ -72,12 +72,12 @@ export class NetworkManager {
         if (creScreen) creScreen.style.display = 'block';
 
         ['username', 'password', 'email', 'btn-main', 'no-email'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.disabled = true;
-                el.style.opacity = '0.5';
-                el.style.cursor = 'not-allowed';
-            }
+          const el = document.getElementById(id);
+          if (el) {
+            el.disabled = true;
+            el.style.opacity = '0.5';
+            el.style.cursor = 'not-allowed';
+          }
         });
         const toggleAuth = document.getElementById('toggle-auth');
         if (toggleAuth) toggleAuth.style.pointerEvents = 'none';
@@ -153,12 +153,12 @@ export class NetworkManager {
 
     this.socket.on('dev_load_world_broadcast', async (payload) => {
       if (eng.worldSerializer) {
-         if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
-         eng.currentZone = payload.filename;
-         await eng.worldSerializer.deserialize(payload.data);
-         eng.mapManager.update(16);
-         this.sendPlayerTeleported();
-         if (typeof eng.findSafeSpawn === 'function') eng.findSafeSpawn();
+        if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
+        eng.currentZone = payload.filename;
+        await eng.worldSerializer.deserialize(payload.data);
+        eng.mapManager.update(16);
+        this.sendPlayerTeleported();
+        if (typeof eng.findSafeSpawn === 'function') eng.findSafeSpawn();
       }
     });
 
@@ -167,20 +167,20 @@ export class NetworkManager {
       if (payload.currentZone) eng.currentZone = payload.currentZone;
 
       if (eng.worldSerializer) {
-         await eng.worldSerializer.deserialize(payload);
+        await eng.worldSerializer.deserialize(payload);
       }
 
       if (eng.mapManager && eng.player) {
-         const pxChunk = Math.floor(eng.player.x / 512);
-         const pyChunk = Math.floor(eng.player.y / 512);
-         const renderRadius = eng.clientSettings.renderDistance || 2000;
-         const loadRadius = Math.ceil(renderRadius / 512);
+        const pxChunk = Math.floor(eng.player.x / 512);
+        const pyChunk = Math.floor(eng.player.y / 512);
+        const renderRadius = eng.clientSettings.renderDistance || 2000;
+        const loadRadius = Math.ceil(renderRadius / 512);
 
-         for (let cy = pyChunk - loadRadius; cy <= pyChunk + loadRadius; cy++) {
-           for (let cx = pxChunk - loadRadius; cx <= pxChunk + loadRadius; cx++) {
-             if (typeof eng.mapManager.forceGenerateChunk === 'function') eng.mapManager.forceGenerateChunk(cx, cy);
-           }
-         }
+        for (let cy = pyChunk - loadRadius; cy <= pyChunk + loadRadius; cy++) {
+          for (let cx = pxChunk - loadRadius; cx <= pxChunk + loadRadius; cx++) {
+            if (typeof eng.mapManager.forceGenerateChunk === 'function') eng.mapManager.forceGenerateChunk(cx, cy);
+          }
+        }
       }
 
       if (typeof eng.findSafeSpawn === 'function') {
@@ -206,9 +206,9 @@ export class NetworkManager {
 
     this.socket.on('force_teleport', (data) => {
       if (data.zone && data.zone !== eng.currentZone) {
-         if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
-         eng.currentZone = data.zone;
-         this.socket.emit('join_zone', { zone: data.zone });
+        if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
+        eng.currentZone = data.zone;
+        this.socket.emit('join_zone', { zone: data.zone });
       }
 
       const maxMapSize = 511 * 32;
@@ -238,31 +238,31 @@ export class NetworkManager {
     this.socket.on('current_neighborhoods', (neighborhoods) => {
       eng.neighborhoods = neighborhoods;
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.neighborhoodManagerWindow.element.style.display === 'flex') {
-         eng.ui.devTools.renderNeighborhoodManager();
+        eng.ui.devTools.renderNeighborhoodManager();
       }
     });
 
     this.socket.on('current_mob_packs', (mobPacks) => {
       eng.mobPacks = mobPacks;
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.mobPackManagerWindow.element.style.display === 'flex') {
-         eng.ui.devTools.renderMobPacks();
+        eng.ui.devTools.renderMobPacks();
       }
     });
 
     this.socket.on('current_npc_templates', (templates) => {
       eng.npcTemplates = templates;
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.npcTemplateManagerWindow && eng.ui.devTools.npcTemplateManagerWindow.element.style.display === 'flex') {
-         eng.ui.devTools.renderNpcTemplates();
+        eng.ui.devTools.renderNpcTemplates();
       }
     });
 
     this.socket.on('current_entity_types', (types) => {
       eng.entityTypes = types;
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.entityTypeManagerWindow && eng.ui.devTools.entityTypeManagerWindow.element.style.display === 'flex') {
-         eng.ui.devTools.renderEntityTypes();
+        eng.ui.devTools.renderEntityTypes();
       }
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.npcTemplateManagerWindow && eng.ui.devTools.npcTemplateManagerWindow.element.style.display === 'flex') {
-         eng.ui.devTools.renderNpcTemplates();
+        eng.ui.devTools.renderNpcTemplates();
       }
     });
 
@@ -330,16 +330,16 @@ export class NetworkManager {
     this.socket.on('drones_moved', (drones) => {
       for (const id in drones) {
         if (eng.drones[id]) {
-            const existing = eng.drones[id];
-            const incoming = drones[id];
-            // Preserve client-side simulated coordinates for smooth lerping
-            const tempX = existing.x;
-            const tempY = existing.y;
-            const tempZ = existing.z;
-            Object.assign(existing, incoming);
-            existing.x = tempX;
-            existing.y = tempY;
-            existing.z = tempZ;
+          const existing = eng.drones[id];
+          const incoming = drones[id];
+          // Preserve client-side simulated coordinates for smooth lerping
+          const tempX = existing.x;
+          const tempY = existing.y;
+          const tempZ = existing.z;
+          Object.assign(existing, incoming);
+          existing.x = tempX;
+          existing.y = tempY;
+          existing.z = tempZ;
         }
         else eng.drones[id] = drones[id];
       }
@@ -348,10 +348,10 @@ export class NetworkManager {
     this.socket.on('drone_spawned', (drone) => {
       drone.deployTimer = 1.5;
       if (eng.playerData.name === drone.ownerName) {
-         drone.z = (eng.player.z || 0) + 1000;
+        drone.z = (eng.player.z || 0) + 1000;
       } else {
-         const op = eng.otherPlayers[drone.ownerSocketId];
-         if (op) drone.z = (op.z || 0) + 1000;
+        const op = eng.otherPlayers[drone.ownerSocketId];
+        if (op) drone.z = (op.z || 0) + 1000;
       }
       eng.drones[drone.uuid] = drone;
     });
@@ -391,7 +391,7 @@ export class NetworkManager {
     });
 
     this.socket.on('trade_started', (data) => {
-       if (eng.ui && eng.ui.inventory) eng.ui.inventory.openTrade(data.partnerName);
+      if (eng.ui && eng.ui.inventory) eng.ui.inventory.openTrade(data.partnerName);
     });
 
     this.socket.on('player_data_updated', (newCharData) => {
@@ -415,16 +415,16 @@ export class NetworkManager {
             acc.characters[charIdx] = eng.playerData;
             localStorage.setItem('b_current_account', JSON.stringify(acc));
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const powersPanel = document.getElementById('powers-panel');
       if (powersPanel && powersPanel.style.display === 'flex' && eng.ui && eng.ui.powerbar) {
-          eng.ui.powerbar.renderPowersUI();
+        eng.ui.powerbar.renderPowersUI();
       }
       const trainerModal = document.getElementById('trainer-dialog-modal');
       if (trainerModal && trainerModal.style.display === 'flex' && eng.ui && eng.ui.trainer) {
-          eng.ui.trainer.openTrainerUI(eng.activeTrainer);
+        eng.ui.trainer.openTrainerUI(eng.activeTrainer);
       }
       if (eng.ui && eng.ui.powerbar && eng.ui.powerbar.updatePowerbar) eng.ui.powerbar.updatePowerbar();
     });
@@ -442,7 +442,7 @@ export class NetworkManager {
           eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, z: eng.player.z, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
           if (eng.ui) eng.ui.update();
         } else if (data.isDeflect) {
-           eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, z: eng.player.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
+          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, z: eng.player.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
         }
         if (data.isDead) {
           eng.player.state = 'death'; eng.player.frame = 0; eng.player.respawnTimer = 10000;
@@ -459,7 +459,7 @@ export class NetworkManager {
           const offsetY = data.isDoT ? 110 : 130;
           eng.floatingTexts.push({ x: op.x, y: op.y, z: op.z, offsetY: offsetY, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: life, color: color, isDoT: data.isDoT, isCrit: isCrit });
         } else if (data.isDeflect) {
-           eng.floatingTexts.push({ x: op.x, y: op.y, z: op.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
+          eng.floatingTexts.push({ x: op.x, y: op.y, z: op.z, offsetY: 130, rndX: (Math.random() - 0.5) * 50, rndY: -20, text: 'DEFLECT', life: 1.0, color: '#9b59b6', isCrit: true });
         }
         if (data.isDead) { op.state = 'death'; op.frame = 0; }
         if (eng.ui) eng.ui.update();
@@ -477,16 +477,30 @@ export class NetworkManager {
 
       const maxDist = Math.max(1, Math.hypot(targetX - startX, targetY - startY));
 
-      const isAirplane = data.isAirplane !== undefined ? data.isAirplane : (speed === 400);
-      const isLaser = data.isLaser !== undefined ? data.isLaser : false;
-      const isCrit = data.isCrit !== undefined ? data.isCrit : false;
-      const isCritLoop = data.isCritLoop !== undefined ? data.isCritLoop : (isAirplane && isCrit);
-      const damage = data.damage !== undefined ? data.damage : (isAirplane ? (isCrit ? 3 : 1) : 1);
+      if (data.projectileStyle === 'lightning') {
+        if (!eng.lightnings) eng.lightnings = [];
+        eng.lightnings.push({
+          startX: startX, startY: startY, startZ: startZ,
+          endX: targetX, endY: targetY, endZ: targetZ,
+          duration: 0.3, life: 0.3, maxLife: 0.3
+        });
+      }
+
+      let isAirplane = false;
+      let isCritLoop = false;
+      if (data.powerId && window.POWER_REGISTRY && window.POWER_REGISTRY[data.powerId]) {
+        const pDef = window.POWER_REGISTRY[data.powerId];
+        if (pDef.engineScript === 'paper-airplane') {
+          isAirplane = true;
+          isCritLoop = data.isCrit !== undefined ? data.isCrit : false;
+        }
+      }
+
+      const damage = data.damage !== undefined ? data.damage : (isAirplane ? (data.isCrit ? 3 : 1) : 1);
 
       eng.projectiles.push({
         uuid: data.uuid,
         isAirplane: isAirplane,
-        isLaser: isLaser,
         isCritLoop: isCritLoop,
         startX: startX, startY: startY, startZ: startZ,
         x: startX, y: startY, z: startZ,
@@ -497,58 +511,58 @@ export class NetworkManager {
         senderId: data.senderId,
         powerId: data.powerId,
         damage: damage,
-        isCrit: isCrit,
+        isCrit: data.isCrit !== undefined ? data.isCrit : false,
+        projectileStyle: data.projectileStyle || 'sprite',
         trail: true,
-        trailColor: '#c8e6ff',
-        trailColor: '#c8e6ff',
-        trailSize: 2.5,
+        trailColor: data.trailColor || '#f1c40f',
+        trailSize: data.trailSize !== undefined ? data.trailSize : 2.5,
+        projectileVisuals: data.projectileVisuals || [],
+        projectileArc: data.projectileArc || 0,
         onHit: () => {
           let hasCustom = false;
           let tint = '#ffffff';
           if (data.powerId && window.POWER_REGISTRY && window.POWER_REGISTRY[data.powerId]) {
-              const pDef = window.POWER_REGISTRY[data.powerId];
-              if (pDef.visuals?.tint) tint = pDef.visuals.tint;
+            const pDef = window.POWER_REGISTRY[data.powerId];
+            if (pDef.visuals?.tint) tint = pDef.visuals.tint;
 
-              if (pDef.visuals?.targetVisuals && pDef.visuals.targetVisuals.length > 0) {
-                pDef.visuals.targetVisuals.forEach(vis => {
-                   if (vis.sequence && vis.sequence !== 'None') {
-                     hasCustom = true;
-                     setTimeout(() => {
-                       eng.debris.push({
-                          x: data.targetX, y: data.targetY, z: data.targetZ + (vis.offsetZ || 0),
-                          vx: 0, vy: 0, vz: 0,
-                          life: 0.5, maxLife: 0.5, crumpleTimer: 0,
-                          wasteTex: vis.sequence, isFX: true, color: tint
-                       });
-                     }, (vis.delay || 0) * 1000);
-                   }
-                });
-              }
+            if (pDef.visuals?.targetVisuals && pDef.visuals.targetVisuals.length > 0) {
+              pDef.visuals.targetVisuals.forEach(vis => {
+                if ((vis.sequence && vis.sequence !== 'None') || (vis.particle && vis.particle !== 'none')) {
+                  hasCustom = true;
+                  setTimeout(() => {
+                    const fxData = {
+                      x: data.targetX, y: data.targetY, z: data.targetZ + (vis.offsetZ || 0),
+                      vx: 0, vy: 0, vz: 0,
+                      life: 0.5, maxLife: 0.5, crumpleTimer: 0,
+                      wasteTex: vis.sequence, isFX: true, color: tint
+                    };
+                    if (vis.sequence && vis.sequence !== 'None') eng.debris.push(fxData);
+                    if (vis.particle && vis.particle !== 'none') eng.spawnEventParticles({ ...fxData, particle: vis.particle, particleColor: vis.color || '#ffffff' });
+                  }, (vis.delay || 0) * 1000);
+                }
+              });
+            }
           }
 
           if (!hasCustom) {
-             if (!isAirplane) {
-                 eng.debris.push({
-                     x: data.targetX, y: data.targetY, z: data.targetZ,
-                     vx: 0, vy: 0, vz: 0, life: 0.48, maxLife: 0.48, crumpleTimer: 0,
-                     wasteTex: 'fx_sparks', isFX: true, color: data.trailColor || '#f39c12',
-                     rotation: Math.random() * Math.PI * 2
-                 });
-             } else {
-                 eng.debris.push({
-                    x: data.targetX, y: data.targetY, z: data.targetZ,
-                    vx: (Math.random() - 0.5) * 150, vy: (Math.random() - 0.5) * 150, vz: 100 + Math.random() * 150,
-                    life: 5.0, maxLife: 5.0, crumpleTimer: 0.3,
-                    wasteTex: Math.random() > 0.5 ? 'waste_1' : 'waste_2', rotation: Math.random() * Math.PI * 2
-                 });
-             }
+            if (isAirplane) {
+              eng.debris.push({
+                x: data.targetX, y: data.targetY, z: data.targetZ,
+                vx: (Math.random() - 0.5) * 150, vy: (Math.random() - 0.5) * 150, vz: 100 + Math.random() * 150,
+                life: 5.0, maxLife: 5.0, crumpleTimer: 0.3,
+                wasteTex: Math.random() > 0.5 ? 'waste_1' : 'waste_2', rotation: Math.random() * Math.PI * 2
+              });
+            }
           }
         }
       });
     });
 
     this.socket.on('spawn_fx', (data) => {
-      if (eng.debris) eng.debris.push(data);
+      if (data.wasteTex && data.wasteTex !== 'None') {
+        if (eng.debris) eng.debris.push(data);
+      }
+      if (data.particle && data.particle !== 'none') eng.spawnEventParticles(data);
     });
 
     this.socket.on('force_refresh', () => {
@@ -650,7 +664,7 @@ export class NetworkManager {
 
     this.socket.on('entity_groups_data', (data) => {
       if (eng.ui && eng.ui.devTools) {
-         eng.ui.devTools.renderEntityGroupManager(data);
+        eng.ui.devTools.renderEntityGroupManager(data);
       }
     });
 
@@ -665,13 +679,13 @@ export class NetworkManager {
       eng.lightnings.push({ ...data, life: data.duration, maxLife: data.duration });
 
       if (eng.drones) {
-          for (let id in eng.drones) {
-              let d = eng.drones[id];
-              if (d.isCombatDrone && Math.abs(d.x - data.startX) < 10 && Math.abs(d.y - data.startY) < 10) {
-                  d.stunAnimTimer = 960; // 8 frames * 120ms
-                  d.frame = 0; // Force sync to frame 1!
-              }
+        for (let id in eng.drones) {
+          let d = eng.drones[id];
+          if (d.isCombatDrone && Math.abs(d.x - data.startX) < 10 && Math.abs(d.y - data.startY) < 10) {
+            d.stunAnimTimer = 960; // 8 frames * 120ms
+            d.frame = 0; // Force sync to frame 1!
           }
+        }
       }
     });
 
@@ -687,19 +701,19 @@ export class NetworkManager {
 
     this.socket.on('arcade_match_found', (data) => {
       if (eng.arcadeSystem && eng.arcadeSystem.vm && eng.arcadeSystem.vm.onMatchFound) {
-          eng.arcadeSystem.vm.onMatchFound(data);
+        eng.arcadeSystem.vm.onMatchFound(data);
       }
     });
 
     this.socket.on('arcade_state_sync', (data) => {
       if (eng.arcadeSystem && eng.arcadeSystem.vm && eng.arcadeSystem.vm.onStateSync) {
-          eng.arcadeSystem.vm.onStateSync(data);
+        eng.arcadeSystem.vm.onStateSync(data);
       }
     });
 
     this.socket.on('arcade_match_ended', () => {
       if (eng.arcadeSystem && eng.arcadeSystem.vm && eng.arcadeSystem.vm.onMatchEnded) {
-          eng.arcadeSystem.vm.onMatchEnded();
+        eng.arcadeSystem.vm.onMatchEnded();
       }
     });
   }

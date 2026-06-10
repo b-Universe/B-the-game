@@ -99,7 +99,8 @@ export class CommandHandler {
 
       eng.ui.showSystemMessage('Nudged out of stuck position.');
     } else if (cmd === '/editmode') {
-      if (!checkPerm('editmode')) return eng.ui.showSystemMessage('You do not have permission to use /editmode.');
+      const hasEditPerm = ['editmode', 'builder', 'dev', 'admin'].some(role => checkPerm(role));
+      if (!hasEditPerm) return eng.ui.showSystemMessage('You do not have permission to use /editmode.');
       eng.editMode = !eng.editMode;
       if (eng.renderer) eng.renderer.needsVoxelUpdate = true;
       const bPanel = document.getElementById('builder-panel');
@@ -114,7 +115,7 @@ export class CommandHandler {
               try {
                 const pos = JSON.parse(savedPos);
                 bPanel.style.left = pos.left; bPanel.style.top = pos.top; bPanel.style.right = 'auto';
-              } catch(e) {}
+              } catch (e) { }
             }
           } else {
             bPanel.style.top = '70px';
@@ -133,7 +134,7 @@ export class CommandHandler {
               try {
                 const pos = JSON.parse(savedHotbarPos);
                 bHotbar.style.left = pos.left; bHotbar.style.top = pos.top; bHotbar.style.right = 'auto';
-              } catch(e) {}
+              } catch (e) { }
             } else {
               bHotbar.style.top = '280px'; bHotbar.style.left = 'auto'; bHotbar.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
             }
@@ -151,7 +152,7 @@ export class CommandHandler {
               try {
                 const pos = JSON.parse(savedPos);
                 bObjLib.style.left = pos.left; bObjLib.style.top = pos.top; bObjLib.style.right = 'auto';
-              } catch(e) {}
+              } catch (e) { }
             } else {
               bObjLib.style.top = '70px'; bObjLib.style.left = 'auto'; bObjLib.style.right = eng.clientSettings.showMinimap ? '570px' : '310px';
             }
@@ -212,9 +213,9 @@ export class CommandHandler {
       let angle = ((hour - 6 + 24) % 24) / 24 * Math.PI * 2;
       let t;
       if (angle <= Math.PI) {
-        t = (angle / Math.PI) * (2/3);
+        t = (angle / Math.PI) * (2 / 3);
       } else {
-        t = (2/3) + ((angle - Math.PI) / Math.PI) * (1/3);
+        t = (2 / 3) + ((angle - Math.PI) / Math.PI) * (1 / 3);
       }
       eng.timeOverride = t;
       eng.ui.showSystemMessage(`Time frozen to ${hour}:00.`);
@@ -261,25 +262,25 @@ export class CommandHandler {
       const spawnZ = args[4] !== undefined ? parseFloat(args[4]) : undefined;
 
       if (eng.worldSerializer) {
-         eng.ui.setupLoadingScreen();
-         eng.worldSerializer.save(eng.currentZone || 'untitled').then(() => {
-             eng.currentZone = targetZone;
-             eng.worldSerializer.load(targetZone).then(() => {
-                 eng.network.sendPlayerTeleported();
-                 eng.player.x = spawnX;
-                 eng.player.y = spawnY;
-                 eng.mapManager.update(16);
-                 if (spawnZ !== undefined) eng.player.z = spawnZ;
-                 else eng.findSafeSpawn();
-                 eng.camera.x = eng.player.x;
-                 eng.camera.y = eng.player.y;
+        eng.ui.setupLoadingScreen();
+        eng.worldSerializer.save(eng.currentZone || 'untitled').then(() => {
+          eng.currentZone = targetZone;
+          eng.worldSerializer.load(targetZone).then(() => {
+            eng.network.sendPlayerTeleported();
+            eng.player.x = spawnX;
+            eng.player.y = spawnY;
+            eng.mapManager.update(16);
+            if (spawnZ !== undefined) eng.player.z = spawnZ;
+            else eng.findSafeSpawn();
+            eng.camera.x = eng.player.x;
+            eng.camera.y = eng.player.y;
 
-                       eng.mapReceived = true;
-                       if (eng.renderer) {
-                           eng.renderer.checkInitialLoad();
-                       }
-             });
-         });
+            eng.mapReceived = true;
+            if (eng.renderer) {
+              eng.renderer.checkInitialLoad();
+            }
+          });
+        });
       }
     } else if (cmd === '/teleport_zone' || cmd === '/tpz') {
       const targetZone = args[1] ? args[1].toLowerCase() : null;

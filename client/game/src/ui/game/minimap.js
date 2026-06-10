@@ -1,4 +1,4 @@
-const SCREEN_ANGLES = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
+const SCREEN_ANGLES = { 'right': 0, 'down-right': Math.PI / 4, 'down': Math.PI / 2, 'down-left': Math.PI * 0.75, 'left': Math.PI, 'up-left': -Math.PI * 0.75, 'up': -Math.PI / 2, 'up-right': -Math.PI / 4 };
 
 export class MinimapManager {
   constructor(engine) {
@@ -16,17 +16,17 @@ export class MinimapManager {
     const mmRadius = Math.ceil(((mmSize / mmTileSize) / 2) * 1.5) + 1;
 
     ctx.save();
-        ctx.fillStyle = 'rgba(5, 7, 10, 0.8)';
+    ctx.fillStyle = 'rgba(5, 7, 10, 0.8)';
     ctx.fillRect(mmX, mmY, mmSize, mmSize);
     ctx.strokeStyle = '#00d2ff';
     ctx.lineWidth = 2;
     ctx.strokeRect(mmX, mmY, mmSize, mmSize);
 
-        ctx.beginPath();
+    ctx.beginPath();
     ctx.rect(mmX, mmY, mmSize, mmSize);
     ctx.clip();
 
-        ctx.translate(mmX + mmSize / 2, mmY + mmSize / 2);
+    ctx.translate(mmX + mmSize / 2, mmY + mmSize / 2);
 
     const camAngle = eng.renderer ? eng.renderer.cameraAngle : 0;
     const rotationAngle = eng.clientSettings.rotateMinimap ? camAngle : 0;
@@ -82,7 +82,7 @@ export class MinimapManager {
       const wDrawY = (wp.y / 32 - pFracY) * mmTileSize;
       ctx.fillStyle = '#f1c40f';
       ctx.beginPath();
-      ctx.arc(wDrawX, wDrawY, Math.max(3, mmTileSize/2), 0, Math.PI * 2);
+      ctx.arc(wDrawX, wDrawY, Math.max(3, mmTileSize / 2), 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 1.5;
@@ -110,7 +110,7 @@ export class MinimapManager {
       });
     }
 
-        const drawMinimapDot = (worldX, worldY, dotColor, size) => {
+    const drawMinimapDot = (worldX, worldY, dotColor, size) => {
       const drawX = (worldX / 32 - pFracX) * mmTileSize;
       const drawY = (worldY / 32 - pFracY) * mmTileSize;
       ctx.fillStyle = dotColor;
@@ -130,7 +130,7 @@ export class MinimapManager {
       if (op.state !== 'death') drawMinimapDot(op.x, op.y, '#3498db', 2.5);
     });
 
-        ctx.fillStyle = '#2ecc71';
+    ctx.fillStyle = '#2ecc71';
     ctx.beginPath();
     ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
     ctx.fill();

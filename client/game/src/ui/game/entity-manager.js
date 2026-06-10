@@ -41,10 +41,10 @@ export class EntityManager {
         const b = entity.chatBubbles[i];
         b.timer -= dt;
 
-                if (b.timer > 0 && b.opacity < 1) b.opacity = Math.min(1, b.opacity + dt / 150);
+        if (b.timer > 0 && b.opacity < 1) b.opacity = Math.min(1, b.opacity + dt / 150);
         else if (b.timer <= 0) b.opacity -= dt / 300;
 
-                if (b.currentY === undefined) b.currentY = b.targetY || 0;
+        if (b.currentY === undefined) b.currentY = b.targetY || 0;
         b.currentY += ((b.targetY || 0) - b.currentY) * 15 * (dt / 1000);
 
         if (b.opacity <= 0) entity.chatBubbles.splice(i, 1);
@@ -84,99 +84,99 @@ export class EntityManager {
       const tint = powerDef?.visuals?.tint || '#9b59b6';
 
       for (let i = 0; i < 8; i++) {
-          eng.spawnParticle({
-              x: player.x + (Math.random() - 0.5) * 32,
-              y: player.y + (Math.random() - 0.5) * 32,
-              z: (player.z || 0) + Math.random() * 64,
-              vx: (Math.random() - 0.5) * 80,
-              vy: (Math.random() - 0.5) * 80,
-              vz: 50 + Math.random() * 100,
-              noGravity: true,
-              life: 0.2 + Math.random() * 0.3,
-              maxLife: 0.5,
-              color: tint,
-              size: 2 + Math.random() * 4
-          });
+        eng.spawnParticle({
+          x: player.x + (Math.random() - 0.5) * 32,
+          y: player.y + (Math.random() - 0.5) * 32,
+          z: (player.z || 0) + Math.random() * 64,
+          vx: (Math.random() - 0.5) * 80,
+          vy: (Math.random() - 0.5) * 80,
+          vz: 50 + Math.random() * 100,
+          noGravity: true,
+          life: 0.2 + Math.random() * 0.3,
+          maxLife: 0.5,
+          color: tint,
+          size: 2 + Math.random() * 4
+        });
       }
 
       if (player.teleportTarget.timer <= 0) {
-          eng.cameraShake = Math.max(eng.cameraShake, 6);
-          const targetX = player.teleportTarget.x;
-          const targetY = player.teleportTarget.y;
-          let targetZ = eng.getTerrainZ(targetX, targetY);
-          if (targetZ <= -96) targetZ = 1000; // Drop from sky if chunk isn't loaded locally yet!
+        eng.cameraShake = Math.max(eng.cameraShake, 6);
+        const targetX = player.teleportTarget.x;
+        const targetY = player.teleportTarget.y;
+        let targetZ = eng.getTerrainZ(targetX, targetY);
+        if (targetZ <= -96) targetZ = 1000; // Drop from sky if chunk isn't loaded locally yet!
 
-          eng.network.sendPlayerTeleported();
+        eng.network.sendPlayerTeleported();
 
-          let hasCustom = false;
-          if (powerDef?.visuals?.targetVisuals && powerDef.visuals.targetVisuals.length > 0) {
-            powerDef.visuals.targetVisuals.forEach(vis => {
-              if (vis.sequence && vis.sequence !== 'None') {
-                hasCustom = true;
-                setTimeout(() => {
-                  const fxData = {
-                    x: targetX, y: targetY, z: targetZ + (vis.offsetZ || 0),
-                    vx: 0, vy: 0, vz: 0, life: 0.6, maxLife: 0.6, crumpleTimer: 0,
-                    wasteTex: vis.sequence, isFX: true, color: tint
-                  };
-                  eng.debris.push(fxData);
-                  if (eng.network) eng.network.sendSpawnFX(fxData);
-                }, (vis.delay || 0) * 1000);
-              }
-            });
-          }
-          if (!hasCustom) {
-            // Fallback to old hardcoded effects
-            const fxData = {
-              x: targetX, y: targetY, z: targetZ + 50, vx: 0, vy: 0, vz: 0,
-              life: 0.6, maxLife: 0.6, crumpleTimer: 0, wasteTex: 'fx_teleport', isFX: true
-            };
-            const fxData2 = {
-              x: targetX, y: targetY, z: targetZ + 32, vx: 0, vy: 0, vz: 0,
-              life: 0.6, maxLife: 0.6, crumpleTimer: 0, wasteTex: 'fx_teleport_2', isFX: true
-            };
-            eng.debris.push(fxData);
-            eng.debris.push(fxData2);
-            if (eng.network) { eng.network.sendSpawnFX(fxData); eng.network.sendSpawnFX(fxData2); }
-          }
+        let hasCustom = false;
+        if (powerDef?.visuals?.targetVisuals && powerDef.visuals.targetVisuals.length > 0) {
+          powerDef.visuals.targetVisuals.forEach(vis => {
+            if (vis.sequence && vis.sequence !== 'None') {
+              hasCustom = true;
+              setTimeout(() => {
+                const fxData = {
+                  x: targetX, y: targetY, z: targetZ + (vis.offsetZ || 0),
+                  vx: 0, vy: 0, vz: 0, life: 0.6, maxLife: 0.6, crumpleTimer: 0,
+                  wasteTex: vis.sequence, isFX: true, color: tint
+                };
+                eng.debris.push(fxData);
+                if (eng.network) eng.network.sendSpawnFX(fxData);
+              }, (vis.delay || 0) * 1000);
+            }
+          });
+        }
+        if (!hasCustom) {
+          // Fallback to old hardcoded effects
+          const fxData = {
+            x: targetX, y: targetY, z: targetZ + 50, vx: 0, vy: 0, vz: 0,
+            life: 0.6, maxLife: 0.6, crumpleTimer: 0, wasteTex: 'fx_teleport', isFX: true
+          };
+          const fxData2 = {
+            x: targetX, y: targetY, z: targetZ + 32, vx: 0, vy: 0, vz: 0,
+            life: 0.6, maxLife: 0.6, crumpleTimer: 0, wasteTex: 'fx_teleport_2', isFX: true
+          };
+          eng.debris.push(fxData);
+          eng.debris.push(fxData2);
+          if (eng.network) { eng.network.sendSpawnFX(fxData); eng.network.sendSpawnFX(fxData2); }
+        }
 
-          player.x = targetX;
-          player.y = targetY;
-          player.z = targetZ;
-          eng.camera.x = player.x;
-          eng.camera.y = player.y;
+        player.x = targetX;
+        player.y = targetY;
+        player.z = targetZ;
+        eng.camera.x = player.x;
+        eng.camera.y = player.y;
 
-          for (let i = 0; i < 60; i++) {
-              eng.spawnParticle({
-                  x: targetX + (Math.random() - 0.5) * 40,
-                  y: targetY + (Math.random() - 0.5) * 40,
-                  z: targetZ + Math.random() * 80,
-                  vx: (Math.random() - 0.5) * 300,
-                  vy: (Math.random() - 0.5) * 300,
-                  vz: (Math.random() - 0.5) * 300,
-                  life: 0.3 + Math.random() * 0.4,
-                  maxLife: 0.7,
-                  color: tint,
-                  size: 3 + Math.random() * 5
-              });
-          }
-          for (let i = 0; i < 40; i++) {
-             const angle = (i / 40) * Math.PI * 2;
-             eng.spawnParticle({
-                 x: targetX,
-                 y: targetY,
-                 z: targetZ + 5,
-                 vx: Math.cos(angle) * 500,
-                 vy: Math.sin(angle) * 500,
-                 vz: 0,
-                 life: 0.4,
-                 maxLife: 0.4,
-                 color: tint,
-                 size: 6
-             });
-          }
+        for (let i = 0; i < 60; i++) {
+          eng.spawnParticle({
+            x: targetX + (Math.random() - 0.5) * 40,
+            y: targetY + (Math.random() - 0.5) * 40,
+            z: targetZ + Math.random() * 80,
+            vx: (Math.random() - 0.5) * 300,
+            vy: (Math.random() - 0.5) * 300,
+            vz: (Math.random() - 0.5) * 300,
+            life: 0.3 + Math.random() * 0.4,
+            maxLife: 0.7,
+            color: tint,
+            size: 3 + Math.random() * 5
+          });
+        }
+        for (let i = 0; i < 40; i++) {
+          const angle = (i / 40) * Math.PI * 2;
+          eng.spawnParticle({
+            x: targetX,
+            y: targetY,
+            z: targetZ + 5,
+            vx: Math.cos(angle) * 500,
+            vy: Math.sin(angle) * 500,
+            vz: 0,
+            life: 0.4,
+            maxLife: 0.4,
+            color: tint,
+            size: 6
+          });
+        }
 
-          player.teleportTarget = null;
+        player.teleportTarget = null;
       }
     }
 
@@ -203,55 +203,55 @@ export class EntityManager {
       let netBattery = 0;
 
       if (eng.playerData.powers) {
-         eng.playerData.powers.forEach(pId => {
-            const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
-            if (pDef && pDef.type?.toLowerCase() === 'passive') {
-               let canRecover = true;
-               if (pDef.engineScript?.trim().toLowerCase() === 'solar_recovery') {
-                  const cycleDuration = 480000;
-                  let realT = ((Date.now() % cycleDuration) / cycleDuration);
-                  let realAngle = (realT < (2 / 3)) ? (realT / (2 / 3)) * Math.PI : Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
-                  if (Math.sin(realAngle) <= 0) canRecover = false;
-               }
-               if (pDef.engineScript?.trim().toLowerCase() === 'lunar_recovery') {
-                  const cycleDuration = 480000;
-                  let realT = ((Date.now() % cycleDuration) / cycleDuration);
-                  let realAngle = (realT < (2 / 3)) ? (realT / (2 / 3)) * Math.PI : Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
-                  if (Math.sin(realAngle) > 0) canRecover = false;
-               }
-               if (canRecover) {
-                 netEnergy += pDef.stats?.recoveryRatePerSecond || 0;
-                 netBattery += pDef.stats?.batteryRecoveryRatePerSecond || 0;
-               }
+        eng.playerData.powers.forEach(pId => {
+          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+          if (pDef && pDef.type?.toLowerCase() === 'passive') {
+            let canRecover = true;
+            if (pDef.engineScript?.trim().toLowerCase() === 'solar_recovery') {
+              const cycleDuration = 480000;
+              let realT = ((Date.now() % cycleDuration) / cycleDuration);
+              let realAngle = (realT < (2 / 3)) ? (realT / (2 / 3)) * Math.PI : Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
+              if (Math.sin(realAngle) <= 0) canRecover = false;
             }
-         });
+            if (pDef.engineScript?.trim().toLowerCase() === 'lunar_recovery') {
+              const cycleDuration = 480000;
+              let realT = ((Date.now() % cycleDuration) / cycleDuration);
+              let realAngle = (realT < (2 / 3)) ? (realT / (2 / 3)) * Math.PI : Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
+              if (Math.sin(realAngle) > 0) canRecover = false;
+            }
+            if (canRecover) {
+              netEnergy += pDef.stats?.recoveryRatePerSecond || 0;
+              netBattery += pDef.stats?.batteryRecoveryRatePerSecond || 0;
+            }
+          }
+        });
       }
       if (player.activePowers) {
-         player.activePowers.forEach(pId => {
-            const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
-            if (pDef && pDef.type?.toLowerCase() === 'toggle') {
-               netEnergy -= pDef.stats?.energyCostPerSecond || 0;
-               netBattery -= pDef.stats?.batteryCostPerSecond || 0;
-            }
-         });
+        player.activePowers.forEach(pId => {
+          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
+          if (pDef && pDef.type?.toLowerCase() === 'toggle') {
+            netEnergy -= pDef.stats?.energyCostPerSecond || 0;
+            netBattery -= pDef.stats?.batteryCostPerSecond || 0;
+          }
+        });
       }
 
       if (netBattery > 0 && player.synthEnergy < (player.maxSynthEnergy || 1000)) {
-         if (Math.random() > 0.6) {
-             eng.spawnParticle({
-                 x: player.x + (Math.random() - 0.5) * 32,
-                 y: player.y + (Math.random() - 0.5) * 32,
-                 z: (player.z || 0) + Math.random() * 20,
-                 vx: (Math.random() - 0.5) * 15,
-                 vy: (Math.random() - 0.5) * 15,
-                 vz: 30 + Math.random() * 30,
-                 life: 0.3 + Math.random() * 0.4,
-                 maxLife: 0.7,
-                 color: '#00d2ff', // Cyan / Battery color
-                 size: 2 + Math.random() * 3,
-                 noGravity: true
-             });
-         }
+        if (Math.random() > 0.6) {
+          eng.spawnParticle({
+            x: player.x + (Math.random() - 0.5) * 32,
+            y: player.y + (Math.random() - 0.5) * 32,
+            z: (player.z || 0) + Math.random() * 20,
+            vx: (Math.random() - 0.5) * 15,
+            vy: (Math.random() - 0.5) * 15,
+            vz: 30 + Math.random() * 30,
+            life: 0.3 + Math.random() * 0.4,
+            maxLife: 0.7,
+            color: '#00d2ff', // Cyan / Battery color
+            size: 2 + Math.random() * 3,
+            noGravity: true
+          });
+        }
       }
 
       let updatedUI = false;
@@ -278,7 +278,7 @@ export class EntityManager {
         eng.camera.x = player.x;
         eng.camera.y = player.y;
         eng.ui.update();
-        eng.chat.addMessage('system', 'System', 'You have respawned!');
+        eng.ui.showSystemMessage('You have respawned!');
         eng.lastEmit.state = 'respawning';
       }
     } else {
@@ -302,20 +302,20 @@ export class EntityManager {
       }
 
       if (player.teleportTarget || (eng.arcadeSystem && eng.arcadeSystem.isActive)) {
-         screenDx = 0; screenDy = 0;
-         isPressingShift = false; isPressingSpace = false;
-         player.vx = 0; player.vy = 0;
-         player.momentumX = 0; player.momentumY = 0;
-         player.state = player.teleportTarget ? player.state : 'idle';
-         player.frame = player.teleportTarget ? player.frame : 0;
+        screenDx = 0; screenDy = 0;
+        isPressingShift = false; isPressingSpace = false;
+        player.vx = 0; player.vy = 0;
+        player.momentumX = 0; player.momentumY = 0;
+        player.state = player.teleportTarget ? player.state : 'idle';
+        player.frame = player.teleportTarget ? player.frame : 0;
       } else {
-         if (eng.input.isActionDown('moveForward')) screenDy -= 1;
-         if (eng.input.isActionDown('moveBackward')) screenDy += 1;
-         if (eng.input.isActionDown('moveLeft')) screenDx -= 1;
-         if (eng.input.isActionDown('moveRight')) screenDx += 1;
-         const isSprintDown = eng.input.isActionDown('sprint');
-         isPressingShift = eng.clientSettings.alwaysSprint ? !isSprintDown : isSprintDown;
-         isPressingSpace = eng.input.isActionDown('jump');
+        if (eng.input.isActionDown('moveForward')) screenDy -= 1;
+        if (eng.input.isActionDown('moveBackward')) screenDy += 1;
+        if (eng.input.isActionDown('moveLeft')) screenDx -= 1;
+        if (eng.input.isActionDown('moveRight')) screenDx += 1;
+        const isSprintDown = eng.input.isActionDown('sprint');
+        isPressingShift = eng.clientSettings.alwaysSprint ? !isSprintDown : isSprintDown;
+        isPressingSpace = eng.input.isActionDown('jump');
       }
     }
 
@@ -335,7 +335,7 @@ export class EntityManager {
 
       player.vx = nx * Math.cos(totalRotation) - ny * Math.sin(totalRotation);
       player.vy = nx * Math.sin(totalRotation) + ny * Math.cos(totalRotation);
-          } else if (player.movePath && player.movePath.length > 0) {
+    } else if (player.movePath && player.movePath.length > 0) {
       player.moveTarget.timer -= (dt / 1000);
       if (player.moveTarget.timer <= 0) {
         player.moveTarget = null;
@@ -358,7 +358,7 @@ export class EntityManager {
 
           const tz = currentTarget.z !== undefined ? currentTarget.z : eng.getTerrainZ(currentTarget.x, currentTarget.y);
           if (tz > (player.z || 0) + 8 && (player.vz || 0) <= 0 && player.actionTimer <= 0) {
-             isPressingSpace = true;
+            isPressingSpace = true;
           }
 
         } else {
@@ -433,9 +433,9 @@ export class EntityManager {
         }
       }
 
-        if (!isPressingSpace && player.wasPressingSpace && player.vz > 0) {
-          player.vz *= 0.4;
-        }
+      if (!isPressingSpace && player.wasPressingSpace && player.vz > 0) {
+        player.vz *= 0.4;
+      }
     }
     player.wasPressingSpace = isPressingSpace;
 
@@ -495,10 +495,10 @@ export class EntityManager {
           player.superSpeedMult = 1.0;
         }
 
-    if (player.activeEffects && player.activeEffects.some(e => e.id === 'status_stun')) {
-        speed *= 0.2;
-        player.superSpeedMult = 1.0;
-    }
+        if (player.activeEffects && player.activeEffects.some(e => e.id === 'status_stun')) {
+          speed *= 0.2;
+          player.superSpeedMult = 1.0;
+        }
 
         if (player.wasInWater) speed *= 0.4; // Wading/swimming penalty
         else if (eng.mapManager) {
@@ -604,17 +604,17 @@ export class EntityManager {
         const accel = isOnGround ? 1000 : (player.activePowers && player.activePowers.includes('fly') ? 800 : 400);
 
         if (Math.sign(player.momentumX) === Math.sign(targetVx) && Math.abs(player.momentumX) > Math.abs(targetVx)) {
-           // Preserve excess momentum when pushing the same direction
+          // Preserve excess momentum when pushing the same direction
         } else {
-           if (player.momentumX < targetVx) player.momentumX = Math.min(targetVx, player.momentumX + accel * (dt / 1000));
-           else if (player.momentumX > targetVx) player.momentumX = Math.max(targetVx, player.momentumX - accel * (dt / 1000));
+          if (player.momentumX < targetVx) player.momentumX = Math.min(targetVx, player.momentumX + accel * (dt / 1000));
+          else if (player.momentumX > targetVx) player.momentumX = Math.max(targetVx, player.momentumX - accel * (dt / 1000));
         }
 
         if (Math.sign(player.momentumY) === Math.sign(targetVy) && Math.abs(player.momentumY) > Math.abs(targetVy)) {
-           // Preserve excess momentum when pushing the same direction
+          // Preserve excess momentum when pushing the same direction
         } else {
-           if (player.momentumY < targetVy) player.momentumY = Math.min(targetVy, player.momentumY + accel * (dt / 1000));
-           else if (player.momentumY > targetVy) player.momentumY = Math.max(targetVy, player.momentumY - accel * (dt / 1000));
+          if (player.momentumY < targetVy) player.momentumY = Math.min(targetVy, player.momentumY + accel * (dt / 1000));
+          else if (player.momentumY > targetVy) player.momentumY = Math.max(targetVy, player.momentumY - accel * (dt / 1000));
         }
       }
 
@@ -797,7 +797,8 @@ export class EntityManager {
     if (player.frameTimer >= currentInterval) {
       player.frameTimer -= currentInterval;
       const maxFrames = this.getFrameCount(player.state);
-      if (player.state === 'death') {
+      const isOneShot = player.state.startsWith('attack') || player.state.startsWith('throw-attack') || player.state.startsWith('cast:');
+      if (player.state === 'death' || isOneShot) {
         if (player.frame < maxFrames - 1) player.frame++;
       } else {
         player.frame = (player.frame + 1) % maxFrames;
@@ -808,8 +809,8 @@ export class EntityManager {
   updateNpcs(dt) {
     this.engine.npcs.forEach(npc => {
       if (npc.serverX !== undefined && npc.serverY !== undefined) {
-         npc.x += (npc.serverX - npc.x) * 10 * (dt / 1000);
-         npc.y += (npc.serverY - npc.y) * 10 * (dt / 1000);
+        npc.x += (npc.serverX - npc.x) * 10 * (dt / 1000);
+        npc.y += (npc.serverY - npc.y) * 10 * (dt / 1000);
       }
 
       if (npc.hurtTimer > 0) npc.hurtTimer -= dt;
@@ -820,7 +821,8 @@ export class EntityManager {
       if (npc.frameTimer >= npcInterval) {
         npc.frameTimer -= npcInterval;
         const maxFrames = this.getFrameCount(npc.state);
-        if (npc.state === 'dead') {
+        const isOneShot = npc.state && (npc.state.startsWith('attack') || npc.state.startsWith('throw-attack') || npc.state.startsWith('cast:'));
+        if (npc.state === 'dead' || isOneShot) {
           if (npc.frame < maxFrames - 1) npc.frame++;
         } else {
           npc.frame = (npc.frame + 1) % maxFrames;
@@ -839,7 +841,8 @@ export class EntityManager {
       if (op.frameTimer >= opInterval) {
         op.frameTimer -= opInterval;
         const maxFrames = this.getFrameCount(op.state || 'idle');
-        if (op.state === 'death') {
+        const isOneShot = op.state && (op.state.startsWith('attack') || op.state.startsWith('throw-attack') || op.state.startsWith('cast:'));
+        if (op.state === 'death' || isOneShot) {
           if ((op.frame || 0) < maxFrames - 1) op.frame = (op.frame || 0) + 1;
         } else {
           op.frame = ((op.frame || 0) + 1) % maxFrames;
@@ -848,28 +851,28 @@ export class EntityManager {
 
       const opGroundZ = this.engine.getTerrainZ(op.x, op.y);
       if (op.activePowers && op.activePowers.includes('super-speed') && (op.state === 'run' || op.state === 'dash') && Math.abs((op.z || 0) - opGroundZ) < 1.0) {
-         if (Math.random() > 0.6) {
-             this.engine.debris.push({
-               x: op.x + (Math.random() - 0.5) * 16, y: op.y + (Math.random() - 0.5) * 16, z: (op.z || 0) + 19,
-               vx: 0, vy: 0, vz: 0, life: 0.3, maxLife: 0.3, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
-               color: '#f1c40f',
-               flipX: Math.random() > 0.5
-             });
-         }
-         if (Math.random() > 0.4) {
-             this.engine.spawnParticle({
-                x: op.x + (Math.random() - 0.5) * 16,
-                y: op.y + (Math.random() - 0.5) * 16,
-                z: (op.z || 0) + 2,
-                vx: (Math.random() - 0.5) * 50,
-                vy: (Math.random() - 0.5) * 50,
-                vz: 10 + Math.random() * 40,
-                life: 0.2 + Math.random() * 0.3,
-                maxLife: 0.5,
-                color: '#f1c40f',
-                size: 2 + Math.random() * 4
-             });
-         }
+        if (Math.random() > 0.6) {
+          this.engine.debris.push({
+            x: op.x + (Math.random() - 0.5) * 16, y: op.y + (Math.random() - 0.5) * 16, z: (op.z || 0) + 19,
+            vx: 0, vy: 0, vz: 0, life: 0.3, maxLife: 0.3, crumpleTimer: 0, wasteTex: 'fx_speed_step', isFX: true,
+            color: '#f1c40f',
+            flipX: Math.random() > 0.5
+          });
+        }
+        if (Math.random() > 0.4) {
+          this.engine.spawnParticle({
+            x: op.x + (Math.random() - 0.5) * 16,
+            y: op.y + (Math.random() - 0.5) * 16,
+            z: (op.z || 0) + 2,
+            vx: (Math.random() - 0.5) * 50,
+            vy: (Math.random() - 0.5) * 50,
+            vz: 10 + Math.random() * 40,
+            life: 0.2 + Math.random() * 0.3,
+            maxLife: 0.5,
+            color: '#f1c40f',
+            size: 2 + Math.random() * 4
+          });
+        }
       }
     });
   }
@@ -949,11 +952,11 @@ export class EntityManager {
       let height = 154;
 
       if (entity.type === 'drone') {
-            width = 32;
-            height = 32;
-            hitBox.scale.set(48, 48, 48);
-            hitBox.position.set(0, 0, 16);
-            sprite.position.copy(camUp).multiplyScalar(16);
+        width = 32;
+        height = 32;
+        hitBox.scale.set(48, 48, 48);
+        hitBox.position.set(0, 0, 16);
+        sprite.position.copy(camUp).multiplyScalar(16);
 
         if (entity.isUpgraded) sprite.material.color.setHex(0xf1c40f); // Tint gold if upgraded!
         else sprite.material.color.setHex(0xffffff);
@@ -978,29 +981,29 @@ export class EntityManager {
       const hasStun = entity.activeEffects && entity.activeEffects.some(e => e.type === 'Status' && e.statusType === 'stun');
       let stunSprite = group.userData.stunSprite;
       if (hasStun) {
-          if (!stunSprite) {
-              const tex = renderer.assetManager.textures['fx_stun'];
-              if (tex) {
-                  const mat = new THREE.SpriteMaterial({ map: tex.clone(), color: 0xffffff, transparent: true });
-                  stunSprite = new THREE.Sprite(mat);
-                  stunSprite.scale.set(48, 48, 1);
-                  stunSprite.position.set(0, 0, 60); // Above head
-                  group.add(stunSprite);
-                  group.userData.stunSprite = stunSprite;
-              }
+        if (!stunSprite) {
+          const tex = renderer.assetManager.textures['fx_stun'];
+          if (tex) {
+            const mat = new THREE.SpriteMaterial({ map: tex.clone(), color: 0xffffff, transparent: true });
+            stunSprite = new THREE.Sprite(mat);
+            stunSprite.scale.set(48, 48, 1);
+            stunSprite.position.set(0, 0, 60); // Above head
+            group.add(stunSprite);
+            group.userData.stunSprite = stunSprite;
           }
-          if (stunSprite && stunSprite.material.map) {
-              const seqData = renderer.assetManager.sequenceLibrary['fx_stun'];
-              if (seqData) {
-                  const frames = seqData.frames;
-                  stunSprite.material.map.repeat.set(1 / frames, 1);
-                  const frameIdx = Math.floor(performance.now() / (seqData.speed || 100)) % frames;
-                  stunSprite.material.map.offset.set(frameIdx / frames, 0);
-              }
-              stunSprite.visible = true;
+        }
+        if (stunSprite && stunSprite.material.map) {
+          const seqData = renderer.assetManager.sequenceLibrary['fx_stun'];
+          if (seqData) {
+            const frames = seqData.frames;
+            stunSprite.material.map.repeat.set(1 / frames, 1);
+            const frameIdx = Math.floor(performance.now() / (seqData.speed || 100)) % frames;
+            stunSprite.material.map.offset.set(frameIdx / frames, 0);
           }
+          stunSprite.visible = true;
+        }
       } else if (stunSprite) {
-          stunSprite.visible = false;
+        stunSprite.visible = false;
       }
 
       if (shadow) {
@@ -1014,15 +1017,15 @@ export class EntityManager {
       }
 
       if (shield) {
-          if (entity.activeEffects && entity.activeEffects.some(e => e.id === 'spawn_protection')) {
-              shield.visible = true;
-              shield.position.copy(camUp).multiplyScalar(32);
-              const scale = 1.0 + Math.sin(performance.now() / 150) * 0.05;
-              shield.scale.set(scale, scale, scale);
-              shield.material.opacity = 0.2 + Math.sin(performance.now() / 150) * 0.1;
-          } else {
-              shield.visible = false;
-          }
+        if (entity.activeEffects && entity.activeEffects.some(e => e.id === 'spawn_protection')) {
+          shield.visible = true;
+          shield.position.copy(camUp).multiplyScalar(32);
+          const scale = 1.0 + Math.sin(performance.now() / 150) * 0.05;
+          shield.scale.set(scale, scale, scale);
+          shield.material.opacity = 0.2 + Math.sin(performance.now() / 150) * 0.1;
+        } else {
+          shield.visible = false;
+        }
       }
 
       const relDir = renderer.getRelativeSpriteDirection(entity.dir || 'down');
@@ -1033,7 +1036,7 @@ export class EntityManager {
 
         if (sprite.userData.mapUuid !== tex.uuid) {
           if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
-              sprite.material.map.dispose();
+            sprite.material.map.dispose();
           }
           sprite.material.map = tex.clone();
           if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
@@ -1042,21 +1045,21 @@ export class EntityManager {
         }
 
         if (entity.type === 'drone') {
-            const dFrames = this.getFrameCount(state);
-            const isFlipped = !!entity.isFlipped;
-            sprite.material.map.repeat.set((isFlipped ? -1 : 1) / dFrames, 1);
-            let frameIdx = (entity.frame || 0) / dFrames;
-            if (isFlipped) frameIdx += (1 / dFrames);
-            sprite.material.map.offset.set(frameIdx, 0);
+          const dFrames = this.getFrameCount(state);
+          const isFlipped = !!entity.isFlipped;
+          sprite.material.map.repeat.set((isFlipped ? -1 : 1) / dFrames, 1);
+          let frameIdx = (entity.frame || 0) / dFrames;
+          if (isFlipped) frameIdx += (1 / dFrames);
+          sprite.material.map.offset.set(frameIdx, 0);
         } else {
-            let dirCols = {
-              'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
-              'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
-            };
-            const colIndex = dirCols[relDir] !== undefined ? dirCols[relDir] : 3;
-            const rows = tex.userData.rows || 8;
-            sprite.material.map.offset.x = colIndex / 8;
-            sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);
+          let dirCols = {
+            'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
+            'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
+          };
+          const colIndex = dirCols[relDir] !== undefined ? dirCols[relDir] : 3;
+          const rows = tex.userData.rows || 8;
+          sprite.material.map.offset.x = colIndex / 8;
+          sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);
         }
 
         const maxFrames = this.getFrameCount(state);
@@ -1127,37 +1130,37 @@ export class EntityManager {
       const shadow = group.userData.shadow;
 
       if (deb.isFX && sprite.material.blending !== THREE.AdditiveBlending) {
-          if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
-              sprite.material.map.dispose();
-          }
-          sprite.material.dispose();
-          sprite.material = renderer.baseFXMaterial.clone();
-          sprite.material.onBeforeCompile = renderer.baseFXMaterial.onBeforeCompile;
-          sprite.material.customProgramCacheKey = renderer.baseFXMaterial.customProgramCacheKey;
-          sprite.userData.mapUuid = null;
+        if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+          sprite.material.map.dispose();
+        }
+        sprite.material.dispose();
+        sprite.material = renderer.baseFXMaterial.clone();
+        sprite.material.onBeforeCompile = renderer.baseFXMaterial.onBeforeCompile;
+        sprite.material.customProgramCacheKey = renderer.baseFXMaterial.customProgramCacheKey;
+        sprite.userData.mapUuid = null;
       } else if (!deb.isFX && sprite.material.blending !== THREE.NormalBlending) {
-          if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
-              sprite.material.map.dispose();
-          }
-          sprite.material.dispose();
-          sprite.material = renderer.baseDebrisMaterial.clone();
-          sprite.material.onBeforeCompile = renderer.baseDebrisMaterial.onBeforeCompile;
-          sprite.material.customProgramCacheKey = renderer.baseDebrisMaterial.customProgramCacheKey;
-          sprite.userData.mapUuid = null;
+        if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
+          sprite.material.map.dispose();
+        }
+        sprite.material.dispose();
+        sprite.material = renderer.baseDebrisMaterial.clone();
+        sprite.material.onBeforeCompile = renderer.baseDebrisMaterial.onBeforeCompile;
+        sprite.material.customProgramCacheKey = renderer.baseDebrisMaterial.customProgramCacheKey;
+        sprite.userData.mapUuid = null;
       }
 
       let texName = deb.wasteTex;
       if (!deb.isFX) {
-          if (deb.isCharred) texName = 'charred_1';
-          else if (deb.crumpleTimer > 0.2) texName = 'cronched_1';
-          else if (deb.crumpleTimer > 0.1) texName = 'cronched_2';
-          else if (deb.crumpleTimer > 0) texName = 'cronched_3';
+        if (deb.isCharred) texName = 'charred_1';
+        else if (deb.crumpleTimer > 0.2) texName = 'cronched_1';
+        else if (deb.crumpleTimer > 0.1) texName = 'cronched_2';
+        else if (deb.crumpleTimer > 0) texName = 'cronched_3';
       }
 
       const tex = renderer.assetManager.textures[texName];
       if (tex && sprite.userData.mapUuid !== tex.uuid) {
         if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
-            sprite.material.map.dispose();
+          sprite.material.map.dispose();
         }
         sprite.material.map = tex.clone();
         if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
@@ -1209,16 +1212,16 @@ export class EntityManager {
             sprite.scale.set(192 * sMult, 192 * sMult, 1);
           } else {
             const speed = seqData.speed || 80;
-              const elapsedMs = (deb.maxLife - deb.life) * 1000;
-              const frameIndex = Math.floor(elapsedMs / speed) % frameCount;
+            const elapsedMs = (deb.maxLife - deb.life) * 1000;
+            const frameIndex = Math.floor(elapsedMs / speed) % frameCount;
             if (sprite.material.map) sprite.material.map.offset.set(frameIndex / frameCount, 0);
             if (texName === 'fx_electric_zap') sprite.scale.set((deb.flipX ? -128 : 128) * sMult, 128 * sMult, 1);
           }
         } else if ((texName === 'fx_teleport' || texName === 'fx_teleport_2' || texName === 'fx_speed_start' || texName === 'fx_speed_step') && tex) {
-           const frameCount = texName === 'fx_speed_start' ? 9 : 8;
-             const elapsedMs = (deb.maxLife - deb.life) * 1000;
-             const frameIndex = Math.floor(elapsedMs / 80) % frameCount;
-           if (sprite.material.map) sprite.material.map.offset.set(frameIndex / frameCount, 0);
+          const frameCount = texName === 'fx_speed_start' ? 9 : 8;
+          const elapsedMs = (deb.maxLife - deb.life) * 1000;
+          const frameIndex = Math.floor(elapsedMs / 80) % frameCount;
+          if (sprite.material.map) sprite.material.map.offset.set(frameIndex / frameCount, 0);
         }
       } else {
         sprite.scale.set(48, 48, 1);

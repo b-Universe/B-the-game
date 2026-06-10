@@ -8,6 +8,7 @@ import { GAME_TIPS } from './tips.js?v=cache-bust-005';
 import { PowerEditorUIManager } from '../power-editor-ui.js?v=cache-bust-005';
 import { PlayerModifierUIManager } from './player-modifier-ui.js?v=cache-bust-005';
 import { ProgressionSystem } from '../windows/progression.js?v=cache-bust-005';
+import { CombatStatsUIManager } from './combat-stats-ui.js?v=cache-bust-005';
 
 export class UIManager {
   constructor(engine) {
@@ -21,6 +22,7 @@ export class UIManager {
     this.friendsList = new FriendsUIManager(engine, this);
     this.powerEditor = new PowerEditorUIManager(engine);
     this.playerModifier = new PlayerModifierUIManager(engine, this);
+    this.combatStats = new CombatStatsUIManager(engine, this);
 
     this.setupContextMenu();
     this.setupLoadingScreen();
@@ -125,26 +127,48 @@ export class UIManager {
       altUiContainer.style.cssText = 'position: absolute; top: 10px; right: 10px; width: 280px; background: rgba(5, 7, 10, 0.85); border: 2px solid #3498db; border-radius: 6px; padding: 10px; display: none; flex-direction: column; gap: 6px; z-index: 1000; pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
 
       altUiContainer.innerHTML = `
-        <div id="alt-ui-drag-handle" style="display: flex; justify-content: space-between; align-items: center; cursor: move; padding-bottom: 4px; border-bottom: 1px solid #333; margin-bottom: 4px;">
-          <div id="alt-ui-level" style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid #f1c40f; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; font-family: var(--font-header); background: rgba(0, 0, 0, 0.8); font-size: 0.85rem;">1</div>
-          <div id="alt-ui-name" style="flex-grow: 1; text-align: left; padding-left: 10px; color: #fff; font-weight: bold; font-family: var(--font-header); text-shadow: 1px 1px 0 #000; font-size: 1rem;">Player Name</div>
-          <button id="alt-ui-menu-btn" style="background: #3498db; color: #fff; border: 1px solid #2980b9; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: var(--font-header); font-size: 0.8rem; transition: background 0.2s;">Menu</button>
+        <div id="alt-ui-drag-handle" style="display: flex; justify-content: space-between; align-items: center; cursor: move; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; gap: 10px;">
+          <div id="alt-ui-level" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #9b59b6; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; font-family: 'Arial Black', Impact, sans-serif; background: linear-gradient(135deg, #111, #333); font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.8);">1</div>
+          <div id="alt-ui-name" style="flex-grow: 1; text-align: left; color: #fff; font-weight: bold; font-family: 'Arial Black', Impact, sans-serif; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8); font-size: 1.1rem; letter-spacing: 0.5px;">Player Name</div>
+          <button id="alt-ui-menu-btn" style="background: linear-gradient(to bottom, #34495e, #2c3e50); color: #fff; border: 1px solid #1abc9c; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: 'Arial Black', Impact, sans-serif; font-size: 0.8rem; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: all 0.2s;">Menu</button>
+          <div id="alt-ui-dropdown" style="position: absolute; top: 100%; right: 0; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; gap: 5px; padding: 10px; z-index: 1001; min-width: 200px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); cursor: default; margin-top: 10px;">
+          <p style="text-align: center; margin: 0; color: #1abc9c">Game</p>
+            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-player-search" style="text-align: left; padding: 6px 10px;">Player Search</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-fullscreen-map" style="text-align: left; padding: 6px 10px;">Fullscreen Map</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-inventory" style="text-align: left; padding: 6px 10px;">Inventory</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-editmode" style="text-align: left; padding: 6px 10px;">Builder Mode (/edit)</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-dev-tools" style="text-align: left; padding: 6px 10px; display: none; border-color: #1abc9c; color: #1abc9c;">Developer Tools</button>
+            <p style="text-align: center; margin: 0; color: #1abc9c">Combat</p>
+            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-combat-stats" style="text-align: left; padding: 6px 10px;">Combat Statistics</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-powers" style="text-align: left; padding: 6px 10px;">Powers and Abilities</button>
+            <p style="text-align: center; margin: 0; color: #1abc9c">Account</p>
+            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-settings" style="text-align: left; padding: 6px 10px;">Settings</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-char-select" style="text-align: left; padding: 6px 10px;">Change Character</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-logout" style="text-align: left; padding: 6px 10px; color: #e74c3c; border-color: #e74c3c;">Logout</button>
+          </div>
         </div>
-        <div style="position: relative; height: 16px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden;">
-          <div id="alt-ui-hp-fill" style="height: 100%; width: 100%; background: #2ecc71; transition: width 0.2s;"></div>
-          <div id="alt-ui-hp-text" style="position: absolute; width: 100%; text-align: center; top: -1px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
+        <div style="position: relative; height: 18px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+          <div id="alt-ui-hp-fill" style="height: 100%; width: 100%; background: linear-gradient(to right, #27ae60, #2ecc71); transition: width 0.2s;"></div>
+          <div id="alt-ui-hp-text" style="position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
         </div>
-        <div style="position: relative; height: 16px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden;">
-          <div id="alt-ui-ep-fill" style="height: 100%; width: 100%; background: #0984e3; transition: width 0.2s;"></div>
-          <div id="alt-ui-ep-text" style="position: absolute; width: 100%; text-align: center; top: -1px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
+        <div style="position: relative; height: 18px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+          <div id="alt-ui-ep-fill" style="height: 100%; width: 100%; background: linear-gradient(to right, #0984e3, #74b9ff); transition: width 0.2s;"></div>
+          <div id="alt-ui-ep-text" style="position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
         </div>
-        <div style="position: relative; height: 16px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden;" id="alt-ui-bp-container">
-          <div id="alt-ui-bp-fill" style="height: 100%; width: 100%; background: #00d2ff; transition: width 0.2s;"></div>
-          <div id="alt-ui-bp-text" style="position: absolute; width: 100%; text-align: center; top: -1px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
+        <div style="position: relative; height: 18px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px;" id="alt-ui-bp-container">
+          <div id="alt-ui-bp-fill" style="height: 100%; width: 100%; background: linear-gradient(to right, #0097e6, #00d2ff); transition: width 0.2s;"></div>
+          <div id="alt-ui-bp-text" style="position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
         </div>
-        <div style="position: relative; height: 10px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-top: 2px;">
-          <div id="alt-ui-xp-fill" style="height: 100%; width: 0%; background: #9b59b6; transition: width 0.2s;"></div>
+        <div id="alt-ui-xp-container" style="position: relative; height: 12px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; display: flex;" title="Experience">
+          <div id="alt-ui-xp-fill" style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: linear-gradient(to right, #8e44ad, #9b59b6); transition: width 0.2s; z-index: 1;"></div>
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; z-index: 2; pointer-events: none;">
+             ${Array.from({length: 10}).map((_, i) => `<div style="flex: 1; border-right: ${i < 9 ? '1px solid rgba(0,0,0,0.8)' : 'none'}; box-sizing: border-box; background: rgba(255,255,255,0.05);"></div>`).join('')}
+          </div>
         </div>
+        <div id="alt-ui-buffs" style="margin-top: 8px; min-height: 24px; display: flex; flex-wrap: wrap; gap: 5px;"></div>
       `;
       const gameScreen = document.getElementById('game-screen');
       if (gameScreen) gameScreen.appendChild(altUiContainer);
@@ -154,17 +178,68 @@ export class UIManager {
       applySavedPos('alt-ui-container', 'b_alt_ui_pos');
 
       const altMenuBtn = document.getElementById('alt-ui-menu-btn');
-      if (altMenuBtn) {
-        altMenuBtn.onclick = () => {
-          const sysMenuBtn = document.getElementById('btn-system-menu') || document.getElementById('btn-in-game-menu') || document.getElementById('btn-menu');
-          if (sysMenuBtn) {
-            sysMenuBtn.click();
-          } else {
-            const dropdown = document.getElementById('system-menu-dropdown') || document.querySelector('.menu-dropdown') || document.getElementById('in-game-menu-dropdown');
-            if (dropdown) {
-              dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
-            }
-          }
+      const altDropdown = document.getElementById('alt-ui-dropdown');
+      if (altMenuBtn && altDropdown) {
+        altMenuBtn.onclick = (e) => {
+          e.stopPropagation();
+          altDropdown.style.display = altDropdown.style.display === 'none' ? 'flex' : 'none';
+        };
+
+        document.addEventListener('click', (e) => {
+           if (altDropdown.style.display === 'flex' && !altDropdown.contains(e.target) && e.target !== altMenuBtn) {
+               altDropdown.style.display = 'none';
+           }
+        });
+
+        const closeDropdown = () => { altDropdown.style.display = 'none'; };
+
+        document.getElementById('alt-btn-combat-stats').onclick = () => {
+           this.combatStats.toggle();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-powers').onclick = () => {
+           document.getElementById('btn-powers')?.click();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-inventory').onclick = () => {
+           document.getElementById('btn-inventory')?.click();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-fullscreen-map').onclick = () => {
+           document.getElementById('btn-fullscreen-map')?.click();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-player-search').onclick = () => {
+           document.getElementById('btn-player-list')?.click();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-editmode').onclick = () => {
+           const chatInput = document.getElementById('chat-input');
+           if (chatInput) {
+               chatInput.value = '/editmode';
+               chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+           }
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-dev-tools').onclick = () => {
+           const chatInput = document.getElementById('chat-input');
+           if (chatInput) {
+               chatInput.value = '/dev';
+               chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+           }
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-settings').onclick = () => {
+           document.getElementById('btn-settings')?.click();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-char-select').onclick = () => {
+           document.getElementById('btn-char-select')?.click();
+           closeDropdown();
+        };
+        document.getElementById('alt-btn-logout').onclick = () => {
+           document.getElementById('btn-logout')?.click();
+           closeDropdown();
         };
       }
     }
@@ -248,7 +323,7 @@ export class UIManager {
       };
       petContainer.innerHTML = `
         <div id="pet-window-header" style="background: rgba(0, 210, 255, 0.2); padding: 5px 10px; border-bottom: 1px solid #00d2ff; display: flex; justify-content: space-between; align-items: center; border-radius: 4px 4px 0 0; margin: -10px -10px 10px -10px;">
-           <span style="color: #fff; font-weight: bold; font-size: 0.85rem; font-family: var(--font-header);">ACTIVE SATELLITE(S)</span>
+           <span style="color: #fff; font-weight: bold; font-size: 0.85rem; font-family: var(--font-mono); text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Robotics</span>
         </div>
         <div id="pet-list-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
       `;
@@ -319,6 +394,7 @@ export class UIManager {
       altUiBpContainer: document.getElementById('alt-ui-bp-container'),
       altUiBpFill: document.getElementById('alt-ui-bp-fill'),
       altUiBpText: document.getElementById('alt-ui-bp-text'),
+      altUiXpContainer: document.getElementById('alt-ui-xp-container'),
       altUiXpFill: document.getElementById('alt-ui-xp-fill'),
       altUiLevel: document.getElementById('alt-ui-level'),
       altUiName: document.getElementById('alt-ui-name'),
@@ -332,7 +408,7 @@ export class UIManager {
     if (!text) return '';
     return text
       // Highlight Commands (e.g. /editmode, /tpz <zoneName>)
-      .replace(/(\/[a-z_]+(?:\s<[^>]+>)?)/gi, '<span style="color: #e056fd; font-weight: bold;">$1</span>')
+      .replace(/(\/[a-z_]+(?:\s<[^>]+>)?)/gi, '<span style="color: #1abc9c; font-weight: bold;">$1</span>')
       // Highlight Keybinds (e.g. 'M', 'N', Shift, Ctrl, Right-Click)
       .replace(/(Shift|Ctrl|Left Click|Right-Click|ESC|'M'|'N'|'P'|'C'|'K')/gi, '<span style="color: #f1c40f; font-weight: bold;">$1</span>')
       // Highlight specific game terms
@@ -883,8 +959,59 @@ export class UIManager {
     const isAltMode = eng.clientSettings.uiMode === 'alternative';
     const bottomHud = document.querySelector('.game-bottom-hud');
     if (bottomHud) bottomHud.style.display = isAltMode ? 'none' : 'flex';
+    const sideHud = document.querySelector('.game-side-hud');
+    if (sideHud) sideHud.style.display = isAltMode ? 'none' : 'flex';
+
+    const pName = eng.playerData && eng.playerData.name ? eng.playerData.name.toLowerCase() : '';
+    const perms = eng.permissions || {};
+    const hasEdit = ['editmode', 'builder', 'dev', 'admin'].some(role =>
+        perms[role] && (perms[role].includes('*') || perms[role].includes(pName))
+    );
+
+    const hudEditBtn = document.getElementById('btn-hud-edit');
+    if (hudEditBtn) {
+        hudEditBtn.disabled = !hasEdit;
+        hudEditBtn.style.opacity = hasEdit ? '1' : '0.5';
+        hudEditBtn.style.cursor = hasEdit ? 'pointer' : 'not-allowed';
+    }
+
+    if (isAltMode) {
+       const devBtn = document.getElementById('alt-btn-dev-tools');
+       const editBtn = document.getElementById('alt-btn-editmode');
+       if (devBtn) {
+          const isDev = perms['dev'] && (perms['dev'].includes('*') || perms['dev'].includes(pName));
+          devBtn.style.display = isDev ? 'block' : 'none';
+       }
+       if (editBtn) {
+          editBtn.disabled = !hasEdit;
+          editBtn.style.opacity = hasEdit ? '1' : '0.5';
+          editBtn.style.cursor = hasEdit ? 'pointer' : 'not-allowed';
+       }
+    }
     if (this.els.altUiContainer) this.els.altUiContainer.style.display = isAltMode ? 'flex' : 'none';
     if (this.els.classicXpContainer) this.els.classicXpContainer.style.display = isAltMode ? 'none' : 'block';
+
+    if (this.combatStats && this.combatStats.window.element.style.display !== 'none') {
+        this.combatStats.updateStats();
+    }
+
+    const topBarMenuBtn = document.getElementById('btn-game-menu');
+    if (topBarMenuBtn) topBarMenuBtn.style.display = isAltMode ? 'none' : 'block';
+
+    const buffContainer = document.getElementById('buff-indicator-container');
+    const altBuffSlot = document.getElementById('alt-ui-buffs');
+
+    if (isAltMode) {
+      if (altBuffSlot && this.els.buffList && this.els.buffList.parentNode !== altBuffSlot) {
+        altBuffSlot.appendChild(this.els.buffList);
+      }
+      if (buffContainer) buffContainer.style.display = 'none';
+    } else {
+      if (buffContainer && this.els.buffList && this.els.buffList.parentNode !== buffContainer) {
+        buffContainer.appendChild(this.els.buffList);
+      }
+      if (buffContainer) buffContainer.style.display = 'flex';
+    }
 
     if (this.els.zoneDisplay && eng.currentZone) {
       const zoneText = `ZONE: ${eng.currentZone}`;
@@ -938,6 +1065,7 @@ export class UIManager {
       if (this.els.altUiBpFill) this.els.altUiBpFill.style.width = `${synthPercent * 100}%`;
       if (this.els.altUiBpText) this.els.altUiBpText.innerText = `${Math.floor(eng.player.synthEnergy)} / ${eng.player.maxSynthEnergy}`;
       if (this.els.altUiXpFill) this.els.altUiXpFill.style.width = `${xpPercent}%`;
+      if (this.els.altUiXpContainer) this.els.altUiXpContainer.title = `XP: ${Math.floor(xp)} / ${nextXp}`;
 
       if (eng.clientSettings.mergeSynthBar && this.els.altUiBpContainer) {
         this.els.altUiBpContainer.style.display = 'none';
@@ -1117,9 +1245,19 @@ export class UIManager {
         this.els.targetWindow.style.display = 'flex';
 
         let tColor = '#ffffff';
+        let tFaction = '';
+        if (eng.selectedTarget.type === 'npc') tFaction = targetObj.group || 'Civilian';
+        else if (eng.selectedTarget.type === 'player' || eng.selectedTarget.type === 'self') tFaction = targetObj.alignment || 'Neutral';
+        else if (eng.selectedTarget.type === 'drone') {
+            const owner = eng.otherPlayers[targetObj.ownerSocketId] || (targetObj.ownerSocketId === eng.socket?.id ? eng.playerData : null);
+            tFaction = owner ? (owner.alignment || 'Neutral') : 'Neutral';
+        }
+        tFaction = tFaction.charAt(0).toUpperCase() + tFaction.slice(1);
+
+        const targetLvl = targetObj.level || eng.playerData.level || 1;
+
         if (eng.selectedTarget.type === 'npc' && targetObj.type !== 'trainer' && targetObj.type !== 'civilian') {
             const playerLvl = eng.playerData.level || 1;
-            const targetLvl = targetObj.level || 1;
             const diff = targetLvl - playerLvl;
             if (diff >= 4) tColor = '#ff4757';
             else if (diff === 3) tColor = '#e67e22';
@@ -1129,14 +1267,23 @@ export class UIManager {
             else if (diff === -1) tColor = '#bdc3c7';
             else if (diff === -2) tColor = '#7f8c8d';
             else tColor = '#444444';
-            this.els.targetName.innerHTML = `<span style="color: ${tColor};">${tName} <span style="font-size: 0.75em;">(Lv.${targetObj.level || 1})</span></span>`;
         } else if (eng.selectedTarget.type === 'npc' && targetObj.type === 'civilian') {
-            this.els.targetName.innerHTML = `<span style="color: #bdc3c7;">${tName} <span style="font-size: 0.75em;">(Lv.${targetObj.level || 1})</span></span>`;
+            tColor = '#bdc3c7';
         } else if (eng.selectedTarget.type === 'npc' && targetObj.type === 'trainer') {
-            this.els.targetName.innerHTML = `<span style="color: #3498db;">${tName}</span>`;
+            tColor = '#3498db';
         } else {
-            this.els.targetName.innerHTML = tName;
+            tColor = '#ffffff';
         }
+
+        this.els.targetName.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid ${tColor}; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; font-family: 'Arial Black', Impact, sans-serif; background: linear-gradient(135deg, #111, #333); font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.8); flex-shrink: 0; text-shadow: 1px 1px 0 #000;">${targetLvl}</div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="color: ${tColor}; font-weight: bold; text-shadow: 1px 1px 0 #000; font-size: 1.1rem; line-height: 1;">${tName}</span>
+                    <span style="font-size: 0.75rem; color: #aaa; font-family: var(--font-mono); line-height: 1.2;">[${tFaction}]</span>
+                </div>
+            </div>
+        `;
 
         const hpPercent = Math.max(0, targetObj.hp / targetObj.maxHp);
         this.els.targetHealthFill.style.width = `${hpPercent * 100}%`;
@@ -1172,9 +1319,10 @@ export class UIManager {
             if (drone.isAssaultDrone) dName = 'Assault Drone';
             else if (drone.isCombatDrone) dName = 'Combat Drone';
 
+            const dLevel = drone.level || eng.playerData.level || 1;
             const hpPercent = Math.max(0, drone.hp / drone.maxHp);
             petListHtml += `<div class="pet-item" data-id="${drone.uuid}" style="margin-bottom: 4px; padding: 4px; border: 1px solid transparent; border-radius: 4px; transition: background 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='transparent'">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="color: #00d2ff; font-family: var(--font-header); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 0 #000; pointer-events: none;">${dName}</span><span style="color: #fff; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none;">${Math.floor(drone.hp)} / ${drone.maxHp}</span></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="color: #00d2ff; font-family: var(--font-header); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 0 #000; pointer-events: none;">${dName} <span style="font-size: 0.75em; color: #aaa;">(Lv.${dLevel})</span></span><span style="color: #fff; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none;">${Math.floor(drone.hp)} / ${drone.maxHp}</span></div>
                 <div style="width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; border: 1px solid #333;"><div style="height: 100%; background: #2ecc71; width: ${hpPercent * 100}%; transition: width 0.2s;"></div></div>
             </div>`;
         });
@@ -1211,7 +1359,6 @@ export class UIManager {
         if (pb.style.display !== 'none') currentBottomOffset += pb.offsetHeight + 10;
     }
 
-    const buffContainer = document.getElementById('buff-indicator-container');
     if (eng.clientSettings.snapActivePowers && buffContainer) {
         buffContainer.style.bottom = `${currentBottomOffset}px`;
         buffContainer.style.right = '20px';

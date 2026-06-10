@@ -93,7 +93,7 @@ const baseScripts = {
 
     if (powerDef?.visuals?.casterVisuals && powerDef.visuals.casterVisuals.length > 0) {
       powerDef.visuals.casterVisuals.forEach(vis => {
-        if (vis.sequence && vis.sequence !== 'None') {
+        if ((vis.sequence && vis.sequence !== 'None') || (vis.particle && vis.particle !== 'none')) {
           setTimeout(() => {
             const seqData = eng.renderer.assetManager.sequenceLibrary[vis.sequence];
             const lifeTime = seqData ? (seqData.frames * seqData.speed) / 1000 : 0.6;
@@ -102,7 +102,8 @@ const baseScripts = {
               vx: 0, vy: 0, vz: 0, life: lifeTime, maxLife: lifeTime, crumpleTimer: 0,
               wasteTex: vis.sequence, isFX: true, color: powerDef.visuals?.tint || '#ffffff'
             };
-            eng.debris.push(fxData);
+            if (vis.sequence && vis.sequence !== 'None') eng.debris.push(fxData);
+            if (vis.particle && vis.particle !== 'none') eng.spawnEventParticles({ ...fxData, particle: vis.particle, particleColor: vis.color || '#ffffff' });
             eng.network.sendSpawnFX(fxData);
           }, (vis.delay || 0) * 1000);
         }
@@ -195,7 +196,7 @@ const baseScripts = {
     }
   },
 
-  'throw-airplane': (eng, powerId = 'throw-airplane') => {
+  'paper-airplane': (eng, powerId = 'throw-airplane') => {
     if (
       eng.player.state === 'dash' ||
       eng.player.state === 'death' ||
@@ -246,7 +247,7 @@ const baseScripts = {
 
     if (powerDef?.visuals?.casterVisuals && powerDef.visuals.casterVisuals.length > 0) {
       powerDef.visuals.casterVisuals.forEach(vis => {
-        if (vis.sequence && vis.sequence !== 'None') {
+        if ((vis.sequence && vis.sequence !== 'None') || (vis.particle && vis.particle !== 'none')) {
           setTimeout(() => {
             const seqData = eng.renderer.assetManager.sequenceLibrary[vis.sequence];
             const lifeTime = seqData ? (seqData.frames * seqData.speed) / 1000 : 0.6;
@@ -255,7 +256,8 @@ const baseScripts = {
               vx: 0, vy: 0, vz: 0, life: lifeTime, maxLife: lifeTime, crumpleTimer: 0,
               wasteTex: vis.sequence, isFX: true, color: powerDef.visuals?.tint || '#ffffff'
             };
-            eng.debris.push(fxData);
+            if (vis.sequence && vis.sequence !== 'None') eng.debris.push(fxData);
+            if (vis.particle && vis.particle !== 'none') eng.spawnEventParticles({ ...fxData, particle: vis.particle, particleColor: vis.color || '#ffffff' });
             eng.network.sendSpawnFX(fxData);
           }, (vis.delay || 0) * 1000);
         }
@@ -367,7 +369,7 @@ export const PowerScripts = new Proxy(baseScripts, {
 
        if (powerDef.visuals?.casterVisuals && powerDef.visuals.casterVisuals.length > 0) {
          powerDef.visuals.casterVisuals.forEach(vis => {
-           if (vis.sequence && vis.sequence !== 'None') {
+           if ((vis.sequence && vis.sequence !== 'None') || (vis.particle && vis.particle !== 'none')) {
              setTimeout(() => {
                const seqData = eng.renderer.assetManager.sequenceLibrary[vis.sequence];
                const lifeTime = seqData ? (seqData.frames * seqData.speed) / 1000 : 0.6;
@@ -376,7 +378,8 @@ export const PowerScripts = new Proxy(baseScripts, {
                  vx: 0, vy: 0, vz: 0, life: lifeTime, maxLife: lifeTime, crumpleTimer: 0,
                  wasteTex: vis.sequence, isFX: true, color: powerDef.visuals?.tint || '#ffffff'
                };
-               eng.debris.push(fxData);
+               if (vis.sequence && vis.sequence !== 'None') eng.debris.push(fxData);
+               if (vis.particle && vis.particle !== 'none') eng.spawnEventParticles({ ...fxData, particle: vis.particle, particleColor: vis.color || '#ffffff' });
                eng.network.sendSpawnFX(fxData);
              }, (vis.delay || 0) * 1000);
            }
@@ -396,7 +399,7 @@ export const PowerScripts = new Proxy(baseScripts, {
        if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
        eng.player.dir = DIRECTIONS[Math.floor(normalizedAngle / (Math.PI / 4)) % 8];
 
-       const isProjectile = powerDef.visuals?.projectileVisuals && powerDef.visuals.projectileVisuals.length > 0 && powerDef.visuals.projectileVisuals[0].sequence !== 'None';
+       const isProjectile = powerDef.isProjectile || ['laser', 'bullet', 'lightning'].includes(powerDef.visuals?.projectileStyle) || (powerDef.visuals?.projectileSpeed !== undefined && powerDef.visuals.projectileSpeed > 0) || (powerDef.visuals?.projectileVisuals && powerDef.visuals.projectileVisuals.length > 0 && powerDef.visuals.projectileVisuals[0].sequence !== 'None');
        const isTargetedAoE = powerDef.type === 'Targeted AoE';
        const isPBAoE = powerDef.type === 'PBAoE';
 
@@ -435,7 +438,7 @@ export const PowerScripts = new Proxy(baseScripts, {
             targetId: directTargetId,
             targetX: targetX, targetY: targetY, targetZ: finalTargetZ,
             damage: powerDef.stats?.damage || 0,
-            speed: 500
+            speed: powerDef.visuals?.projectileSpeed || 500
           });
        } else {
           if (isTargetedAoE) {
@@ -511,7 +514,7 @@ export const PowerExecutors = {
 
     if (powerDef.visuals?.casterVisuals && powerDef.visuals.casterVisuals.length > 0) {
       powerDef.visuals.casterVisuals.forEach(vis => {
-        if (vis.sequence && vis.sequence !== 'None') {
+        if ((vis.sequence && vis.sequence !== 'None') || (vis.particle && vis.particle !== 'none')) {
           setTimeout(() => {
             const seqData = eng.renderer.assetManager.sequenceLibrary[vis.sequence];
             const lifeTime = seqData ? (seqData.frames * seqData.speed) / 1000 : 0.6;
@@ -520,7 +523,8 @@ export const PowerExecutors = {
               vx: 0, vy: 0, vz: 0, life: lifeTime, maxLife: lifeTime, crumpleTimer: 0,
               wasteTex: vis.sequence, isFX: true, color: powerDef.visuals?.tint || '#ffffff'
             };
-            eng.debris.push(fxData);
+            if (vis.sequence && vis.sequence !== 'None') eng.debris.push(fxData);
+            if (vis.particle && vis.particle !== 'none') eng.spawnEventParticles({ ...fxData, particle: vis.particle, particleColor: vis.color || '#ffffff' });
             eng.network.sendSpawnFX(fxData);
           }, (vis.delay || 0) * 1000);
         }

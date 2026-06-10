@@ -1,22 +1,20 @@
 {
-  "1": [
-    {
-      "group": "Maple Gang",
-      "weight": 1,
-      "intensityMin": 1,
-      "intensityMax": 5,
-      "levelMinOffset": 0,
-      "levelMaxOffset": 1,
-      "strengthOffset": 0
-    },
-    {
-      "group": "Maple Gang",
-      "weight": 1,
-      "intensityMin": 1,
-      "intensityMax": 5,
-      "levelMinOffset": 0,
-      "levelMaxOffset": 1,
-      "strengthOffset": 0
-    }
-  ]
+  "1": {
+    "group": "Maple Gang",
+    "intensityMin": 1,
+    "intensityMax": 5,
+    "weight": 10,
+    "spawns": [
+      {
+        "templateId": "new-maplegang-j3i0-copy",
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "templateId": "new-maplegang-j3i0",
+        "minCount": 1,
+        "maxCount": 3
+      }
+    ]
+  }
 }

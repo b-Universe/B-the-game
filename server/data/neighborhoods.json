@@ -1,1 +1,23 @@
-{}
+{
+  "nh_i9vuwmihy": {
+    "id": "nh_i9vuwmihy",
+    "zone": "atlas-city",
+    "name": "Argossy Industrial",
+    "baseLevel": 5,
+    "intensity": 3,
+    "factionWeights": [
+      {
+        "faction": "Maple Gang",
+        "weight": 100
+      }
+    ],
+    "bounds": {
+      "minX": 0,
+      "minY": 0,
+      "minZ": -80,
+      "maxX": 8150,
+      "maxY": 36850,
+      "maxZ": 800
+    }
+  }
+}

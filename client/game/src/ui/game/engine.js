@@ -22,10 +22,10 @@ export class GameEngine {
     this.playerData = playerData;
     this.accountUuid = accountUuid;
 
-        this.canvas.width = window.innerWidth;
+    this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
 
-            if (!this.playerData.powersets) this.playerData.powersets = [];
+    if (!this.playerData.powersets) this.playerData.powersets = [];
     const psIdx = this.playerData.powersets.indexOf('Inherited');
     if (psIdx !== -1) this.playerData.powersets[psIdx] = 'inherited';
     if (!this.playerData.powersets.includes('inherited')) {
@@ -42,7 +42,7 @@ export class GameEngine {
       this.playerData.powerTray = this.playerData.powers.filter(p => window.POWER_REGISTRY && window.POWER_REGISTRY[p] && window.POWER_REGISTRY[p].type?.toLowerCase() !== 'passive');
     }
 
-    const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
+    const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, fov: 1000, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
 
     // If this is the player's first time loading the client, perform a hardware bottleneck check
@@ -60,7 +60,7 @@ export class GameEngine {
             if (renderer.includes('swiftshader') || renderer.includes('llvmpipe') || renderer.includes('software')) isSoftwareRenderer = true;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (isMobile || isLowEnd || isSoftwareRenderer) {
         Object.assign(defaultSettings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0, chunkGenSpeed: 1 });
@@ -162,7 +162,7 @@ export class GameEngine {
     this.debris = [];
     this.drones = {};
 
-        this.input = new InputManager(this);
+    this.input = new InputManager(this);
     this.keys = this.input.keys;
     this.mousePos = this.input.mousePos;
 
@@ -181,7 +181,7 @@ export class GameEngine {
       if (!isInput && e.key.toLowerCase() === 't') {
         const target = this.arcadeSystem.findNearestCabinet();
         if (target) {
-            this.arcadeSystem.interact(target.x, target.y, target.z, target.dir, target.gameId);
+          this.arcadeSystem.interact(target.x, target.y, target.z, target.dir, target.gameId);
         }
         return;
       }
@@ -193,15 +193,15 @@ export class GameEngine {
         this.clientSettings.showEntityNames = newState;
         this.clientSettings.showEntityHealth = newState;
         localStorage.setItem('b_client_settings', JSON.stringify(this.clientSettings));
-        this.chat.addMessage('system', 'System', `Nameplates are now ${newState ? 'ON' : 'OFF'}.`);
+        this.ui.showSystemMessage(`Nameplates are now ${newState ? 'ON' : 'OFF'}.`);
 
         // Live-update the UI buttons if the settings menu happens to be open
         ['btn-toggle-player-names', 'btn-toggle-player-health', 'btn-toggle-entity-names', 'btn-toggle-entity-health'].forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.innerText = newState ? 'Enabled' : 'Disabled';
-                btn.className = newState ? 'btn-primary' : 'btn-secondary';
-            }
+          const btn = document.getElementById(id);
+          if (btn) {
+            btn.innerText = newState ? 'Enabled' : 'Disabled';
+            btn.className = newState ? 'btn-primary' : 'btn-secondary';
+          }
         });
       }
     });
@@ -212,7 +212,7 @@ export class GameEngine {
       }
     });
 
-        window.addEventListener('resize', this.handleResize);
+    window.addEventListener('resize', this.handleResize);
 
     const defaultDev = { showPlayerPos: false, showPlayerTile: false, showEntityPos: false, showEntityTile: false, showMelee: false, showLoS: false, showHitboxes: false, showTile: false, showChunk: false, showDistToNPC: false, showDistNpcToMouse: false, showDistPlayerToMouse: false, losDistance: 400, losAngle: 60, useDebugTooltip: false, useBlockPreview: true };
 
@@ -222,7 +222,7 @@ export class GameEngine {
 
     this.floatingTexts = [];
 
-        this.otherPlayers = {};
+    this.otherPlayers = {};
 
     this.network = new NetworkManager(this);
     this.socket = this.network.socket;
@@ -403,62 +403,62 @@ export class GameEngine {
   }
 
   async loadPowersets() {
-        try {
-          const regRes = await fetch('/api/registry/powers');
-          if (regRes.ok) {
-            const regJson = await regRes.json();
-            Object.assign(POWER_REGISTRY, regJson);
-            window.POWER_REGISTRY = POWER_REGISTRY;
-          }
-        } catch (e) {
-          console.warn('Failed to load power registry:', e);
-        }
+    try {
+      const regRes = await fetch('/api/registry/powers');
+      if (regRes.ok) {
+        const regJson = await regRes.json();
+        Object.assign(POWER_REGISTRY, regJson);
+        window.POWER_REGISTRY = POWER_REGISTRY;
+      }
+    } catch (e) {
+      console.warn('Failed to load power registry:', e);
+    }
 
-        try {
-          const effRes = await fetch('/api/registry/effects');
-          if (effRes.ok) {
-            const effJson = await effRes.json();
-            Object.assign(EFFECT_REGISTRY, effJson);
-          }
-        } catch (e) {
-          console.warn('Failed to load effect registry:', e);
-        }
+    try {
+      const effRes = await fetch('/api/registry/effects');
+      if (effRes.ok) {
+        const effJson = await effRes.json();
+        Object.assign(EFFECT_REGISTRY, effJson);
+      }
+    } catch (e) {
+      console.warn('Failed to load effect registry:', e);
+    }
 
-        try {
+    try {
       const res = await fetch('/api/powersets');
-            if (res.ok) {
-                const json = await res.json();
+      if (res.ok) {
+        const json = await res.json();
         for (const [catKey, powersetsList] of Object.entries(json)) {
           powersetsList.forEach(ps => {
-                        const id = ps.Id || ps.id;
-                        if (id) {
-                            this.powersetsData[id] = {
-                                id: id,
-                                name: ps.Name || ps.name || id,
-                                category: catKey,
-                                minIntegrity: ps.minIntegrity,
-                                maxIntegrity: ps.maxIntegrity,
-                                powers: (ps.Powers || ps.powers || []).map((p, i) => ({ id: p.Id || p.id || `${id}-p${i+1}`, name: p.Name || p.name || `Power ${i+1}`, desc: p.Description || p.desc || p.Focus || '' }))
-                            };
-                        }
-                    });
+            const id = ps.Id || ps.id;
+            if (id) {
+              this.powersetsData[id] = {
+                id: id,
+                name: ps.Name || ps.name || id,
+                category: catKey,
+                minIntegrity: ps.minIntegrity,
+                maxIntegrity: ps.maxIntegrity,
+                powers: (ps.Powers || ps.powers || []).map((p, i) => ({ id: p.Id || p.id || `${id}-p${i + 1}`, name: p.Name || p.name || `Power ${i + 1}`, desc: p.Description || p.desc || p.Focus || '' }))
+              };
+            }
+          });
         }
 
         for (const [id, ps] of Object.entries(POWERSET_REGISTRY)) {
-            this.powersetsData[id] = {
-              id: id,
-              name: ps.name,
-              category: 'Innate',
-              powers: ps.powers.map(pId => {
-                const pDef = POWER_REGISTRY[pId];
-                return { id: pId, name: pDef ? pDef.name : pId, desc: pDef ? pDef.description : '' };
-              })
-            };
+          this.powersetsData[id] = {
+            id: id,
+            name: ps.name,
+            category: 'Innate',
+            powers: ps.powers.map(pId => {
+              const pDef = POWER_REGISTRY[pId];
+              return { id: pId, name: pDef ? pDef.name : pId, desc: pDef ? pDef.description : '' };
+            })
+          };
         }
-            }
-        } catch (e) {
+      }
+    } catch (e) {
       console.warn('Failed to load powersets from API:', e);
-        }
+    }
   }
 
   getScreenPos(wx, wy, wz = 0) {
@@ -468,9 +468,9 @@ export class GameEngine {
     let centerY = this.canvas.height / 2;
 
     if (this.mapOverlay && this.mapOverlay.active) {
-       const box = this.getMinimapBox();
-       centerX = box.x + box.size / 2;
-       centerY = box.y + box.size / 2;
+      const box = this.getMinimapBox();
+      centerX = box.x + box.size / 2;
+      centerY = box.y + box.size / 2;
     }
 
     return {
@@ -484,9 +484,9 @@ export class GameEngine {
     let centerY = this.canvas.height / 2;
 
     if (this.mapOverlay && this.mapOverlay.active) {
-       const box = this.getMinimapBox();
-       centerX = box.x + box.size / 2;
-       centerY = box.y + box.size / 2;
+      const box = this.getMinimapBox();
+      centerX = box.x + box.size / 2;
+      centerY = box.y + box.size / 2;
     }
 
     const sx = clientX - centerX;
@@ -798,14 +798,14 @@ export class GameEngine {
         if (Math.random() < currentBubbleRate) {
           let cHex = lp.color || (lp.isAcid ? '#2ecc71' : '#ff5d00');
           if (!lp.isAcid && cHex.startsWith('#') && cHex.length === 7) {
-             let r = parseInt(cHex.slice(1, 3), 16);
-             let g = parseInt(cHex.slice(3, 5), 16);
-             let b = parseInt(cHex.slice(5, 7), 16);
-             const offset = (Math.random() - 0.5) * 50;
-             r = Math.min(255, Math.max(0, Math.floor(r + offset)));
-             g = Math.min(255, Math.max(0, Math.floor(g + offset)));
-             b = Math.min(255, Math.max(0, Math.floor(b + offset)));
-             cHex = `rgb(${r}, ${g}, ${b})`;
+            let r = parseInt(cHex.slice(1, 3), 16);
+            let g = parseInt(cHex.slice(3, 5), 16);
+            let b = parseInt(cHex.slice(5, 7), 16);
+            const offset = (Math.random() - 0.5) * 50;
+            r = Math.min(255, Math.max(0, Math.floor(r + offset)));
+            g = Math.min(255, Math.max(0, Math.floor(g + offset)));
+            b = Math.min(255, Math.max(0, Math.floor(b + offset)));
+            cHex = `rgb(${r}, ${g}, ${b})`;
           }
 
           this.spawnParticle({
@@ -852,8 +852,8 @@ export class GameEngine {
           const voxelBottom = voxelZ - 16;
           const voxelTop = voxelZ + 16;
           if (d.z <= voxelTop && d.z + 16 >= voxelBottom) {
-             inLava = true;
-             break;
+            inLava = true;
+            break;
           }
         }
       }
@@ -886,12 +886,12 @@ export class GameEngine {
         d.vz = -15; // Slow steady sink
 
         if (Math.random() > 0.5) {
-           this.spawnParticle({
-              x: d.x + (Math.random() - 0.5) * 10, y: d.y + (Math.random() - 0.5) * 10, z: d.z + 5,
-              vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, vz: 10 + Math.random() * 20,
-              noGravity: true, life: 0.3 + Math.random() * 0.4, maxLife: 0.7,
-              color: Math.random() > 0.5 ? '#ff5d00' : 'rgba(80, 80, 80, 0.7)', size: 2 + Math.random() * 2
-           });
+          this.spawnParticle({
+            x: d.x + (Math.random() - 0.5) * 10, y: d.y + (Math.random() - 0.5) * 10, z: d.z + 5,
+            vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, vz: 10 + Math.random() * 20,
+            noGravity: true, life: 0.3 + Math.random() * 0.4, maxLife: 0.7,
+            color: Math.random() > 0.5 ? '#ff5d00' : 'rgba(80, 80, 80, 0.7)', size: 2 + Math.random() * 2
+          });
         }
         continue;
       }
@@ -907,7 +907,7 @@ export class GameEngine {
       }
 
       if (d.vx !== 0 || d.vy !== 0) {
-        d.rotation = (d.rotation || 0) + (Math.sqrt(d.vx*d.vx + d.vy*d.vy)) * 0.05 * (dt/1000) * (d.vx > 0 ? 1 : -1);
+        d.rotation = (d.rotation || 0) + (Math.sqrt(d.vx * d.vx + d.vy * d.vy)) * 0.05 * (dt / 1000) * (d.vx > 0 ? 1 : -1);
       }
     }
 
@@ -915,23 +915,23 @@ export class GameEngine {
     this.mapManager.update(dt);
 
     if (this.autoOpenedDoors) {
-        for (const [key, data] of this.autoOpenedDoors.entries()) {
-            const dist = Math.hypot(this.player.x - data.x, this.player.y - data.y);
-            if (dist > 80) {
-                data.timer -= dt;
-            } else {
-                data.timer = 3000;
-            }
-
-            if (dist > 80 && data.timer <= 0) {
-                const currentVoxel = this.mapManager.getVoxelAt(data.x, data.y, data.z);
-                if (currentVoxel && currentVoxel.shape && currentVoxel.shape.includes('_open')) {
-                    currentVoxel.shape = currentVoxel.shape.replace('_open', '');
-                    this.mapManager.setVoxelAt(data.x, data.y, data.z, currentVoxel);
-                }
-                this.autoOpenedDoors.delete(key);
-            }
+      for (const [key, data] of this.autoOpenedDoors.entries()) {
+        const dist = Math.hypot(this.player.x - data.x, this.player.y - data.y);
+        if (dist > 80) {
+          data.timer -= dt;
+        } else {
+          data.timer = 3000;
         }
+
+        if (dist > 80 && data.timer <= 0) {
+          const currentVoxel = this.mapManager.getVoxelAt(data.x, data.y, data.z);
+          if (currentVoxel && currentVoxel.shape && currentVoxel.shape.includes('_open')) {
+            currentVoxel.shape = currentVoxel.shape.replace('_open', '');
+            this.mapManager.setVoxelAt(data.x, data.y, data.z, currentVoxel);
+          }
+          this.autoOpenedDoors.delete(key);
+        }
+      }
     }
 
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -952,9 +952,18 @@ export class GameEngine {
         }
       }
 
+      const oldX = proj.x;
+      const oldY = proj.y;
+      const oldZ = proj.z;
+
       proj.x = proj.startX + (proj.targetX - proj.startX) * baseRatio;
       proj.y = proj.startY + (proj.targetY - proj.startY) * baseRatio;
       proj.z = proj.startZ + (proj.targetZ - proj.startZ) * baseRatio;
+
+      if (proj.projectileArc > 0) {
+        const arcZ = 4 * proj.projectileArc * baseRatio * (1 - baseRatio);
+        proj.z += arcZ;
+      }
 
       if (proj.isCritLoop) {
         if (ratio >= 0.25 && ratio <= 0.75) {
@@ -976,6 +985,54 @@ export class GameEngine {
           proj.loopPitch = loopRatio * Math.PI * 2;
         } else {
           proj.loopPitch = 0;
+        }
+      }
+
+      // Render trail along the interpolated flight path BEFORE hit detontaion checks!
+      if (proj.trail) {
+        let pColor = proj.trailColor || 'rgba(255, 255, 255, 0.8)';
+        let pSize = proj.trailSize || 2.5;
+        let pType = 'trail';
+
+        if (proj.projectileVisuals && proj.projectileVisuals.length > 0) {
+          const vis = proj.projectileVisuals[0];
+          if (vis.particle && vis.particle !== 'none') {
+            pType = vis.particle;
+            if (vis.color) pColor = vis.color;
+          }
+        }
+
+        const distSq = (proj.x - oldX) ** 2 + (proj.y - oldY) ** 2 + (proj.z - oldZ) ** 2;
+        const steps = Math.min(20, Math.ceil(Math.sqrt(distSq) / 16)); // Interpolate a particle every 16 units!
+
+        if (pType === 'trail') {
+          for (let s = 0; s <= steps; s++) {
+            const f = steps === 0 ? 1 : s / steps;
+            if (Math.random() > 0.5) {
+              this.spawnParticle({ x: oldX + (proj.x - oldX) * f + (Math.random() - 0.5) * 8, y: oldY + (proj.y - oldY) * f + (Math.random() - 0.5) * 8, z: oldZ + (proj.z - oldZ) * f + (Math.random() - 0.5) * 8, life: 0.3 + Math.random() * 0.2, maxLife: 0.5, color: pColor, size: pSize });
+            }
+          }
+        } else if (pType === 'sparks') {
+          for (let s = 0; s <= steps; s++) {
+            const f = steps === 0 ? 1 : s / steps;
+            if (Math.random() > 0.7) {
+              this.spawnParticle({ x: oldX + (proj.x - oldX) * f + (Math.random() - 0.5) * 16, y: oldY + (proj.y - oldY) * f + (Math.random() - 0.5) * 16, z: oldZ + (proj.z - oldZ) * f + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50, vz: (Math.random() - 0.5) * 50, life: 0.2 + Math.random() * 0.2, maxLife: 0.4, color: pColor, size: pSize * 1.5, noGravity: true });
+            }
+          }
+        } else if (pType === 'smoke') {
+          for (let s = 0; s <= steps; s++) {
+            const f = steps === 0 ? 1 : s / steps;
+            if (Math.random() > 0.8) {
+              this.spawnParticle({ x: oldX + (proj.x - oldX) * f + (Math.random() - 0.5) * 10, y: oldY + (proj.y - oldY) * f + (Math.random() - 0.5) * 10, z: oldZ + (proj.z - oldZ) * f + (Math.random() - 0.5) * 10, vx: 0, vy: 0, vz: 10 + Math.random() * 10, life: 0.4 + Math.random() * 0.4, maxLife: 0.8, color: pColor, size: pSize * 2, tex: 'smoke', noGravity: true });
+            }
+          }
+        } else if (pType === 'aura') {
+          for (let s = 0; s <= steps; s++) {
+            const f = steps === 0 ? 1 : s / steps;
+            if (Math.random() > 0.6) {
+              this.spawnParticle({ x: oldX + (proj.x - oldX) * f + (Math.random() - 0.5) * 20, y: oldY + (proj.y - oldY) * f + (Math.random() - 0.5) * 20, z: oldZ + (proj.z - oldZ) * f + (Math.random() - 0.5) * 20, vx: 0, vy: 0, vz: 0, life: 0.2 + Math.random() * 0.2, maxLife: 0.4, color: pColor, size: pSize * 1.5, noGravity: true });
+            }
+          }
         }
       }
 
@@ -1025,19 +1082,6 @@ export class GameEngine {
       if (proj.distTravelled >= proj.maxDist) {
         if (proj.onHit && !proj.hasHit) proj.onHit();
         this.projectiles.splice(i, 1);
-      } else if (proj.trail) {
-        const particleCount = Math.random() > 0.5 ? 2 : 1;
-        for (let pIdx = 0; pIdx < particleCount; pIdx++) {
-          this.spawnParticle({
-            x: proj.x + (Math.random() - 0.5) * 8,
-            y: proj.y + (Math.random() - 0.5) * 8,
-            z: proj.z + (Math.random() - 0.5) * 8,
-            life: 0.3 + Math.random() * 0.2,
-            maxLife: 0.5,
-            color: proj.trailColor || 'rgba(255, 255, 255, 0.8)',
-            size: proj.trailSize || 2
-          });
-        }
       }
     }
 
@@ -1104,7 +1148,7 @@ export class GameEngine {
     if (this.renderer.debugCtx) {
       if (this.clientSettings.showMinimap && (!this.mapOverlay || !this.mapOverlay.active)) {
         this.minimap.draw(this.renderer.debugCtx);
-      }
+      } F
       if (this.mapOverlay && this.mapOverlay.active) {
         this.mapOverlay.draw(this.renderer.debugCtx);
         this.mapOverlay.drawBorder(this.renderer.debugCtx);

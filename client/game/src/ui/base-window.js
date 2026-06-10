@@ -17,6 +17,7 @@ export class BaseWindow {
 
     this.element = null;
     this.body = null;
+    this.stateKey = `b_window_state_${this.id}`;
 
     this.build();
   }
@@ -33,6 +34,9 @@ export class BaseWindow {
     this.element.style.left = `${this.x}px`;
     this.element.style.top = `${this.y}px`;
     this.element.style.display = 'none'; // Hidden by default
+    this.element.style.opacity = '0';
+    this.element.style.transform = 'scale(0.95)';
+    this.element.style.transition = 'opacity 0.15s ease-out, transform 0.15s ease-out';
 
     // Header (32px, Neon-rainbow theme via CSS)
     const header = document.createElement('div');
@@ -79,6 +83,34 @@ export class BaseWindow {
     if (this.isDraggable) {
       this.makeDraggable(header);
     }
+
+    this.restoreState();
+  }
+
+  saveState() {
+    const state = {
+      left: this.element.style.left,
+      top: this.element.style.top,
+      minimized: this.body.style.display === 'none'
+    };
+    localStorage.setItem(this.stateKey, JSON.stringify(state));
+  }
+
+  restoreState() {
+    const saved = localStorage.getItem(this.stateKey);
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state.left && state.left !== 'auto') this.element.style.left = state.left;
+        if (state.top && state.top !== 'auto') this.element.style.top = state.top;
+        if (state.minimized) {
+          this.body.style.display = 'none';
+          this.element.style.height = '32px';
+        }
+      } catch (e) {
+        console.warn('Failed to restore window state for', this.id);
+      }
+    }
   }
 
   setContent(htmlOrElement) {
@@ -90,14 +122,29 @@ export class BaseWindow {
     }
   }
 
+  setTitle(title) {
+    this.title = title;
+    const titleEl = this.element.querySelector('.b-window-title');
+    if (titleEl) titleEl.innerText = title;
+  }
+
   open() {
     this.element.style.display = 'flex';
+    void this.element.offsetWidth; // Force reflow
+    this.element.style.opacity = '1';
+    this.element.style.transform = 'scale(1)';
     this.bringToFront();
     this.onOpen();
   }
 
   close() {
-    this.element.style.display = 'none';
+    this.element.style.opacity = '0';
+    this.element.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        if (this.element.style.opacity === '0') {
+            this.element.style.display = 'none';
+        }
+    }, 150);
     this.onClose();
   }
 
@@ -109,6 +156,7 @@ export class BaseWindow {
       this.body.style.display = 'none';
       this.element.style.height = '32px'; // Snap to header height
     }
+    this.saveState();
   }
 
   bringToFront() {
@@ -169,6 +217,7 @@ export class BaseWindow {
         isDragging = false;
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        this.saveState();
       };
 
       document.addEventListener('mousemove', onMouseMove);
