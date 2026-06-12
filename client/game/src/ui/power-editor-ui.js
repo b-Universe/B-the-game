@@ -137,15 +137,35 @@ export class PowerEditorUIManager {
 
   async loadData() {
     try {
-      const [powersRes, powersetsRes] = await Promise.all([
-        fetch('/api/powers'),
-        fetch('/api/powersets')
-      ]);
+      let powersJson, powersetsJson;
+      const cachedPowers = localStorage.getItem('b_cache_powers');
+      if (cachedPowers) {
+        powersJson = JSON.parse(cachedPowers);
+        fetch('/api/powers').then(r => r.json()).then(d => localStorage.setItem('b_cache_powers', JSON.stringify(d))).catch(()=>{});
+      } else {
+        const powersRes = await fetch('/api/powers');
+        if (powersRes.ok) {
+          powersJson = await powersRes.json();
+          localStorage.setItem('b_cache_powers', JSON.stringify(powersJson));
+        }
+      }
 
-      if (powersRes.ok) this.powers = await powersRes.json();
+      const cachedPowersets = localStorage.getItem('b_cache_powersets');
+      if (cachedPowersets) {
+        powersetsJson = JSON.parse(cachedPowersets);
+        fetch('/api/powersets').then(r => r.json()).then(d => localStorage.setItem('b_cache_powersets', JSON.stringify(d))).catch(()=>{});
+      } else {
+        const powersetsRes = await fetch('/api/powersets');
+        if (powersetsRes.ok) {
+          powersetsJson = await powersetsRes.json();
+          localStorage.setItem('b_cache_powersets', JSON.stringify(powersetsJson));
+        }
+      }
 
-      if (powersetsRes.ok) {
-        const rawPowersets = await powersetsRes.json();
+      if (powersJson) this.powers = powersJson;
+
+      if (powersetsJson) {
+        const rawPowersets = powersetsJson;
         this.powersets = [];
         // Flatten categories into a single searchable array
         for (const cat in rawPowersets) {

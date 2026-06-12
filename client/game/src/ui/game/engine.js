@@ -451,9 +451,19 @@ export class GameEngine {
 
   async loadPowersets() {
     try {
-      const regRes = await fetch('/api/registry/powers');
-      if (regRes.ok) {
-        const regJson = await regRes.json();
+      let regJson;
+      const cachedReg = localStorage.getItem('b_cache_registry_powers');
+      if (cachedReg) {
+        regJson = JSON.parse(cachedReg);
+        fetch('/api/registry/powers').then(r => r.json()).then(d => localStorage.setItem('b_cache_registry_powers', JSON.stringify(d))).catch(()=>{});
+      } else {
+        const regRes = await fetch('/api/registry/powers');
+        if (regRes.ok) {
+          regJson = await regRes.json();
+          localStorage.setItem('b_cache_registry_powers', JSON.stringify(regJson));
+        }
+      }
+      if (regJson) {
         Object.assign(POWER_REGISTRY, regJson);
         window.POWER_REGISTRY = POWER_REGISTRY;
       }
@@ -462,9 +472,19 @@ export class GameEngine {
     }
 
     try {
-      const effRes = await fetch('/api/registry/effects');
-      if (effRes.ok) {
-        const effJson = await effRes.json();
+      let effJson;
+      const cachedEff = localStorage.getItem('b_cache_registry_effects');
+      if (cachedEff) {
+        effJson = JSON.parse(cachedEff);
+        fetch('/api/registry/effects').then(r => r.json()).then(d => localStorage.setItem('b_cache_registry_effects', JSON.stringify(d))).catch(()=>{});
+      } else {
+        const effRes = await fetch('/api/registry/effects');
+        if (effRes.ok) {
+          effJson = await effRes.json();
+          localStorage.setItem('b_cache_registry_effects', JSON.stringify(effJson));
+        }
+      }
+      if (effJson) {
         Object.assign(EFFECT_REGISTRY, effJson);
       }
     } catch (e) {
@@ -472,9 +492,19 @@ export class GameEngine {
     }
 
     try {
-      const res = await fetch('/api/powersets');
-      if (res.ok) {
-        const json = await res.json();
+      let json;
+      const cachedPs = localStorage.getItem('b_cache_powersets');
+      if (cachedPs) {
+        json = JSON.parse(cachedPs);
+        fetch('/api/powersets').then(r => r.json()).then(d => localStorage.setItem('b_cache_powersets', JSON.stringify(d))).catch(()=>{});
+      } else {
+        const res = await fetch('/api/powersets');
+        if (res.ok) {
+          json = await res.json();
+          localStorage.setItem('b_cache_powersets', JSON.stringify(json));
+        }
+      }
+      if (json) {
         for (const [catKey, powersetsList] of Object.entries(json)) {
           powersetsList.forEach(ps => {
             const id = ps.Id || ps.id;

@@ -24,6 +24,7 @@ export class WorldManagerUI {
         });
         if (res.ok) {
           input.value = '';
+          localStorage.removeItem('b_cache_zones'); // Force a fresh fetch next render
           this.renderZoneManager();
         } else {
           eng.ui.showSystemMessage('Failed to create zone.');

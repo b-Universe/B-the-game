@@ -114,6 +114,22 @@ export class CharacterCreatorUIManager {
     this.setupUI();
   }
 
+  fadeIn(element, display = 'flex') {
+    element.style.opacity = '0';
+    element.style.display = display;
+    element.style.transition = 'opacity 1s ease';
+    void element.offsetWidth; // Force reflow
+    element.style.opacity = '1';
+  }
+
+  fadeOut(element) {
+    element.style.transition = 'opacity 1s ease';
+    element.style.opacity = '0';
+    setTimeout(() => {
+      element.style.display = 'none';
+    }, 1000);
+  }
+
   setupUI() {
     const classItems = document.querySelectorAll('#class-list .list-item');
     const playerPreviews = [
@@ -452,10 +468,11 @@ export class CharacterCreatorUIManager {
 
       stepPanels.forEach(panel => {
         if (panel.id === `step-${stepName}`) {
-          panel.style.display = 'flex';
+          this.fadeIn(panel, 'flex');
           panel.classList.add('active');
         } else {
           panel.style.display = 'none';
+          panel.style.opacity = '0';
           panel.classList.remove('active');
         }
       });
@@ -482,8 +499,8 @@ export class CharacterCreatorUIManager {
         if (currentStepIndex > 0) {
           navigateToStep(currentStepIndex - 1);
         } else {
-          document.getElementById('character-creator-screen').style.display = 'none';
-          document.getElementById('selection-screen').style.display = 'block';
+          this.fadeOut(document.getElementById('character-creator-screen'));
+          this.fadeIn(document.getElementById('selection-screen'), 'block');
         }
       });
     }
@@ -492,9 +509,17 @@ export class CharacterCreatorUIManager {
 
     const loadPowersets = async () => {
       try {
-        const res = await fetch('/api/powersets');
-        if (!res.ok) throw new Error("Failed to fetch powersets API");
-        const json = await res.json();
+        let json;
+        const cachedPs = localStorage.getItem('b_cache_powersets');
+        if (cachedPs) {
+          json = JSON.parse(cachedPs);
+          fetch('/api/powersets').then(r => r.json()).then(d => localStorage.setItem('b_cache_powersets', JSON.stringify(d))).catch(()=>{});
+        } else {
+          const res = await fetch('/api/powersets');
+          if (!res.ok) throw new Error("Failed to fetch powersets API");
+          json = await res.json();
+          localStorage.setItem('b_cache_powersets', JSON.stringify(json));
+        }
 
         for (const [catKey, powersetsList] of Object.entries(json)) {
           if (!rawPowersetsData[catKey]) rawPowersetsData[catKey] = [];
@@ -890,12 +915,12 @@ export class CharacterCreatorUIManager {
           unspentPowersetPicks: unspentPowersetPicks
         };
 
-        confirmModal.style.display = 'flex';
+        this.fadeIn(confirmModal, 'flex');
       });
 
-      document.getElementById('confirm-no').onclick = () => confirmModal.style.display = 'none';
+      document.getElementById('confirm-no').onclick = () => this.fadeOut(confirmModal);
       document.getElementById('confirm-yes').onclick = async () => {
-        confirmModal.style.display = 'none';
+        this.fadeOut(confirmModal);
         try {
           const updatedAccount = await this.app.auth.createCharacter(this.app.currentAccount.uuid, pendingCharData);
           this.app.currentAccount = updatedAccount;
@@ -949,8 +974,8 @@ export class CharacterCreatorUIManager {
 
           import(`./game/engine.js?v=${Date.now()}`).then(module => {
             if (window.currentGameEngine) window.currentGameEngine.stop();
-            document.getElementById('character-creator-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
+            this.fadeOut(document.getElementById('character-creator-screen'));
+            this.fadeIn(document.getElementById('game-screen'), 'block');
             window.currentGameEngine = new module.GameEngine('game-canvas', newChar, this.app.currentAccount.uuid);
           }).catch(err => {
             console.error("Engine Import Error:", err);

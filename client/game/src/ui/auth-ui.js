@@ -7,6 +7,22 @@ export class AuthUIManager {
     this.loadPatchNotes();
   }
 
+  fadeIn(element, display = 'block') {
+    element.style.opacity = '0';
+    element.style.display = display;
+    element.style.transition = 'opacity 1s ease';
+    void element.offsetWidth; // Force reflow
+    element.style.opacity = '1';
+  }
+
+  fadeOut(element) {
+    element.style.transition = 'opacity 1s ease';
+    element.style.opacity = '0';
+    setTimeout(() => {
+      element.style.display = 'none';
+    }, 1000);
+  }
+
   checkHardwareConstraints(callback) {
     if (this.hardwareChecked) return callback();
     this.hardwareChecked = true;
@@ -55,11 +71,11 @@ export class AuthUIManager {
       }
 
       hwInstructions.innerHTML = instructions;
-      hwModal.style.display = 'flex';
+      this.fadeIn(hwModal, 'flex');
 
       const handleClose = () => {
         if (chkSkip && chkSkip.checked) localStorage.setItem('b_skip_hardware_warning', 'true');
-        hwModal.style.display = 'none';
+        this.fadeOut(hwModal);
       };
 
       btnPotato.onclick = () => {
@@ -125,7 +141,7 @@ export class AuthUIManager {
 
     if (btnSettings && modalSettings) {
       btnSettings.addEventListener('click', () => {
-        modalSettings.style.display = 'block';
+        this.fadeIn(modalSettings, 'block');
         const saved = localStorage.getItem('b_client_settings');
         const settings = saved ? JSON.parse(saved) : {};
         updatePerfButtonUI(settings.enableShadows === false && settings.enableDayNightCycle === false);
@@ -152,7 +168,7 @@ export class AuthUIManager {
           }
         }
       });
-      btnCloseSettings.addEventListener('click', () => modalSettings.style.display = 'none');
+      btnCloseSettings.addEventListener('click', () => this.fadeOut(modalSettings));
       rowPerfMode.addEventListener('click', () => {
         const saved = localStorage.getItem('b_client_settings');
         const settings = saved ? JSON.parse(saved) : { enableShadows: true, enableDayNightCycle: true };
@@ -356,13 +372,13 @@ export class AuthUIManager {
       btnGuest.addEventListener('click', () => {
         this.checkHardwareConstraints(() => {
           guestInput.value = '';
-          guestModal.style.display = 'flex';
+          this.fadeIn(guestModal, 'flex');
           guestInput.focus();
         });
       });
 
       btnGuestCancel.addEventListener('click', () => {
-        guestModal.style.display = 'none';
+        this.fadeOut(guestModal);
       });
 
       btnGuestPlay.addEventListener('click', async () => {
@@ -370,7 +386,7 @@ export class AuthUIManager {
         if (name.length < 2 || name.length > 16) {
           return this.app.showModal("Input Error", "Name must be between 2 and 16 characters.");
         }
-        guestModal.style.display = 'none';
+        this.fadeOut(guestModal);
 
         try {
           const res = await fetch('/guest', {
@@ -387,7 +403,7 @@ export class AuthUIManager {
           this.app.currentAccount = data;
           localStorage.setItem('b_current_account', JSON.stringify(data));
 
-          document.getElementById('creation-screen').style.display = 'none';
+          this.fadeOut(document.getElementById('creation-screen'));
           this.app.initSelection(data);
 
           setTimeout(() => {
@@ -426,8 +442,8 @@ export class AuthUIManager {
           }
 
           if (selectedChar) {
-            document.getElementById('creation-screen').style.display = 'none';
-            document.getElementById('selection-screen').style.display = 'none';
+            this.fadeOut(document.getElementById('creation-screen'));
+            this.fadeOut(document.getElementById('selection-screen'));
 
             let loader = document.getElementById('loading-screen');
             if (!loader) {
@@ -439,7 +455,7 @@ export class AuthUIManager {
             } else {
               loader.style.display = 'flex';
             }
-            document.getElementById('game-screen').style.display = 'block';
+            this.fadeIn(document.getElementById('game-screen'), 'block');
             const btnMusic = document.getElementById('btn-login-music');
             if (btnMusic) btnMusic.style.display = 'none';
 
@@ -482,7 +498,7 @@ export class AuthUIManager {
           return this.app.showModal("Data Error", "Could not load character data.");
         }
 
-        document.getElementById('selection-screen').style.display = 'none';
+        this.fadeOut(document.getElementById('selection-screen'));
 
         let loader = document.getElementById('loading-screen');
         if (!loader) {
@@ -495,7 +511,7 @@ export class AuthUIManager {
           loader.style.display = 'flex';
         }
 
-        document.getElementById('game-screen').style.display = 'block';
+        this.fadeIn(document.getElementById('game-screen'), 'block');
         const btnMusic = document.getElementById('btn-login-music');
         if (btnMusic) btnMusic.style.display = 'none';
 

@@ -30,18 +30,26 @@ export class WorldSerializer {
 
   async load(filename = this.engine.currentZone || 'untitled') {
     try {
-      const res = await fetch(`/api/world/load?file=${filename}&v=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        await this.deserialize(data);
+      let data;
+      const cacheKey = `b_cache_world_${filename}`;
+      const cachedWorld = localStorage.getItem(cacheKey);
 
-        const payload = { data: data, filename: filename };
-        if (this.engine.network) this.engine.network.socket.emit('dev_load_world', payload);
+      if (cachedWorld) {
+        data = JSON.parse(cachedWorld);
+        fetch(`/api/world/load?file=${filename}&v=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).then(d => localStorage.setItem(cacheKey, JSON.stringify(d))).catch(()=>{});
       } else {
-        await this.deserialize({});
-        const payload = { data: {}, filename: filename };
-        if (this.engine.network) this.engine.network.socket.emit('dev_load_world', payload);
+        const res = await fetch(`/api/world/load?file=${filename}&v=${Date.now()}`, { cache: 'no-store' });
+        if (res.ok) {
+          data = await res.json();
+          localStorage.setItem(cacheKey, JSON.stringify(data));
+        } else {
+          data = {};
+        }
       }
+
+      await this.deserialize(data);
+      const payload = { data: data, filename: filename };
+      if (this.engine.network) this.engine.network.socket.emit('dev_load_world', payload);
     } catch (e) {
       console.error("Error loading world:", e);
     }

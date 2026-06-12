@@ -33,7 +33,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     for (const username in index) {
       const entry = index[username]; const playerFile = path.join(PLAYER_DATA_DIR, `${entry.uuid}.json`);
       if (fs.existsSync(playerFile)) {
-        try { const pd = JSON.parse(fs.readFileSync(playerFile, 'utf8')); if (pd.characters) { pd.characters.forEach(c => { const cName = typeof c === 'object' ? c.name : c; charToAccountMap[cName.toLowerCase()] = entry.uuid; }); } } catch(e) {}
+        try { const pd = JSON.parse(fs.readFileSync(playerFile, 'utf8')); if (pd.characters) { pd.characters.forEach(c => { const cName = typeof c === 'object' ? c.name : c; charToAccountMap[cName.toLowerCase()] = entry.uuid; }); } } catch (e) { }
       }
     }
     if (fs.existsSync(CHAR_DATA_DIR)) {
@@ -44,7 +44,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
             const charObj = JSON.parse(fs.readFileSync(path.join(CHAR_DATA_DIR, file), 'utf8'));
             const activeP = onlinePlayersMap[charObj.name.toLowerCase()];
             allChars.push({ name: charObj.name, level: charObj.level || 1, alignment: charObj.alignment || 'Neutral', race: charObj.race || 'Human', integrity: charObj.integrity || 0, online: !!activeP, zone: activeP ? (activeP.zone || 'untitled') : (charObj.zone || 'untitled'), x: charObj.position ? charObj.position.x : 0, y: charObj.position ? charObj.position.y : 0, z: charObj.position ? charObj.position.z : 0, hp: charObj.stats ? charObj.stats.hp : 1000, maxHp: charObj.stats ? charObj.stats.maxHp : 1000, accountUuid: charToAccountMap[charObj.name.toLowerCase()] || null });
-          } catch(e) {}
+          } catch (e) { }
         }
       });
     }
@@ -66,12 +66,12 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
         for (const username in index) {
           const accountUUID = index[username].uuid; const playerFile = path.join(PLAYER_DATA_DIR, `${accountUUID}.json`);
           if (fs.existsSync(playerFile)) {
-            try { const playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8')); if (playerData.characters && playerData.characters.some(c => (typeof c === 'object' ? c.name : c).toLowerCase() === data.targetName.toLowerCase())) { accountUsername = username; charObj.accountUuid = accountUUID; break; } } catch(e) {}
+            try { const playerData = JSON.parse(fs.readFileSync(playerFile, 'utf8')); if (playerData.characters && playerData.characters.some(c => (typeof c === 'object' ? c.name : c).toLowerCase() === data.targetName.toLowerCase())) { accountUsername = username; charObj.accountUuid = accountUUID; break; } } catch (e) { }
           }
         }
         charObj.accountUsername = accountUsername;
         socket.emit('player_data_received', charObj);
-      } catch(e) { socket.emit('system_dialog', `Character ${data.targetName} file is corrupted.`); }
+      } catch (e) { socket.emit('system_dialog', `Character ${data.targetName} file is corrupted.`); }
     } else { socket.emit('system_dialog', `Character ${data.targetName} not found.`); }
   });
 
@@ -113,7 +113,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
         fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); logSystem(`ADMIN UPDATED PLAYER: ${pName} modified ${targetNameLower}`); socket.emit('system_dialog', `Successfully updated ${data.targetName}.`);
         let targetSocketId = null; for (let id in activePlayers) { if (activePlayers[id].name.toLowerCase() === targetNameLower) { targetSocketId = id; break; } }
         if (targetSocketId) { io.to(targetSocketId).emit('player_data_updated', charObj); }
-      } catch(e) { socket.emit('system_dialog', `Character ${data.targetName} file is corrupted.`); }
+      } catch (e) { socket.emit('system_dialog', `Character ${data.targetName} file is corrupted.`); }
     }
   });
 
@@ -135,7 +135,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     const allAccounts = []; const index = getIndex();
     for (const username in index) {
       const entry = index[username]; const accountFile = path.join(PLAYER_DATA_DIR, `${entry.uuid}.json`);
-      if (fs.existsSync(accountFile)) { try { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); allAccounts.push({ uuid: entry.uuid, username: entry.username, email: entry.email, lastIp: accData.lastIp || 'Unknown', created: accData.created || 0, isBanned: !!accData.isBanned, banReason: accData.banReason, characters: accData.characters || [] }); } catch (e) {} }
+      if (fs.existsSync(accountFile)) { try { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); allAccounts.push({ uuid: entry.uuid, username: entry.username, email: entry.email, lastIp: accData.lastIp || 'Unknown', created: accData.created || 0, isBanned: !!accData.isBanned, banReason: accData.banReason, characters: accData.characters || [] }); } catch (e) { } }
     }
     socket.emit('all_accounts_received', allAccounts);
   });
@@ -148,7 +148,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     if (data.username) { const lowerUser = data.username.toLowerCase(); const entry = Object.values(index).find(a => a.username === lowerUser); if (entry) { uuid = entry.uuid; } else { socket.emit('system_dialog', `Account '${data.username}' not found.`); return; } }
     if (!uuid) return;
     const accountFile = path.join(PLAYER_DATA_DIR, `${uuid}.json`);
-    if (fs.existsSync(accountFile)) { try { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); const indexEntry = Object.values(index).find(a => a.uuid === data.uuid); accData.email = indexEntry ? indexEntry.email : 'N/A'; socket.emit('admin_account_data_received', accData); } catch(e) {} }
+    if (fs.existsSync(accountFile)) { try { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); const indexEntry = Object.values(index).find(a => a.uuid === data.uuid); accData.email = indexEntry ? indexEntry.email : 'N/A'; socket.emit('admin_account_data_received', accData); } catch (e) { } }
   });
 
   socket.on('admin_update_account', (data) => {
@@ -157,8 +157,10 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     if (!perms.includes('*') && !perms.includes(pName) && !devPerms.includes('*') && !devPerms.includes(pName)) return;
     const accountFile = path.join(PLAYER_DATA_DIR, `${data.uuid}.json`);
     if (fs.existsSync(accountFile)) {
-        try { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); if (data.isBanned !== undefined) accData.isBanned = data.isBanned; if (data.banReason !== undefined) accData.banReason = data.banReason; fs.writeFileSync(accountFile, JSON.stringify(accData, null, 2)); logSystem(`ADMIN UPDATED ACCOUNT: ${player.name} modified ${data.uuid} (Banned: ${accData.isBanned})`); socket.emit('system_dialog', `Successfully updated account.`);
-          if (accData.isBanned) { for (let id in activePlayers) { if (activePlayers[id].accountUuid === data.uuid) { const targetSocket = io.sockets.sockets.get(id); if (targetSocket) targetSocket.disconnect(true); } } } } catch(e) {}
+      try {
+        const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); if (data.isBanned !== undefined) accData.isBanned = data.isBanned; if (data.banReason !== undefined) accData.banReason = data.banReason; fs.writeFileSync(accountFile, JSON.stringify(accData, null, 2)); logSystem(`ADMIN UPDATED ACCOUNT: ${player.name} modified ${data.uuid} (Banned: ${accData.isBanned})`); socket.emit('system_dialog', `Successfully updated account.`);
+        if (accData.isBanned) { for (let id in activePlayers) { if (activePlayers[id].accountUuid === data.uuid) { const targetSocket = io.sockets.sockets.get(id); if (targetSocket) targetSocket.disconnect(true); } } }
+      } catch (e) { }
     }
   });
 
@@ -195,7 +197,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     const pName = player.name.toLowerCase(); const perms = permissionsCatalog['dev'] || []; if (!perms.includes('*') && !perms.includes(pName)) return;
     const amount = parseInt(data.amount, 10); if (isNaN(amount)) return;
     const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`);
-    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.currency = (charObj.currency || 0) + amount; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); socket.emit('currency_updated', { currency: charObj.currency }); } catch(e) {} }
+    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.currency = (charObj.currency || 0) + amount; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); socket.emit('currency_updated', { currency: charObj.currency }); } catch (e) { } }
   });
 
   socket.on('dev_set_level', (data) => {
@@ -210,7 +212,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
         charObj.level = newLevel; player.level = newLevel;
         if (player.accountUuid) { const playerFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`); if (fs.existsSync(playerFile)) { const accData = JSON.parse(fs.readFileSync(playerFile, 'utf8')); accData.characters.forEach(c => { if (typeof c === 'object' && c.name === player.name) c.level = newLevel; }); ProgressionSystem.recalculateAccountTotalLevel(accData); fs.writeFileSync(playerFile, JSON.stringify(accData, null, 2)); } }
         fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); socket.emit('player_data_updated', charObj);
-      } catch(e) {}
+      } catch (e) { }
     }
   });
 
@@ -219,7 +221,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     const pName = player.name.toLowerCase(); const perms = permissionsCatalog['dev'] || []; if (!perms.includes('*') && !perms.includes(pName)) return;
     const newIntegrity = parseInt(data.integrity, 10); if (isNaN(newIntegrity) || newIntegrity < -100 || newIntegrity > 100) return;
     const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`);
-    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.integrity = newIntegrity; player.integrity = newIntegrity; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); socket.emit('player_data_updated', charObj); } catch(e) {} }
+    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.integrity = newIntegrity; player.integrity = newIntegrity; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); socket.emit('player_data_updated', charObj); } catch (e) { } }
   });
 
   socket.on('create_npc', (data) => {
@@ -270,7 +272,7 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     const player = activePlayers[socket.id]; if (!player) return;
     const pName = player.name.toLowerCase(); const devPerms = permissionsCatalog['dev'] || [];
     if (devPerms.includes('*') || devPerms.includes(pName)) {
-        state.entityGroups[data.group] = data.settings; fs.writeFileSync(ENTITY_GROUPS_FILE, JSON.stringify(state.entityGroups, null, 2)); io.emit('entity_groups_data', state.entityGroups); logSystem(`ENTITY GROUP UPDATED: ${player.name} modified ${data.group}`);
+      state.entityGroups[data.group] = data.settings; fs.writeFileSync(ENTITY_GROUPS_FILE, JSON.stringify(state.entityGroups, null, 2)); io.emit('entity_groups_data', state.entityGroups); logSystem(`ENTITY GROUP UPDATED: ${player.name} modified ${data.group}`);
     }
   });
 
@@ -344,12 +346,12 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
     const pName = player.name.toLowerCase(); const devPerms = permissionsCatalog['dev'] || [];
     if (!devPerms.includes('*') && !devPerms.includes(pName)) return;
     for (let i = npcsCatalog.length - 1; i >= 0; i--) {
-        if (npcsCatalog[i].spawnerUuid === spawnerUuid) {
-            const uuid = npcsCatalog[i].uuid;
-            const zone = npcsCatalog[i].zone || 'untitled';
-            npcsCatalog.splice(i, 1);
-            io.to(zone).emit('npc_deleted', uuid);
-        }
+      if (npcsCatalog[i].spawnerUuid === spawnerUuid) {
+        const uuid = npcsCatalog[i].uuid;
+        const zone = npcsCatalog[i].zone || 'untitled';
+        npcsCatalog.splice(i, 1);
+        io.to(zone).emit('npc_deleted', uuid);
+      }
     }
   });
 };
