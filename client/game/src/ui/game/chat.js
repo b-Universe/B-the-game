@@ -131,9 +131,10 @@ export class ChatManager {
     const nameSpan = document.createElement('span');
     nameSpan.className = 'chat-name';
 
-    if (name && name.toLowerCase() === 'tim') {
-      nameSpan.classList.add('dev-tim');
-      nameSpan.innerText = 'Dev Tim';
+    const isDev = name && this.engine.permissions?.dev && (this.engine.permissions.dev.includes('*') || this.engine.permissions.dev.includes(name.toLowerCase()));
+    if (isDev) {
+      nameSpan.classList.add('dev-user');
+      nameSpan.innerText = `[DEV] ${name}`;
     } else if (name === 'System' || name === 'Combat') {
       nameSpan.style.color = channelConfig.color;
       nameSpan.innerText = name;

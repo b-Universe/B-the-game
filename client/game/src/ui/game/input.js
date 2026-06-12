@@ -42,6 +42,7 @@ export class InputManager {
 
     this.handleKeyDown = (e) => {
       eng.player.lastActionTime = Date.now();
+      eng.player.isManuallyAFK = false;
       this.router.handleKeyDown(e);
     };
 
@@ -93,6 +94,7 @@ export class InputManager {
 
     this.handleMouseDown = (e) => {
       eng.player.lastActionTime = Date.now();
+      eng.player.isManuallyAFK = false;
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
       this.keys['mouse' + e.button] = true;
@@ -244,10 +246,14 @@ export class InputManager {
           if (hitIndex !== -1) {
             eng.waypoints.splice(hitIndex, 1);
           } else {
-            eng.waypoints.push({ x: mapPos.x, y: mapPos.y });
-            if (!eng.mapPings) eng.mapPings = [];
-            eng.mapPings.push({ x: mapPos.x, y: mapPos.y, life: 1.0, color: '#f1c40f' });
-            if (eng.network) eng.network.sendMapPing({ x: mapPos.x, y: mapPos.y });
+            const now = Date.now();
+            if (!eng.lastMapPingTime || now - eng.lastMapPingTime > 1000) {
+              eng.lastMapPingTime = now;
+              eng.waypoints.push({ x: mapPos.x, y: mapPos.y });
+              if (!eng.mapPings) eng.mapPings = [];
+              eng.mapPings.push({ x: mapPos.x, y: mapPos.y, life: 1.0, color: '#f1c40f' });
+              if (eng.network) eng.network.sendMapPing({ x: mapPos.x, y: mapPos.y });
+            }
           }
           return;
         }
@@ -427,7 +433,6 @@ export class InputManager {
     };
 
     this.handleMouseMove = (e) => {
-      eng.player.lastActionTime = Date.now();
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
 

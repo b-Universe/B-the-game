@@ -109,12 +109,18 @@ export class NetworkManager {
     this.socket.on('current_players', (players) => {
       eng.otherPlayers = {};
       for (let id in players) {
-        if (id !== this.socket.id) eng.otherPlayers[id] = players[id];
+        if (id !== this.socket.id) {
+          eng.otherPlayers[id] = players[id];
+          eng.otherPlayers[id].serverX = players[id].x;
+          eng.otherPlayers[id].serverY = players[id].y;
+        }
       }
       if (eng.ui && eng.ui.playerList) eng.ui.playerList.updateList();
     });
 
     this.socket.on('player_joined', (player) => {
+      player.serverX = player.x;
+      player.serverY = player.y;
       eng.otherPlayers[player.id] = player;
       if (eng.ui && eng.ui.playerList) eng.ui.playerList.updateList();
     });
@@ -128,8 +134,8 @@ export class NetworkManager {
 
     this.socket.on('player_moved', (player) => {
       if (eng.otherPlayers[player.id]) {
-        eng.otherPlayers[player.id].x = player.x;
-        eng.otherPlayers[player.id].y = player.y;
+        eng.otherPlayers[player.id].serverX = player.x;
+        eng.otherPlayers[player.id].serverY = player.y;
         if (player.z !== undefined) eng.otherPlayers[player.id].z = player.z;
         eng.otherPlayers[player.id].state = player.state;
         eng.otherPlayers[player.id].dir = player.dir;

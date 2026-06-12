@@ -42,7 +42,7 @@ export class GameEngine {
       this.playerData.powerTray = this.playerData.powers.filter(p => window.POWER_REGISTRY && window.POWER_REGISTRY[p] && window.POWER_REGISTRY[p].type?.toLowerCase() !== 'passive');
     }
 
-    const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, fov: 1000, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
+    const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, disableAFKTimer: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
 
     // If this is the player's first time loading the client, perform a hardware bottleneck check
@@ -109,12 +109,6 @@ export class GameEngine {
     startX = Math.max(0, Math.min(startX, maxMapSize));
     startY = Math.max(0, Math.min(startY, maxMapSize));
 
-    if (this.playerData.name && this.playerData.name.toLowerCase() === 'tim') {
-      startX = mapCenter;
-      startY = mapCenter;
-      console.log("Welcome back, Tim. Spawning at map center.");
-    }
-
     this.player = {
       x: startX,
       y: startY,
@@ -145,6 +139,7 @@ export class GameEngine {
       maxSynthEnergy: (this.playerData.stats && this.playerData.stats.maxSynthEnergy !== undefined) ? this.playerData.stats.maxSynthEnergy : 1000,
       activePowers: this.playerData.activePowers ? [...this.playerData.activePowers] : [],
       isAFK: false,
+      isManuallyAFK: false,
       lastActionTime: Date.now()
     };
     this.screenFade = 0;
@@ -563,7 +558,12 @@ export class GameEngine {
     if (!this.mapReceived) return;
 
     const now = Date.now();
-    const isNowAFK = (now - this.player.lastActionTime) > 120000; // 2 minutes
+    let isNowAFK = this.player.isManuallyAFK || (now - this.player.lastActionTime) > 120000; // 2 minutes
+
+    if (this.clientSettings.disableAFKTimer && !this.player.isManuallyAFK) {
+      isNowAFK = false;
+    }
+
     if (this.player.isAFK !== isNowAFK) {
       this.player.isAFK = isNowAFK;
       if (!isNowAFK) this.player.afkMessage = null;
@@ -1085,23 +1085,28 @@ export class GameEngine {
       }
     }
 
-    if (
-      Math.abs(this.player.x - this.lastEmit.x) > 1 ||
-      Math.abs(this.player.y - this.lastEmit.y) > 1 ||
-      (this.player.z !== undefined && this.lastEmit.z !== undefined && Math.abs(this.player.z - this.lastEmit.z) > 1) ||
-      Math.abs(this.player.hp - this.lastEmit.hp) >= 1 ||
-      this.player.state !== this.lastEmit.state ||
-      this.player.dir !== this.lastEmit.dir ||
-      this.player.activePowers.join(',') !== this.lastEmit.activePowers ||
-      this.player.isAFK !== this.lastEmit.isAFK
-    ) {
-      this.network.sendPlayerMoved({
-        x: this.player.x, y: this.player.y, z: this.player.z,
-        state: this.player.state, dir: this.player.dir,
-        hp: this.player.hp, activePowers: this.player.activePowers,
-        isAFK: this.player.isAFK
-      });
-      this.lastEmit = { x: this.player.x, y: this.player.y, z: this.player.z, state: this.player.state, dir: this.player.dir, hp: this.player.hp, activePowers: this.player.activePowers.join(','), isAFK: this.player.isAFK };
+    if (!this.lastEmitTime) this.lastEmitTime = 0;
+
+    if (now - this.lastEmitTime >= 50) { // Throttle client position packets to max 20 per second
+      if (
+        Math.abs(this.player.x - this.lastEmit.x) > 1 ||
+        Math.abs(this.player.y - this.lastEmit.y) > 1 ||
+        (this.player.z !== undefined && this.lastEmit.z !== undefined && Math.abs(this.player.z - this.lastEmit.z) > 1) ||
+        Math.abs(this.player.hp - this.lastEmit.hp) >= 1 ||
+        this.player.state !== this.lastEmit.state ||
+        this.player.dir !== this.lastEmit.dir ||
+        this.player.activePowers.join(',') !== this.lastEmit.activePowers ||
+        this.player.isAFK !== this.lastEmit.isAFK
+      ) {
+        this.network.sendPlayerMoved({
+          x: this.player.x, y: this.player.y, z: this.player.z,
+          state: this.player.state, dir: this.player.dir,
+          hp: this.player.hp, activePowers: this.player.activePowers,
+          isAFK: this.player.isAFK
+        });
+        this.lastEmit = { x: this.player.x, y: this.player.y, z: this.player.z, state: this.player.state, dir: this.player.dir, hp: this.player.hp, activePowers: this.player.activePowers.join(','), isAFK: this.player.isAFK };
+        this.lastEmitTime = now;
+      }
     }
 
     this.applyGravity(this.player, dt);

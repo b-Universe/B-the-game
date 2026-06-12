@@ -76,6 +76,7 @@ export class SettingsWindow extends BaseWindow {
         <div id="row-toggle-click-move" class="settings-row"><span class="b-label">Click-to-Move</span><button id="btn-toggle-click-move" class="b-btn" style="width: 115px;">Disabled</button></div>
         <div id="row-toggle-click-move-path" class="settings-row"><span class="b-label">Show Click-to-Move Path</span><button id="btn-toggle-click-move-path" class="b-btn" style="width: 115px;">Enabled</button></div>
         <div id="row-toggle-always-sprint" class="settings-row"><span class="b-label">Always Sprint</span><button id="btn-toggle-always-sprint" class="b-btn" style="width: 115px;">Disabled</button></div>
+        <div id="row-toggle-disable-afk" class="settings-row"><span class="b-label">Disable Auto-AFK Timer</span><button id="btn-toggle-disable-afk" class="b-btn" style="width: 115px;">Disabled</button></div>
 
         <div id="row-toggle-mute-arcade" class="settings-row"><span class="b-label">Mute Arcade Sounds</span><button id="btn-toggle-mute-arcade" class="b-btn" style="width: 115px;">Disabled</button></div>
         <div id="row-toggle-lock-builder" class="settings-row"><span class="b-label">Lock Builder Panels</span><button id="btn-toggle-lock-builder" class="b-btn" style="width: 115px;">Disabled</button></div>
@@ -111,7 +112,7 @@ export class SettingsWindow extends BaseWindow {
   saveSettings(settingsObj) {
     localStorage.setItem('b_client_settings', JSON.stringify(settingsObj));
     if (window.currentGameEngine && window.currentGameEngine.network) {
-        window.currentGameEngine.network.sendClientSettings(settingsObj);
+      window.currentGameEngine.network.sendClientSettings(settingsObj);
     }
   }
 
@@ -155,6 +156,7 @@ export class SettingsWindow extends BaseWindow {
     syncToggle('btn-toggle-click-move', 'clickToMove');
     syncToggle('btn-toggle-click-move-path', 'showClickMovePath', true);
     syncToggle('btn-toggle-always-sprint', 'alwaysSprint');
+    syncToggle('btn-toggle-disable-afk', 'disableAFKTimer');
     syncToggle('btn-toggle-cam-jump', 'cameraFollowsJump', true);
     syncToggle('btn-toggle-camera-shake', 'enableCameraShake', true);
     syncToggle('btn-toggle-invert-cam-x', 'invertCameraX');
@@ -214,25 +216,25 @@ export class SettingsWindow extends BaseWindow {
         }
       ];
       for (const cat of categories) {
-         const header = document.createElement('div');
-         header.style.cssText = 'color: #3498db; font-size: 0.8rem; font-weight: bold; margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 3px; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 1px;';
-         header.innerText = cat.name;
-         listEl.appendChild(header);
+        const header = document.createElement('div');
+        header.style.cssText = 'color: #3498db; font-size: 0.8rem; font-weight: bold; margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 3px; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 1px;';
+        header.innerText = cat.name;
+        listEl.appendChild(header);
 
-         for (const [actionId, label] of Object.entries(cat.actions)) {
-            const binds = settings.actionBinds[actionId] || { primary: '', alt: '' };
-            const row = document.createElement('div');
-            row.className = 'settings-row';
-            row.style.padding = '2px 0';
-            const primText = binds.primary ? binds.primary.replace(/control/gi, 'ctrl').replace(/\+/g, ' + ').toUpperCase() : '---';
-            const altText = binds.alt ? binds.alt.replace(/control/gi, 'ctrl').replace(/\+/g, ' + ').toUpperCase() : '---';
-            row.innerHTML = `
+        for (const [actionId, label] of Object.entries(cat.actions)) {
+          const binds = settings.actionBinds[actionId] || { primary: '', alt: '' };
+          const row = document.createElement('div');
+          row.className = 'settings-row';
+          row.style.padding = '2px 0';
+          const primText = binds.primary ? binds.primary.replace(/control/gi, 'ctrl').replace(/\+/g, ' + ').toUpperCase() : '---';
+          const altText = binds.alt ? binds.alt.replace(/control/gi, 'ctrl').replace(/\+/g, ' + ').toUpperCase() : '---';
+          row.innerHTML = `
                <span class="b-label" style="flex: 1.5; margin: 0; padding-left: 5px;">${label}</span>
                <div style="flex: 1; padding: 0 5px;"><button class="b-btn btn-secondary bind-btn" data-action="${actionId}" data-slot="primary" style="width: 100%; font-size: 0.75rem; padding: 4px;">${primText}</button></div>
                <div style="flex: 1; padding: 0 5px;"><button class="b-btn btn-secondary bind-btn" data-action="${actionId}" data-slot="alt" style="width: 100%; font-size: 0.75rem; padding: 4px;">${altText}</button></div>
             `;
-            listEl.appendChild(row);
-         }
+          listEl.appendChild(row);
+        }
       }
     }
   }
@@ -300,6 +302,7 @@ export class SettingsWindow extends BaseWindow {
     bindToggle('btn-toggle-click-move', 'clickToMove');
     bindToggle('btn-toggle-click-move-path', 'showClickMovePath');
     bindToggle('btn-toggle-always-sprint', 'alwaysSprint');
+    bindToggle('btn-toggle-disable-afk', 'disableAFKTimer');
     bindToggle('btn-toggle-cam-jump', 'cameraFollowsJump');
     bindToggle('btn-toggle-camera-shake', 'enableCameraShake');
     bindToggle('btn-toggle-invert-cam-x', 'invertCameraX');
@@ -378,19 +381,19 @@ export class SettingsWindow extends BaseWindow {
     const applyGraphicsPreset = (preset) => {
       const settings = window.currentGameEngine ? window.currentGameEngine.clientSettings : this.getSettings();
       if (preset === 'potato') {
-          Object.assign(settings, { renderDistance: 800, renderScale: 0.5, enableShadows: false, softShadows: false, maxDynamicLights: 0, chunkGenSpeed: 1 });
+        Object.assign(settings, { renderDistance: 800, renderScale: 0.5, enableShadows: false, softShadows: false, maxDynamicLights: 0, chunkGenSpeed: 1 });
       } else if (preset === 'normal') {
-          Object.assign(settings, { renderDistance: 2000, renderScale: 1.0, enableShadows: true, softShadows: true, maxDynamicLights: 48, chunkGenSpeed: 3 });
+        Object.assign(settings, { renderDistance: 2000, renderScale: 1.0, enableShadows: true, softShadows: true, maxDynamicLights: 48, chunkGenSpeed: 3 });
       } else if (preset === 'ultra') {
-          Object.assign(settings, { renderDistance: 4000, renderScale: 1.0, enableShadows: true, softShadows: true, maxDynamicLights: 100, chunkGenSpeed: 8 });
+        Object.assign(settings, { renderDistance: 4000, renderScale: 1.0, enableShadows: true, softShadows: true, maxDynamicLights: 100, chunkGenSpeed: 8 });
       }
       this.saveSettings(settings);
       this.syncUI();
       if (window.currentGameEngine?.renderer) {
-          window.currentGameEngine.renderer.needsVoxelUpdate = true;
-          if (window.currentGameEngine.renderer.updateRenderScale) window.currentGameEngine.renderer.updateRenderScale(settings.renderScale);
-          window.currentGameEngine.renderer.toggleShadows(settings.enableShadows);
-          if (window.currentGameEngine.renderer.toggleSoftShadows) window.currentGameEngine.renderer.toggleSoftShadows(settings.softShadows);
+        window.currentGameEngine.renderer.needsVoxelUpdate = true;
+        if (window.currentGameEngine.renderer.updateRenderScale) window.currentGameEngine.renderer.updateRenderScale(settings.renderScale);
+        window.currentGameEngine.renderer.toggleShadows(settings.enableShadows);
+        if (window.currentGameEngine.renderer.toggleSoftShadows) window.currentGameEngine.renderer.toggleSoftShadows(settings.softShadows);
       }
     };
 
@@ -407,102 +410,102 @@ export class SettingsWindow extends BaseWindow {
     }; // Deprecated previous handler
 
     const handleKeyDown = (e) => {
-       if (!listeningBtn) return;
-       e.preventDefault();
-       e.stopPropagation();
+      if (!listeningBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
 
-       let key = e.key.toLowerCase();
-       if (key === 'altgraph') key = 'alt'; // Catch international keyboard layouts
+      let key = e.key.toLowerCase();
+      if (key === 'altgraph') key = 'alt'; // Catch international keyboard layouts
 
-       if (['shift', 'control', 'alt', 'meta'].includes(key)) {
-           heldModifiers.add(key === 'control' ? 'ctrl' : key);
+      if (['shift', 'control', 'alt', 'meta'].includes(key)) {
+        heldModifiers.add(key === 'control' ? 'ctrl' : key);
 
-           // Fallback timer: if they press a modifier and the browser swallows the keyup event,
-           // we automatically bind it after a brief moment of no other keys being pressed.
-           if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
-           this.modifierTimeout = setTimeout(() => {
-               if (listeningBtn && heldModifiers.size > 0) {
-                   finalizeBind(Array.from(heldModifiers)[0], e);
-               }
-           }, 800);
-           return;
-       }
+        // Fallback timer: if they press a modifier and the browser swallows the keyup event,
+        // we automatically bind it after a brief moment of no other keys being pressed.
+        if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
+        this.modifierTimeout = setTimeout(() => {
+          if (listeningBtn && heldModifiers.size > 0) {
+            finalizeBind(Array.from(heldModifiers)[0], e);
+          }
+        }, 800);
+        return;
+      }
 
-       if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
-       finalizeBind(key, e);
+      if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
+      finalizeBind(key, e);
     };
 
     const handleKeyUp = (e) => {
-       if (!listeningBtn) return;
-       e.preventDefault();
-       e.stopPropagation();
-       if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
+      if (!listeningBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
 
-       let key = e.key.toLowerCase();
-       if (key === 'altgraph') key = 'alt';
+      let key = e.key.toLowerCase();
+      if (key === 'altgraph') key = 'alt';
 
-       if (['shift', 'control', 'alt', 'meta'].includes(key)) {
-           key = key === 'control' ? 'ctrl' : key;
-           heldModifiers.delete(key);
-           if (heldModifiers.size === 0) {
-               finalizeBind(key, e);
-           }
-       }
+      if (['shift', 'control', 'alt', 'meta'].includes(key)) {
+        key = key === 'control' ? 'ctrl' : key;
+        heldModifiers.delete(key);
+        if (heldModifiers.size === 0) {
+          finalizeBind(key, e);
+        }
+      }
     };
 
     const finalizeBind = (key, e) => {
-       if (key === 'escape' || key === 'backspace' || key === 'delete') key = '';
-       else if (key === ' ') key = 'space';
+      if (key === 'escape' || key === 'backspace' || key === 'delete') key = '';
+      else if (key === ' ') key = 'space';
 
-       let bindStr = key;
-       if (key) {
-          const mods = Array.from(heldModifiers);
-          if (mods.length > 0 && !mods.includes(key)) {
-             bindStr = mods.join('+') + '+' + key;
-          }
-       }
+      let bindStr = key;
+      if (key) {
+        const mods = Array.from(heldModifiers);
+        if (mods.length > 0 && !mods.includes(key)) {
+          bindStr = mods.join('+') + '+' + key;
+        }
+      }
 
-       const settings = window.currentGameEngine ? window.currentGameEngine.clientSettings : this.getSettings();
-       settings.actionBinds[listeningAction][listeningSlot] = bindStr;
+      const settings = window.currentGameEngine ? window.currentGameEngine.clientSettings : this.getSettings();
+      settings.actionBinds[listeningAction][listeningSlot] = bindStr;
 
-       this.saveSettings(settings);
-       this.syncUI();
+      this.saveSettings(settings);
+      this.syncUI();
 
-       listeningBtn.classList.remove('btn-primary');
-       listeningBtn.classList.add('btn-secondary');
-       listeningBtn = null;
-       heldModifiers.clear();
-       if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
-       document.removeEventListener('keydown', handleKeyDown, true);
-       document.removeEventListener('keyup', handleKeyUp, true);
+      listeningBtn.classList.remove('btn-primary');
+      listeningBtn.classList.add('btn-secondary');
+      listeningBtn = null;
+      heldModifiers.clear();
+      if (this.modifierTimeout) clearTimeout(this.modifierTimeout);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyUp, true);
     };
 
     this.element.addEventListener('click', (e) => {
-       if (e.target.classList.contains('bind-btn')) {
-          if (listeningBtn) {
-             listeningBtn.classList.remove('btn-primary');
-             listeningBtn.classList.add('btn-secondary');
-             this.syncUI();
-          }
-          listeningBtn = e.target;
-          listeningAction = listeningBtn.dataset.action;
-          listeningSlot = listeningBtn.dataset.slot;
+      if (e.target.classList.contains('bind-btn')) {
+        if (listeningBtn) {
+          listeningBtn.classList.remove('btn-primary');
+          listeningBtn.classList.add('btn-secondary');
+          this.syncUI();
+        }
+        listeningBtn = e.target;
+        listeningAction = listeningBtn.dataset.action;
+        listeningSlot = listeningBtn.dataset.slot;
 
-          listeningBtn.innerText = 'PRESS KEY...';
-          listeningBtn.classList.remove('btn-secondary');
-          listeningBtn.classList.add('btn-primary');
-          heldModifiers.clear();
-          document.addEventListener('keydown', handleKeyDown, true);
-          document.addEventListener('keyup', handleKeyUp, true);
-       }
+        listeningBtn.innerText = 'PRESS KEY...';
+        listeningBtn.classList.remove('btn-secondary');
+        listeningBtn.classList.add('btn-primary');
+        heldModifiers.clear();
+        document.addEventListener('keydown', handleKeyDown, true);
+        document.addEventListener('keyup', handleKeyUp, true);
+      }
     });
 
     document.getElementById('btn-preset-default')?.addEventListener('click', () => {
-        const settings = window.currentGameEngine ? window.currentGameEngine.clientSettings : this.getSettings();
-        settings.actionBinds = { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } };
-        delete settings.keybinds;
-        this.saveSettings(settings);
-        this.syncUI();
+      const settings = window.currentGameEngine ? window.currentGameEngine.clientSettings : this.getSettings();
+      settings.actionBinds = { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } };
+      delete settings.keybinds;
+      this.saveSettings(settings);
+      this.syncUI();
     });
   }
 }

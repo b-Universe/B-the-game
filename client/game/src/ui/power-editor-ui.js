@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { POWER_REGISTRY } from './game/registry.js?v=cache-bust-005';
 import { PowerEditorWindow } from './windows/power-windows.js?v=cache-bust-005';
 
@@ -15,21 +14,6 @@ export class PowerEditorUIManager {
     this.els = {}; // Cache DOM elements
 
     this.sequenceLibrary = {};
-
-    this.previewState = {
-      playing: true,
-      currentSequence: 'None',
-      frameIdx: 0,
-      lastTick: 0,
-      images: {}
-    };
-
-    this.previewSim = {
-      playing: false,
-      time: 0,
-      duration: 3.0,
-      events: []
-    };
 
     this.window = new PowerEditorWindow();
     this.setupUI();
@@ -128,203 +112,6 @@ export class PowerEditorUIManager {
 
     const powerTypeSelect = document.getElementById('pe-power-type');
     if (powerTypeSelect) powerTypeSelect.addEventListener('change', updateDisabledFields);
-
-    this.setupVisualsEngine();
-  }
-
-  setupVisualsEngine() {
-
-    // Re-render tint instantly when dragging the color picker
-    const tintInput = document.getElementById('pe-visual-tint');
-    if (tintInput) {
-      tintInput.addEventListener('input', () => { /* Render loop picks this up automatically */ });
-    }
-
-    this.initPreviewScene();
-  }
-
-  initPreviewScene() {
-    const container = document.getElementById('pe-preview-container');
-    if (!container) return;
-
-    this.previewScene = new THREE.Scene();
-    this.previewCamera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-    this.previewRenderer = new THREE.WebGLRenderer({ alpha: true });
-
-    this.previewRenderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(this.previewRenderer.domElement);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-    this.previewScene.add(ambientLight);
-
-    const casterGeo = new THREE.BoxGeometry(20, 20, 20);
-    const casterMat = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-    const casterMesh = new THREE.Mesh(casterGeo, casterMat);
-    casterMesh.position.set(0, 0, 0);
-    this.previewScene.add(casterMesh);
-
-    const targetGeo = new THREE.BoxGeometry(20, 20, 20);
-    const targetMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const targetMesh = new THREE.Mesh(targetGeo, targetMat);
-    targetMesh.position.set(200, 0, 0);
-    this.previewScene.add(targetMesh);
-
-    this.previewCamera.position.set(100, 100, 200);
-    this.previewCamera.lookAt(100, 0, 0);
-
-    const clock = new THREE.Clock();
-
-    const animate = () => {
-      requestAnimationFrame(animate);
-      if (!this.els.panel || this.els.panel.style.display === 'none') return;
-
-      const dt = clock.getDelta();
-      const scrubber = document.getElementById('pe-preview-scrubber');
-      const timeLabel = document.getElementById('pe-preview-time');
-      const playBtn = document.getElementById('btn-pe-play-anim');
-
-      if (this.previewSim.playing) {
-        this.previewSim.time += dt;
-        if (this.previewSim.time > this.previewSim.duration) {
-          this.previewSim.playing = false;
-          this.previewSim.time = this.previewSim.duration;
-          if (playBtn) playBtn.innerText = '▶';
-        }
-        if (scrubber) scrubber.value = this.previewSim.time;
-      } else if (scrubber) {
-        this.previewSim.time = parseFloat(scrubber.value) || 0;
-      }
-
-      if (timeLabel) timeLabel.innerText = this.previewSim.time.toFixed(2) + 's';
-
-      this.previewSim.events.forEach(ev => {
-        if (this.previewSim.time >= ev.startTime && this.previewSim.time <= ev.endTime) {
-          ev.sprite.visible = true;
-          const localTime = this.previewSim.time - ev.startTime;
-
-          if (ev.type === 'projectile') {
-             ev.sprite.position.x = 200 * (localTime / (ev.endTime - ev.startTime));
-             const frame = Math.floor(localTime / (ev.speed / 1000)) % ev.maxFrames;
-             if (ev.sprite.material.map) ev.sprite.material.map.offset.set(frame / ev.maxFrames, 0);
-          } else {
-             const frame = Math.floor(localTime / (ev.speed / 1000));
-             if (frame < ev.maxFrames) {
-               if (ev.sprite.material.map) ev.sprite.material.map.offset.set(frame / ev.maxFrames, 0);
-             } else {
-               ev.sprite.visible = false;
-             }
-          }
-        } else {
-          ev.sprite.visible = false;
-        }
-      });
-
-      this.previewRenderer.render(this.previewScene, this.previewCamera);
-    };
-    animate();
-
-    const btnPlay = document.getElementById('btn-pe-play-anim');
-    if (btnPlay) {
-      btnPlay.addEventListener('click', () => {
-        if (this.previewSim.playing) {
-          this.previewSim.playing = false;
-          btnPlay.innerText = '▶';
-        } else {
-          if (this.previewSim.time >= this.previewSim.duration) this.previewSim.time = 0;
-          this.buildPreviewSimulation();
-          this.previewSim.playing = true;
-          btnPlay.innerText = '⏸';
-        }
-      });
-    }
-
-    const scrubber = document.getElementById('pe-preview-scrubber');
-    if (scrubber) {
-      scrubber.addEventListener('input', () => {
-        this.previewSim.playing = false;
-        if (btnPlay) btnPlay.innerText = '▶';
-        if (this.previewSim.events.length === 0) this.buildPreviewSimulation();
-      });
-    }
-  }
-
-  buildPreviewSimulation() {
-    if (!this.previewScene) {
-      this.initPreviewScene();
-      if (!this.previewScene) return;
-    }
-
-    this.previewSim.events.forEach(ev => {
-      this.previewScene.remove(ev.sprite);
-      if (ev.sprite.material.map) ev.sprite.material.map.dispose();
-      ev.sprite.material.dispose();
-    });
-    this.previewSim.events = [];
-    this.previewSim.duration = 0;
-
-    const speedInput = document.getElementById('pe-proj-speed');
-    const projSpeed = speedInput ? parseFloat(speedInput.value) || 400 : 400;
-    const projDuration = 200 / Math.max(1, projSpeed);
-
-    const addEvent = (sequenceId, type, startTime, offsetZ, delay) => {
-      if (sequenceId === 'None' || !this.sequenceLibrary[sequenceId]) return;
-      const seq = this.sequenceLibrary[sequenceId];
-      const originalTex = this.engine.renderer.assetManager.textures[sequenceId] || this.sequenceLibrary[sequenceId].texture;
-      if (!originalTex) return;
-
-      const tex = originalTex.clone();
-      tex.needsUpdate = true;
-      tex.repeat.set(1 / seq.frames, 1);
-      tex.offset.set(0, 0);
-
-      const tintInput = document.getElementById('pe-visual-tint');
-      const tintColor = tintInput ? tintInput.value : '#ffffff';
-
-      const mat = new THREE.SpriteMaterial({ map: tex, color: tintColor, transparent: true });
-      const sprite = new THREE.Sprite(mat);
-      sprite.scale.set(64, 64, 1);
-
-      if (type === 'caster' || type === 'projectile') sprite.position.set(0, 0, offsetZ || 0);
-      else if (type === 'target') sprite.position.set(200, 0, offsetZ || 0);
-
-      sprite.visible = false;
-      this.previewScene.add(sprite);
-
-      const duration = type === 'projectile' ? projDuration : (seq.frames * (seq.speed / 1000));
-      const actualStart = startTime + (delay || 0);
-
-      this.previewSim.events.push({
-        sprite, type, startTime: actualStart, endTime: actualStart + duration, maxFrames: seq.frames, speed: seq.speed, offsetZ
-      });
-
-      if (actualStart + duration > this.previewSim.duration) {
-        this.previewSim.duration = actualStart + duration;
-      }
-    };
-
-    let maxCasterTime = 0;
-    this.currentCasterVisuals.forEach(ev => {
-      const seq = this.sequenceLibrary[ev.sequence];
-      if (seq) {
-        const dur = seq.frames * (seq.speed / 1000);
-        if (dur > maxCasterTime) maxCasterTime = dur;
-      }
-      addEvent(ev.sequence, 'caster', 0, ev.offsetZ, ev.delay);
-    });
-
-    let projStart = maxCasterTime;
-    this.currentProjectileVisuals.forEach(ev => addEvent(ev.sequence, 'projectile', projStart, ev.offsetZ, ev.delay));
-
-    let targetStart = this.currentProjectileVisuals.length > 0 ? projStart + projDuration : maxCasterTime;
-    this.currentTargetVisuals.forEach(ev => addEvent(ev.sequence, 'target', targetStart, ev.offsetZ, ev.delay));
-
-    this.previewSim.duration += 0.2; // Small end padding
-
-    const scrubber = document.getElementById('pe-preview-scrubber');
-    if (scrubber) {
-      scrubber.max = this.previewSim.duration;
-      if (this.previewSim.time > this.previewSim.duration) this.previewSim.time = 0;
-    }
   }
 
   updateSequenceDetails(seqId) {
@@ -606,23 +393,18 @@ export class PowerEditorUIManager {
       el.addEventListener('change', (e) => {
         const index = e.target.dataset.index;
         dataArray[index].sequence = e.target.value;
-        this.previewState.currentSequence = e.target.value;
-        this.previewState.frameIdx = 0;
         this.updateSequenceDetails(e.target.value);
-        this.buildPreviewSimulation();
       });
     });
 
     listEl.querySelectorAll('.sprite-event-offset').forEach(el => {
       el.addEventListener('input', (e) => {
         dataArray[e.target.dataset.index].offsetZ = parseFloat(e.target.value) || 0;
-        this.buildPreviewSimulation();
       });
     });
     listEl.querySelectorAll('.sprite-event-delay').forEach(el => {
       el.addEventListener('input', (e) => {
         dataArray[e.target.dataset.index].delay = parseFloat(e.target.value) || 0;
-        this.buildPreviewSimulation();
       });
     });
     listEl.querySelectorAll('.btn-move-up-sprite').forEach(el => {
@@ -633,7 +415,6 @@ export class PowerEditorUIManager {
           dataArray[index] = dataArray[index - 1];
           dataArray[index - 1] = temp;
           this.renderSpriteEventList(type);
-          this.buildPreviewSimulation();
         }
       });
     });
@@ -645,7 +426,6 @@ export class PowerEditorUIManager {
           dataArray[index] = dataArray[index + 1];
           dataArray[index + 1] = temp;
           this.renderSpriteEventList(type);
-          this.buildPreviewSimulation();
         }
       });
     });
@@ -654,7 +434,6 @@ export class PowerEditorUIManager {
       el.addEventListener('click', (e) => {
         dataArray.splice(e.target.dataset.index, 1);
         this.renderSpriteEventList(type);
-        this.buildPreviewSimulation();
       });
     });
   }
@@ -780,14 +559,14 @@ export class PowerEditorUIManager {
 
     const speedInput = document.getElementById('pe-proj-speed');
     if (speedInput && !document.getElementById('pe-projectile-style')) {
-        const row = speedInput.parentNode.parentNode;
+      const row = speedInput.parentNode.parentNode;
 
-        const oldLaserRow = document.getElementById('pe-is-laser')?.closest('.pe-input-row')?.parentNode;
-        if (oldLaserRow) oldLaserRow.remove();
+      const oldLaserRow = document.getElementById('pe-is-laser')?.closest('.pe-input-row')?.parentNode;
+      if (oldLaserRow) oldLaserRow.remove();
 
-        const styleRow = document.createElement('div');
-        styleRow.style.cssText = 'display: flex; gap: 10px; margin-top: 5px;';
-        styleRow.innerHTML = `
+      const styleRow = document.createElement('div');
+      styleRow.style.cssText = 'display: flex; gap: 10px; margin-top: 5px;';
+      styleRow.innerHTML = `
             <div class="pe-input-row" style="flex: 1.5; margin: 0; display: flex; align-items: center; gap: 10px; padding: 5px; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); border-radius: 4px;">
                 <label style="font-size: 0.75rem;">Projectile Style</label>
                 <select id="pe-projectile-style" class="b-select">
@@ -806,7 +585,7 @@ export class PowerEditorUIManager {
                 <input type="number" id="pe-trail-size" class="b-input" style="padding: 0 5px; height: 24px;" min="1" max="10" step="0.5">
             </div>
         `;
-        row.parentNode.insertBefore(styleRow, row.nextSibling);
+      row.parentNode.insertBefore(styleRow, row.nextSibling);
     }
 
     const styleEl = document.getElementById('pe-projectile-style');
@@ -823,12 +602,8 @@ export class PowerEditorUIManager {
     this.renderSpriteEventList('projectile');
     this.renderSpriteEventList('target');
 
-    // Automatically display the cast animation in the preview window
     const firstCastSeq = this.currentCasterVisuals.length > 0 ? this.currentCasterVisuals[0].sequence : 'None';
-    this.previewState.currentSequence = firstCastSeq;
-    this.previewState.frameIdx = 0;
-    this.updateSequenceDetails(this.previewState.currentSequence);
-    this.buildPreviewSimulation();
+    this.updateSequenceDetails(firstCastSeq);
 
     const powerTypeEl = document.getElementById('pe-power-type');
     if (powerTypeEl) powerTypeEl.dispatchEvent(new Event('change'));
@@ -918,10 +693,10 @@ export class PowerEditorUIManager {
         btn.innerText = "Saved!";
         if (this.engine && this.engine.loadPowersets) {
           this.engine.loadPowersets().then(() => {
-             const tModal = document.getElementById('trainer-dialog-modal');
-             if (tModal && tModal.style.display === 'flex' && this.engine.activeTrainer) {
-                this.engine.ui.trainer.openTrainerUI(this.engine.activeTrainer);
-             }
+            const tModal = document.getElementById('trainer-dialog-modal');
+            if (tModal && tModal.style.display === 'flex' && this.engine.activeTrainer) {
+              this.engine.ui.trainer.openTrainerUI(this.engine.activeTrainer);
+            }
           });
         }
       } else {

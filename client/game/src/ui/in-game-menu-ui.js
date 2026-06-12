@@ -25,7 +25,7 @@ export class InGameMenuUIManager {
             if (renderer.includes('swiftshader') || renderer.includes('llvmpipe') || renderer.includes('software')) isSoftwareRenderer = true;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (isMobile || isLowEnd || isSoftwareRenderer) {
         Object.assign(defaultSettings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0, chunkGenSpeed: 1 });
@@ -35,11 +35,32 @@ export class InGameMenuUIManager {
     const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
 
     const saveClientSettings = (settingsObj) => {
-        localStorage.setItem('b_client_settings', JSON.stringify(settingsObj));
-        if (window.currentGameEngine && window.currentGameEngine.network) {
-            window.currentGameEngine.network.sendClientSettings(settingsObj);
-        }
+      localStorage.setItem('b_client_settings', JSON.stringify(settingsObj));
+      if (window.currentGameEngine && window.currentGameEngine.network) {
+        window.currentGameEngine.network.sendClientSettings(settingsObj);
+      }
     };
+
+    const sideHud = document.querySelector('.game-side-hud');
+    if (sideHud && !document.getElementById('btn-hud-help')) {
+      const btn = document.createElement('button');
+      btn.id = 'btn-hud-help';
+      btn.className = 'btn-secondary';
+      btn.style.cssText = 'width: auto; padding: 0 10px; height: 45px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f1c40f; color: #f1c40f; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
+      btn.innerText = 'Help';
+      btn.title = 'Help & Commands';
+      btn.onclick = () => {
+        if (window.currentGameEngine && window.currentGameEngine.ui) {
+          window.currentGameEngine.ui.showHelpModal();
+        }
+      };
+      btn.onmouseenter = () => btn.style.background = 'rgba(241, 196, 15, 0.2)';
+      btn.onmouseleave = () => btn.style.background = 'rgba(0,0,0,0.8)';
+
+      const btnPowers = document.getElementById('btn-powers');
+      if (btnPowers) sideHud.insertBefore(btn, btnPowers);
+      else sideHud.appendChild(btn);
+    }
 
     const btnGameMenu = document.getElementById('btn-game-menu');
     const gameDropdown = document.getElementById('game-dropdown');
@@ -158,10 +179,10 @@ export class InGameMenuUIManager {
           const key = e.key.toLowerCase();
           if (key === 'i') { e.preventDefault(); document.getElementById('btn-edit-id').click(); }
           if (key === 'k') {
-             e.preventDefault();
-             document.getElementById('btn-settings').click();
-             const kbTabBtn = document.querySelector('.settings-tab-btn[data-tab="tab-keybinds"]');
-             if (kbTabBtn) kbTabBtn.click();
+            e.preventDefault();
+            document.getElementById('btn-settings').click();
+            const kbTabBtn = document.querySelector('.settings-tab-btn[data-tab="tab-keybinds"]');
+            if (kbTabBtn) kbTabBtn.click();
           }
           if (key === 's') { e.preventDefault(); document.getElementById('btn-settings').click(); }
           if (key === 'f') { e.preventDefault(); document.getElementById('btn-friends').click(); }

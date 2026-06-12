@@ -1,19 +1,20 @@
 import { BaseWindow } from '../base-window.js?v=cache-bust-005';
+import { UI_COLORS } from './constants.js?v=cache-bust-005';
 
 export class CombatStatsWindow extends BaseWindow {
   constructor() {
-    super('combat-stats-window', 'Combat Statistics', { width: 350, height: 500, x: 100, y: 100 });
+    super('combat-stats-window', 'Combat Statistics', { width: 400, height: 500, x: 100, y: 100 });
     this.setContent(`
       <div style="display: flex; flex-direction: column; height: 100%; gap: 10px; padding: 5px; font-family: var(--font-mono); font-size: 0.85rem; overflow-y: auto;">
 
         <!-- Health Section -->
-        <div style="border: 1px solid #2ecc71; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: #2ecc71; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; display: flex; justify-content: space-between;"><span>Health & Healing</span> <span style="color: #f1c40f; font-size: 0.8rem;">Lv. <span id="cs-level">1</span></span></div>
+        <div style="border: 1px solid ${UI_COLORS.success}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
+          <div style="color: ${UI_COLORS.success}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; display: flex; justify-content: space-between;"><span>Health & Healing</span> <span style="color: ${UI_COLORS.warning}; font-size: 0.8rem;">Lv. <span id="cs-level">1</span></span></div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-            <div style="display: flex; justify-content: space-between;"><span>Current HP:</span> <span id="cs-hp" style="color: #2ecc71;">0</span></div>
-            <div style="display: flex; justify-content: space-between;"><span>Max HP:</span> <span id="cs-max-hp" style="color: #2ecc71;">0</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Current HP:</span> <span id="cs-hp" style="color: ${UI_COLORS.success};">0</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Max HP:</span> <span id="cs-max-hp" style="color: ${UI_COLORS.success};">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Regeneration:</span> <span id="cs-hp-regen">0.0 / s</span></div>
-            <div></div>
+            <div style="display: flex; justify-content: space-between;"><span>Absorption:</span> <span id="cs-absorb">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Healing Strength:</span> <span id="cs-heal-out">+0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Healing Res:</span> <span id="cs-heal-in">+0%</span></div>
           </div>
@@ -24,7 +25,7 @@ export class CombatStatsWindow extends BaseWindow {
           <div style="color: #0984e3; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Energy & Battery</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="color: #0984e3; text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;">Energy</div>
-            <div style="color: #00d2ff; text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;">Battery</div>
+            <div style="color: ${UI_COLORS.cyan}; text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;">Battery</div>
             <div style="display: flex; justify-content: space-between;"><span>Current:</span> <span id="cs-en">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Current:</span> <span id="cs-bat">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Max:</span> <span id="cs-max-en">0</span></div>
@@ -39,10 +40,11 @@ export class CombatStatsWindow extends BaseWindow {
         </div>
 
         <!-- Combat Section -->
-        <div style="border: 1px solid #e74c3c; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: #e74c3c; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Combat</div>
+        <div style="border: 1px solid ${UI_COLORS.error}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
+          <div style="color: ${UI_COLORS.error}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Combat</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Damage Bonus:</span> <span id="cs-dmg">+0%</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Thorns:</span> <span id="cs-thorns">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Crit Chance:</span> <span id="cs-crit-chance">0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Crit Dmg:</span> <span id="cs-crit-dmg">+0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Accuracy:</span> <span id="cs-acc">+0%</span></div>
@@ -50,11 +52,12 @@ export class CombatStatsWindow extends BaseWindow {
             <div style="display: flex; justify-content: space-between;"><span>Recharge:</span> <span id="cs-recharge">+0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Control Bonus:</span> <span id="cs-control">+0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Stealth Radius:</span> <span id="cs-stealth">0 ft</span></div>
+            <div></div>
           </div>
         </div>
 
-        <div style="border: 1px solid #e67e22; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: #e67e22; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Resistance & Defense</div>
+        <div style="border: 1px solid ${UI_COLORS.orange}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
+          <div style="color: ${UI_COLORS.orange}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Resistance & Defense</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Smashing Res:</span> <span id="cs-res-smashing">0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Smashing Def:</span> <span id="cs-def-smashing">0%</span></div>
@@ -63,13 +66,13 @@ export class CombatStatsWindow extends BaseWindow {
           </div>
           <div style="margin-top: 5px; color: #aaa; font-size: 0.75rem;">Debuff Resistance</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+            <div style="display: flex; justify-content: space-between;"><span>Resistance Debuff:</span> <span id="cs-res-resdebuff">0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Defense Debuff:</span> <span id="cs-res-defdebuff">0%</span></div>
-            <div style="display: flex; justify-content: space-between;"><span>Damage Debuff:</span> <span id="cs-res-dmgdebuff">0%</span></div>
           </div>
         </div>
 
-        <div style="border: 1px solid #9b59b6; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: #9b59b6; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Status Protection & Resistance</div>
+        <div style="border: 1px solid ${UI_COLORS.purple}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
+          <div style="color: ${UI_COLORS.purple}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Status Protection & Resistance</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Hold Prot:</span> <span id="cs-prot-hold">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Hold Res:</span> <span id="cs-res-hold">0%</span></div>
@@ -83,17 +86,17 @@ export class CombatStatsWindow extends BaseWindow {
         </div>
 
         <!-- Target Comparison Section -->
-        <div id="cs-target-section" style="border: 1px solid #e74c3c; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4); display: none; flex-direction: column;">
+        <div id="cs-target-section" style="border: 1px solid ${UI_COLORS.error}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4); display: none; flex-direction: column;">
           <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="cs-target-header">
-            <span style="color: #e74c3c; font-weight: bold; text-transform: uppercase;">Target Comparison</span>
+            <span style="color: ${UI_COLORS.error}; font-weight: bold; text-transform: uppercase;">Target Comparison</span>
             <span id="cs-target-toggle">▼</span>
           </div>
           <div id="cs-target-content" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px;">
             <div style="display: flex; justify-content: space-between;"><span>Target:</span> <span id="cs-target-name" style="color: #fff; font-weight: bold;">None</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Level Diff:</span> <span id="cs-target-level-diff">0</span></div>
-            <div style="display: flex; justify-content: space-between;"><span>Base Hit Chance:</span> <span id="cs-target-hit-chance" style="color: #f1c40f;">50%</span></div>
-            <div style="display: flex; justify-content: space-between;"><span>Damage Mult:</span> <span id="cs-target-dmg-mult" style="color: #e74c3c;">100%</span></div>
-            <div style="display: flex; justify-content: space-between;"><span>Damage Res (You):</span> <span id="cs-target-res-mult" style="color: #3498db;">0%</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Base Hit Chance:</span> <span id="cs-target-hit-chance" style="color: ${UI_COLORS.warning};">50%</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Damage Mult:</span> <span id="cs-target-dmg-mult" style="color: ${UI_COLORS.error};">100%</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Damage Res (You):</span> <span id="cs-target-res-mult" style="color: ${UI_COLORS.primary};">0%</span></div>
           </div>
         </div>
 
@@ -155,9 +158,9 @@ export class CombatStatsUIManager {
     let batDrain = 0;
 
     let stats = {
-      tohit: 0, acc: 0, dmg: 0, recharge: 0, healOut: 0, healIn: 0, endDisc: 0, batDisc: 0, stealth: 0,
+      tohit: 0, acc: 0, dmg: 0, thorns: 0, recharge: 0, healOut: 0, healIn: 0, absorb: 0, endDisc: 0, batDisc: 0, stealth: 0,
       critChance: 5, critDmg: 50, control: 0,
-      resSmash: 0, defSmash: 0, resLethal: 0, defLethal: 0, resDefDebuff: 0, resDmgDebuff: 0,
+      resSmash: 0, defSmash: 0, resLethal: 0, defLethal: 0, resDefDebuff: 0, resResDebuff: 0,
       protHold: 0, resHold: 0, protStun: 0, resStun: 0, protSleep: 0, resSleep: 0, protSnare: 0, resSnare: 0
     };
 
@@ -166,9 +169,11 @@ export class CombatStatsUIManager {
       stats.tohit += pDef.stats.toHitBonus || 0;
       stats.acc += pDef.stats.accuracyBonus || 0;
       stats.dmg += pDef.stats.damageBonus || 0;
+      stats.thorns += pDef.stats.thorns || 0;
       stats.recharge += pDef.stats.rechargeBonus || 0;
       stats.healOut += pDef.stats.healingOutBonus || 0;
       stats.healIn += pDef.stats.healingInBonus || 0;
+      stats.absorb += pDef.stats.absorption || 0;
       stats.endDisc += pDef.stats.endDiscount || 0;
       stats.batDisc += pDef.stats.batteryDiscount || (pDef.stats.endDiscount || 0);
       stats.stealth += pDef.stats.stealthRadius || 0;
@@ -183,7 +188,7 @@ export class CombatStatsUIManager {
       stats.defLethal += pDef.stats.defLethal || 0;
 
       stats.resDefDebuff += pDef.stats.resDefDebuff || 0;
-      stats.resDmgDebuff += pDef.stats.resDmgDebuff || 0;
+      stats.resResDebuff += pDef.stats.resResDebuff || 0;
 
       stats.protHold += pDef.stats.protHold || 0;
       stats.resHold += pDef.stats.resHold || 0;
@@ -225,9 +230,11 @@ export class CombatStatsUIManager {
     document.getElementById('cs-tohit').innerText = `+${Math.round(stats.tohit)}%`;
     document.getElementById('cs-acc').innerText = `+${Math.round(stats.acc)}%`;
     document.getElementById('cs-dmg').innerText = `+${Math.round(stats.dmg)}%`;
+    document.getElementById('cs-thorns').innerText = `${Math.round(stats.thorns)}`;
     document.getElementById('cs-recharge').innerText = `+${Math.round(stats.recharge)}%`;
     document.getElementById('cs-heal-out').innerText = `+${Math.round(stats.healOut)}%`;
     document.getElementById('cs-heal-in').innerText = `+${Math.round(stats.healIn)}%`;
+    document.getElementById('cs-absorb').innerText = `${Math.round(stats.absorb)}`;
     document.getElementById('cs-en-disc').innerText = `-${Math.round(stats.endDisc)}%`;
     document.getElementById('cs-bat-disc').innerText = `-${Math.round(stats.batDisc)}%`;
     document.getElementById('cs-crit-chance').innerText = `${Math.round(stats.critChance)}%`;
@@ -239,7 +246,7 @@ export class CombatStatsUIManager {
     document.getElementById('cs-res-lethal').innerText = `${Math.round(stats.resLethal)}%`;
     document.getElementById('cs-def-lethal').innerText = `${Math.round(stats.defLethal)}%`;
     document.getElementById('cs-res-defdebuff').innerText = `${Math.round(stats.resDefDebuff)}%`;
-    document.getElementById('cs-res-dmgdebuff').innerText = `${Math.round(stats.resDmgDebuff)}%`;
+    document.getElementById('cs-res-resdebuff').innerText = `${Math.round(stats.resResDebuff)}%`;
     document.getElementById('cs-prot-hold').innerText = `${stats.protHold}`;
     document.getElementById('cs-res-hold').innerText = `${Math.round(stats.resHold)}%`;
     document.getElementById('cs-prot-stun').innerText = `${stats.protStun}`;

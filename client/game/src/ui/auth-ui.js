@@ -27,7 +27,7 @@ export class AuthUIManager {
           if (renderer.includes('swiftshader') || renderer.includes('llvmpipe') || renderer.includes('software')) isSoftwareRenderer = true;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     if (!isMobile && !isLowEnd && !isSoftwareRenderer) return callback();
 
@@ -64,7 +64,7 @@ export class AuthUIManager {
 
       btnPotato.onclick = () => {
         handleClose();
-        const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, fov: 1000, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
+        const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, disableAFKTimer: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
         const potatoSettings = Object.assign({}, defaultSettings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0, chunkGenSpeed: 1 });
         localStorage.setItem('b_client_settings', JSON.stringify(potatoSettings));
         callback();
@@ -200,14 +200,14 @@ export class AuthUIManager {
         const normalized = val / 100;
         localStorage.setItem('b_login_volume', normalized);
         if (this.app && this.app.menuAudio && typeof this.app.menuAudio.setVolume === 'function') {
-           this.app.menuAudio.setVolume(normalized);
+          this.app.menuAudio.setVolume(normalized);
         }
         const btnMusic = document.getElementById('btn-login-music');
         if (btnMusic) {
-            if (normalized === 0) btnMusic.innerText = '🔇';
-            else if (normalized <= 0.25) btnMusic.innerText = '🔈';
-            else if (normalized <= 0.5) btnMusic.innerText = '🔉';
-            else btnMusic.innerText = '🔊';
+          if (normalized === 0) btnMusic.innerText = '🔇';
+          else if (normalized <= 0.25) btnMusic.innerText = '🔈';
+          else if (normalized <= 0.5) btnMusic.innerText = '🔉';
+          else btnMusic.innerText = '🔊';
         }
       });
     }
@@ -222,26 +222,26 @@ export class AuthUIManager {
 
       const savedVol = localStorage.getItem('b_login_volume');
       if (savedVol !== null) {
-         const parsed = parseFloat(savedVol);
-         currentVolIndex = volSequence.indexOf(parsed);
-         if (currentVolIndex === -1) currentVolIndex = 2;
-         isFirstClick = false;
+        const parsed = parseFloat(savedVol);
+        currentVolIndex = volSequence.indexOf(parsed);
+        if (currentVolIndex === -1) currentVolIndex = 2;
+        isFirstClick = false;
       }
 
       btnMusic.innerText = iconSequence[currentVolIndex];
 
       const updateAudio = () => {
-         btnMusic.innerText = iconSequence[currentVolIndex];
-         localStorage.setItem('b_login_volume', volSequence[currentVolIndex]);
-         if (this.app && this.app.menuAudio && typeof this.app.menuAudio.setVolume === 'function') {
-             this.app.menuAudio.setVolume(volSequence[currentVolIndex]);
-         }
+        btnMusic.innerText = iconSequence[currentVolIndex];
+        localStorage.setItem('b_login_volume', volSequence[currentVolIndex]);
+        if (this.app && this.app.menuAudio && typeof this.app.menuAudio.setVolume === 'function') {
+          this.app.menuAudio.setVolume(volSequence[currentVolIndex]);
+        }
       };
 
       btnMusic.onclick = () => {
-         if (isFirstClick) { currentVolIndex = 0; isFirstClick = false; }
-         else { currentVolIndex = (currentVolIndex + 1) % volSequence.length; }
-         updateAudio();
+        if (isFirstClick) { currentVolIndex = 0; isFirstClick = false; }
+        else { currentVolIndex = (currentVolIndex + 1) % volSequence.length; }
+        updateAudio();
       };
     }
 

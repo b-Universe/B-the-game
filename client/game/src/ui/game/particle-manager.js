@@ -206,20 +206,23 @@ export class ParticleManager {
 
       const pSize = proj.trailSize !== undefined ? proj.trailSize : 2.5;
       if (proj.projectileStyle === 'lightning') {
-          group.visible = false;
-          sprite.visible = false;
+        group.visible = false;
+        sprite.visible = false;
       } else if (proj.projectileStyle === 'laser') {
-          sprite.scale.set(120, pSize * 2, 1);
-          sprite.material.color.setHex(0x000000);
-          sprite.material.emissive.setStyle(proj.trailColor || '#f39c12');
+        sprite.visible = true;
+        sprite.scale.set(120, pSize * 2, 1);
+        sprite.material.color.setHex(0x000000);
+        sprite.material.emissive.setStyle(proj.trailColor || '#f39c12');
       } else if (proj.projectileStyle === 'bullet') {
-          sprite.scale.set(24, pSize * 1.5, 1);
-          sprite.material.color.setHex(0x000000);
-          sprite.material.emissive.setStyle(proj.trailColor || '#bdc3c7');
+        sprite.visible = true;
+        sprite.scale.set(24, pSize * 1.5, 1);
+        sprite.material.color.setHex(0x000000);
+        sprite.material.emissive.setStyle(proj.trailColor || '#bdc3c7');
       } else {
-          sprite.scale.set(64, 64, 1);
-          sprite.material.color.setHex(0xffffff);
-          sprite.material.emissive.setHex(0x000000);
+        sprite.visible = true;
+        sprite.scale.set(64, 64, 1);
+        sprite.material.color.setHex(0xffffff);
+        sprite.material.emissive.setHex(0x000000);
       }
 
       sprite.quaternion.copy(renderer.camera.quaternion);
@@ -263,7 +266,7 @@ export class ParticleManager {
         group.visible = true;
         if (sprite.userData.mapUuid !== tex.uuid) {
           if (sprite.material.map && sprite.material.map !== renderer.dummyTexture) {
-              sprite.material.map.dispose();
+            sprite.material.map.dispose();
           }
           sprite.material.map = tex.clone();
           if (renderer.webgl) renderer.webgl.initTexture(sprite.material.map);
@@ -272,17 +275,17 @@ export class ParticleManager {
         }
 
         if (useDummy) {
-            sprite.material.map.repeat.set(1, 1);
-            sprite.material.map.offset.set(0, 0);
+          sprite.material.map.repeat.set(1, 1);
+          sprite.material.map.offset.set(0, 0);
         } else {
-            const frameIndex = Math.floor(performance.now() / animSpeed) % frameCount;
-            if (isLeft) {
-              sprite.material.map.repeat.set(1 / frameCount, -1);
-              sprite.material.map.offset.set(frameIndex / frameCount, 1);
-            } else {
-              sprite.material.map.repeat.set(1 / frameCount, 1);
-              sprite.material.map.offset.set(frameIndex / frameCount, 0);
-            }
+          const frameIndex = Math.floor(performance.now() / animSpeed) % frameCount;
+          if (isLeft) {
+            sprite.material.map.repeat.set(1 / frameCount, -1);
+            sprite.material.map.offset.set(frameIndex / frameCount, 1);
+          } else {
+            sprite.material.map.repeat.set(1 / frameCount, 1);
+            sprite.material.map.offset.set(frameIndex / frameCount, 0);
+          }
         }
       } else {
         group.visible = false;
@@ -337,14 +340,14 @@ export class ParticleManager {
 
       const colorStr = p.color || '#ffffff';
       if (!this.colorCache.has(colorStr)) {
-         let parsedColor = new THREE.Color();
-         let rgbaMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-         if (rgbaMatch) {
-            parsedColor.setRGB(parseInt(rgbaMatch[1])/255, parseInt(rgbaMatch[2])/255, parseInt(rgbaMatch[3])/255);
-         } else {
-            parsedColor.setStyle(colorStr);
-         }
-         this.colorCache.set(colorStr, parsedColor);
+        let parsedColor = new THREE.Color();
+        let rgbaMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (rgbaMatch) {
+          parsedColor.setRGB(parseInt(rgbaMatch[1]) / 255, parseInt(rgbaMatch[2]) / 255, parseInt(rgbaMatch[3]) / 255);
+        } else {
+          parsedColor.setStyle(colorStr);
+        }
+        this.colorCache.set(colorStr, parsedColor);
       }
       color.copy(this.colorCache.get(colorStr));
 
@@ -353,12 +356,12 @@ export class ParticleManager {
       }
 
       if (renderer.particleMesh.geometry.attributes.packedColor) {
-          const pr = Math.max(0, Math.min(255, color.r * 255)) | 0;
-          const pg = Math.max(0, Math.min(255, color.g * 255)) | 0;
-          const pb = Math.max(0, Math.min(255, color.b * 255)) | 0;
-          renderer.particleMesh.geometry.attributes.packedColor.setX(count, pr | (pg << 8) | (pb << 16));
+        const pr = Math.max(0, Math.min(255, color.r * 255)) | 0;
+        const pg = Math.max(0, Math.min(255, color.g * 255)) | 0;
+        const pb = Math.max(0, Math.min(255, color.b * 255)) | 0;
+        renderer.particleMesh.geometry.attributes.packedColor.setX(count, pr | (pg << 8) | (pb << 16));
       } else {
-          renderer.particleMesh.setColorAt(count, color);
+        renderer.particleMesh.setColorAt(count, color);
       }
 
       let blockType = p.tex || 'white';

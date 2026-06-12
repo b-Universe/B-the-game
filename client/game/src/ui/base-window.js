@@ -101,8 +101,14 @@ export class BaseWindow {
     if (saved) {
       try {
         const state = JSON.parse(saved);
-        if (state.left && state.left !== 'auto') this.element.style.left = state.left;
-        if (state.top && state.top !== 'auto') this.element.style.top = state.top;
+        if (state.left && state.left !== 'auto') {
+          const leftVal = parseInt(state.left, 10);
+          this.element.style.left = `${Math.max(0, Math.min(leftVal, window.innerWidth - 100))}px`;
+        }
+        if (state.top && state.top !== 'auto') {
+          const topVal = parseInt(state.top, 10);
+          this.element.style.top = `${Math.max(0, Math.min(topVal, window.innerHeight - 32))}px`;
+        }
         if (state.minimized) {
           this.body.style.display = 'none';
           this.element.style.height = '32px';
@@ -141,9 +147,9 @@ export class BaseWindow {
     this.element.style.opacity = '0';
     this.element.style.transform = 'scale(0.95)';
     setTimeout(() => {
-        if (this.element.style.opacity === '0') {
-            this.element.style.display = 'none';
-        }
+      if (this.element.style.opacity === '0') {
+        this.element.style.display = 'none';
+      }
     }, 150);
     this.onClose();
   }
@@ -165,8 +171,8 @@ export class BaseWindow {
   }
 
   // Lifecycle hooks for subclasses to implement
-  onOpen() {}
-  onClose() {}
+  onOpen() { }
+  onClose() { }
 
   makeDraggable(header) {
     let isDragging = false;
@@ -182,7 +188,7 @@ export class BaseWindow {
       let scale = 1;
       const gameScreen = document.getElementById('game-screen');
       if (gameScreen && gameScreen.style.zoom) {
-          scale = parseFloat(gameScreen.style.zoom) || 1;
+        scale = parseFloat(gameScreen.style.zoom) || 1;
       }
 
       initialLeft = this.element.offsetLeft;
@@ -200,7 +206,7 @@ export class BaseWindow {
           const settings = JSON.parse(localStorage.getItem('b_client_settings') || '{}');
           isEnergyMerged = settings.mergeSynthBar === true;
           isAlternativeUI = settings.uiMode === 'alternative';
-        } catch(e) {}
+        } catch (e) { }
 
         // Calculate reserved bottom space (e.g., 60px if merged, 95px if split, 0 if alt UI)
         const bottomReservedSpace = isAlternativeUI ? 0 : (isEnergyMerged ? 60 : 95);

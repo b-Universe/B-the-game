@@ -68,7 +68,9 @@ export class Renderer {
 
   setupCamera() {
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = this.engine.clientSettings.fov || 1000;
+    // The 'fov' setting will now control pitch. We'll use a fixed frustum size,
+    // and let the user use the scroll-wheel for zooming.
+    const frustumSize = 1000;
 
     this.camera = new THREE.OrthographicCamera(
       frustumSize * aspect / -2,
@@ -82,16 +84,6 @@ export class Renderer {
     this.camera.rotation.order = 'YXZ';
     this.camera.layers.enableAll();
     this.updateCameraRotation();
-  }
-
-  updateFOV(newFov) {
-    if (!this.camera) return;
-    const aspect = window.innerWidth / window.innerHeight;
-    this.camera.left = newFov * aspect / -2;
-    this.camera.right = newFov * aspect / 2;
-    this.camera.top = newFov / 2;
-    this.camera.bottom = newFov / -2;
-    this.camera.updateProjectionMatrix();
   }
 
   updateCameraRotation() {
@@ -1504,7 +1496,7 @@ export class Renderer {
   handleResize() {
     this.webgl.setSize(window.innerWidth, window.innerHeight);
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = this.engine.clientSettings.fov || 1000;
+    const frustumSize = 1000;
     this.camera.left = frustumSize * aspect / -2;
     this.camera.right = frustumSize * aspect / 2;
     this.camera.top = frustumSize / 2;

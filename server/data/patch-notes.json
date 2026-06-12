@@ -1,5 +1,26 @@
 [
   {
+    "version": "v2.5.2",
+    "color": "#39ff14",
+    "changes": [
+      { "type": "Engine", "text": "Optimized sockets for smoother movement and added a time throttle for network emits." },
+      { "type": "Engine", "text": "Added smooth interpolation between server ticks for other players and NPC paths." },
+      { "type": "Engine", "text": "Split dev-tools-ui.js into separate files for builder-ui.js, npc-manager-ui.js, spawner-manager-ui.js, and world-manager-ui.js." },
+      { "type": "Engine", "text": "Removed old event listeners and live preview code from the Power Editor UI." },
+      { "type": "Engine", "text": "Added a universal constants registry and moved hardcoded data out of the character creator." },
+      { "type": "Engine", "text": "Updated chat tags to use the new permission system." },
+      { "type": "Engine", "text": "Removed hardcoded hex colors from chat-config.js and combat-stats-ui.js." },
+      { "type": "Engine", "text": "Removed the deprecated developer spawn point." },
+      { "type": "UI", "text": "Removed duplicate faction lists from the developer tools." },
+      { "type": "UI", "text": "Added a Help & Commands button to the Alternative UI menu." },
+      { "type": "UI", "text": "Added an AFK timer setting with an option to disable it." },
+      { "type": "Design", "text": "Drafted an experimental Z-axis Field of View." },
+      { "type": "Fix", "text": "Fixed an object pooling bug that was recycling old 3D meshes for projectiles." },
+      { "type": "Fix", "text": "Fixed the Satellite-Support EMP power script." },
+      { "type": "Fix", "text": "Fixed a bug where the mouse would hyper-track while you're /afk." }
+    ]
+  },
+  {
     "version": "v2.5.1",
     "color": "#e056fd",
     "changes": [

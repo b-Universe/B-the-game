@@ -1,4 +1,5 @@
 import { PlayerModifierWindow, AccountManagerWindow, AccountEditWindow } from '../windows/player-windows.js?v=cache-bust-005';
+import { UI_COLORS } from './constants.js?v=cache-bust-005';
 
 export class PlayerModifierUIManager {
   constructor(engine, mainUIManager) {
@@ -138,7 +139,7 @@ export class PlayerModifierUIManager {
     filtered.forEach(acc => {
       const row = document.createElement('div');
       row.style.cssText = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
-      const isBannedStr = acc.isBanned ? '<span style="color: #e74c3c; font-weight: bold;">[BANNED]</span>' : '';
+      const isBannedStr = acc.isBanned ? `<span style="color: ${UI_COLORS.error}; font-weight: bold;">[BANNED]</span>` : '';
       const creationDate = acc.created ? new Date(acc.created).toLocaleDateString() : 'Unknown';
       row.innerHTML = `
             <div style="flex: 1.5; font-weight: bold; color: #fff;" title="${acc.uuid}">${acc.username} ${isBannedStr}</div>
@@ -195,7 +196,7 @@ export class PlayerModifierUIManager {
         row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); border-radius: 3px;';
         row.innerHTML = `
                     <span style="color: #fff; font-weight: bold;">${name}</span>
-                    <button class="b-btn btn-secondary btn-edit-char" style="padding: 2px 8px; font-size: 0.7rem; border-color: #e056fd; color: #e056fd;" title="Edit Character">✎</button>
+                    <button class="b-btn btn-secondary btn-edit-char" style="padding: 2px 8px; font-size: 0.7rem; border-color: ${UI_COLORS.pink}; color: ${UI_COLORS.pink};" title="Edit Character">✎</button>
                 `;
         row.querySelector('.btn-edit-char').onclick = () => {
           this.engine.network.sendRequestPlayerData(name);

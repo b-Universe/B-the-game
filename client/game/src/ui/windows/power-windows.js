@@ -130,21 +130,6 @@ export class PowerEditorWindow extends BaseWindow {
           </div>
 
             </div>
-
-            <!-- Row 2: Live Preview -->
-            <div class="pe-col pe-preview" style="flex: 1; display: flex; flex-direction: column; min-height: 250px;">
-              <div class="pe-editor-section" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
-                <h4 class="pe-section-title">Live Preview</h4>
-                <div id="pe-preview-container" style="flex: 1; background: #000; border: 1px solid var(--text-dim); border-radius: var(--border-radius); position: relative; overflow: hidden;">
-                <canvas id="pe-preview-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-              </div>
-              <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                <button id="btn-pe-play-anim" class="b-btn" style="flex-shrink: 0; padding: 5px 15px;">▶</button>
-                <input type="range" id="pe-preview-scrubber" min="0" max="100" value="0" style="flex: 1; cursor: pointer;">
-                <span id="pe-preview-time" style="color: var(--text-dim); font-family: var(--font-mono); font-size: 0.8rem;">0.00s</span>
-              </div>
-              </div>
-            </div>
           </div>
         </div>
 

@@ -1,3 +1,113 @@
+const heritageData = {
+  standard: {
+    name: 'Standard',
+    description: 'As the adaptive baseline, your potential is limitless. You specialize in versatility, allowing you to bridge the gap between machine and monster without losing your core identity. Your strength lies in synergy—balancing metabolic stability with technical complexity to thrive in any environment.',
+    splash: 'assets/images/ui/creator/splashes/standard.png',
+    affinities: [
+      { id: 'human', name: 'Human', desc: 'The neutral baseline for multi-pathing.', spriteDir: 'standard', check: v => v >= -85 && v <= 85 },
+      { id: 'cyborg', name: 'Cyborg', desc: 'A fusion of organic adaptability and synthetic hardware enhancements.', spriteDir: 'cyborg', check: v => v < 0 && v > -100 },
+      { id: 'automaton', name: 'Automaton', desc: 'Fully synthetic chassis offering hardware durability and complexity slots.', spriteDir: 'automaton', check: v => v === -100 }
+    ]
+  },
+  primal: {
+    name: 'Primal',
+    description: 'Ancient entities from dimensional or mythic origins. As a Primal, you are naturally attuned to Arcane and biological energies, possessing high energy pools and an innate resistance to psychological debuffs. Your path lies in harnessing these raw, unbridled forces to endure and outlast your opposition.',
+    splash: 'assets/images/ui/creator/splashes/primal.png',
+    affinities: [
+      { id: 'elven', name: 'Elven', desc: 'High energy pools and resistance to psychological debuffs.', spriteDir: 'primal', check: v => v >= -70 && v <= 70 },
+      { id: 'fae', name: 'Fae', desc: 'Innate mystical resonance and enhanced agility.', spriteDir: 'primal', check: v => v >= -70 && v <= 70 },
+      { id: 'gnome', name: 'Gnome', desc: 'Compact frame with high energy recovery and mystical assist compatibility.', spriteDir: 'primal', check: v => v >= -70 && v <= 70 },
+      { id: 'djinn', name: 'Djinn', desc: 'Ancient elemental entity. Innate environmental manipulation and thermal resistance.', spriteDir: 'primal', check: v => v > 70 },
+      { id: 'celestial', name: 'Celestial', desc: 'Entities forged from astral essence and starlight. High arcane capacity.', spriteDir: 'primal', check: v => v > 70 }
+    ]
+  },
+  mutated: {
+    name: 'Mutated',
+    description: 'Species forged by extreme environmental toxins or biological instability. You possess immense Biomorphic growth potential, allowing for rapid natural regeneration and specialized organic mutations. Your unpredictable, volatile nature makes you an absolute force of devastation.',
+    splash: 'assets/images/ui/creator/splashes/mutated.png',
+    affinities: [
+      { id: 'goblins', name: 'Goblins', desc: 'High scavenging and craft speed.', spriteDir: 'mutated', check: v => v >= -70 && v <= 70 },
+      { id: 'giant', name: 'Giant', desc: 'Humans mutated by environmental toxins. High physical power.', spriteDir: 'mutated', check: v => v >= -50 && v <= 50 },
+      { id: 'minotaur', name: 'Minotaur', desc: 'Beast-humanoid mutation. High momentum combat and unyielding stance.', spriteDir: 'mutated', check: v => v >= 25 && v <= 75 },
+      { id: 'ogre', name: 'Ogre', desc: 'Absolute mutation. Massive health pools and metabolic damage.', spriteDir: 'mutated', check: v => v > 70 },
+      { id: 'troll', name: 'Troll', desc: 'Absolute mutation. Massive health pools and metabolic damage.', spriteDir: 'mutated', check: v => v > 70 }
+    ]
+  },
+  hybrid: {
+    name: 'Hybrid',
+    description: 'Currently Locked: Requires Creation Discovery via Ptouille or The Neon Girl. Hybrids achieve true multi-path mastery, fusing conflicting integrities—such as synthetic hardware and biomorphic flesh—into a single, dominant vessel.',
+    splash: 'assets/images/ui/creator/splashes/standard.png',
+    affinities: []
+  }
+};
+
+const styleData = {
+  standard: {
+    description: 'Recommended for new players. The baseline experience where players function as independent entities. You can team up with others or run solo without penalties. Standard players typically originate as Manifested, are created synthetically, or are brought to the city by normal means.',
+    splash: 'assets/images/ui/creator/splashes/standard.png',
+    skills: [
+      { name: 'Diversity Synergy', desc: 'Gains Efficiency and Recovery boosts for every standard player in your party.' },
+      { name: 'Integrity Versatility', desc: 'Can maintain moderate levels of both Synthetic and Mutation Integrity simultaneously.' },
+      { name: 'Adaptive Link', desc: 'Efficiency scales with the proximity of other players in the party.' }
+    ],
+    equipment: {
+      'chest': { name: 'Standard Issue Vest', desc: 'Basic Kevlar weave for street-level protection. Reliable and easy to repair.' },
+      'left-hand': { name: 'Vibro-Knife', desc: 'Standard close-quarters blade. Emits a low-frequency hum.' },
+      'feet': { name: 'Tactical Boots', desc: 'Durable footwear with excellent grip for urban environments.' }
+    }
+  },
+  ironman: {
+    description: 'Reject the collective to maximize your Sovereign potential. You become the raid boss of your own story, gaining massive stat multipliers but losing strength when other players interfere with your proximity. You can be affected by other players but cannot aid or trade with others.',
+    splash: 'assets/images/ui/creator/splashes/standard.png',
+    skills: [
+      { name: 'Tactical Advantage', desc: 'High base defense and damage that increases when enemies surround you.' },
+      { name: 'Self Sustain', desc: 'High Max HP and Energy; regenerative abilities are most effective when solo.' },
+      { name: 'Unyielding Mind', desc: 'Immune to signal interference and status effects because there is no network link to exploit.' }
+    ],
+    equipment: {
+      'helmet': { name: 'Sovereign Visor', desc: 'Heavily armored headgear with an integrated lone-wolf HUD.' },
+      'chest': { name: 'Heavy Plating', desc: 'Thick armor plating designed to withstand blows from multiple attackers.' },
+      'right-hand': { name: 'Assault Gauntlet', desc: 'Hydraulic-powered gauntlet for devastating melee strikes.' }
+    }
+  },
+  neural: {
+    description: 'The Neural or Pet type players - operators controlling multiple entities like a hivemind pathogen or a coordinated robotic network. You multiply your efficiency through shared systems, mirroring the command structure of The Galactic Federation of B.',
+    splash: 'assets/images/ui/creator/splashes/standard.png',
+    skills: [
+      { name: 'Shared Vision', desc: 'If one unit sees an enemy, the entire group detects it regardless of individual line-of-sight.' },
+      { name: 'Distributed Efficiency', desc: 'Efficiency and critical multipliers scale exponentially when units are in close proximity.' },
+      { name: 'Distributed Trauma', desc: 'The ability to share incoming damage across the group to prevent unit loss.' }
+    ],
+    equipment: {
+      'helmet': { name: 'Neural Uplink Band', desc: 'High-bandwidth neural transmitter for commanding networked units.' },
+      'backpack': { name: 'Signal Amplifier', desc: 'Boosts command range and minimizes signal degradation.' },
+      'amulet': { name: 'Processing Core', desc: 'External co-processor to handle simultaneous unit commands.' }
+    }
+  }
+};
+
+const archetypesData = [
+  { id: 'civilian', name: 'Civilian', desc: 'No Archetype, choose later. Pick 3 powers from a single powerset, or not.', cols: [{ label: 'Primary Powerset', picks: 3 }] },
+  { id: 'brute', name: 'Brute', desc: 'Melee Focus. High melee damage.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
+  { id: 'blaster', name: 'Blaster', desc: 'Ranged Focus. High ranged damage.', cols: [{ label: 'Primary (Ranged)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
+  { id: 'tank', name: 'Tank', desc: 'Defense Focus. Avoidance and survival.', cols: [{ label: 'Primary (Defense)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
+  { id: 'team_support', name: 'Team Support', desc: 'Support Focus. Team buffs.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
+  { id: 'controller', name: 'Controller', desc: 'Control Focus. Crowd control and status effect dominance.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
+  { id: 'hivemind_simple', name: 'Hivemind', desc: 'Neural Focus. Multitasking via summoned or linked units.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
+  { id: 'super_tank', name: 'Super Tank', desc: 'Pure mitigation followed by avoidance.', cols: [{ label: 'Primary (Resistance)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
+  { id: 'scrapper', name: 'Scrapper', desc: 'Balanced melee survival and output.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
+  { id: 'sentinel', name: 'Sentinel', desc: 'Durable ranged combatant.', cols: [{ label: 'Primary (Ranged)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
+  { id: 'dominator', name: 'Dominator', desc: 'Direct control with aggressive melee backup.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] },
+  { id: 'archon', name: 'Archon', desc: 'Disrupting enemies while bolstering allies.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary (Support)', picks: 2 }] },
+  { id: 'defender', name: 'Defender', desc: 'Team buffs and healing with ranged utility.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] },
+  { id: 'hardline', name: 'Hardline', desc: 'Team buffs mixed with defensive focus.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
+  { id: 'catalyst', name: 'Catalyst', desc: 'Multi-unit management with support focus.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary (Support)', picks: 2 }] },
+  { id: 'tactician', name: 'Tactician', desc: 'Unit management mixed with field control.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary (Control)', picks: 2 }] },
+  { id: 'enforcer', name: 'Enforcer', desc: 'Melee damage that debuffs or heals.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Support/Control)', picks: 2 }] },
+  { id: 'paladin', name: 'Paladin', desc: 'Close quarters combat that buffs the party.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Support)', picks: 2 }] },
+  { id: 'glass_cannon', name: 'Glass Cannon', desc: 'Absolute high-damage glass cannon.', cols: [{ label: 'Primary (Ranged/Melee)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] }
+];
+
 export class CharacterCreatorUIManager {
   constructor(app) {
     this.app = app;
@@ -36,49 +146,6 @@ export class CharacterCreatorUIManager {
         heritageDescBox.appendChild(integrityWarning);
       }
     }
-
-    const heritageData = {
-      standard: {
-        name: 'Standard',
-        description: 'As the adaptive baseline, your potential is limitless. You specialize in versatility, allowing you to bridge the gap between machine and monster without losing your core identity. Your strength lies in synergy—balancing metabolic stability with technical complexity to thrive in any environment.',
-        splash: 'assets/images/ui/creator/splashes/standard.png',
-        affinities: [
-          { id: 'human', name: 'Human', desc: 'The neutral baseline for multi-pathing.', spriteDir: 'standard', check: v => v >= -85 && v <= 85 },
-          { id: 'cyborg', name: 'Cyborg', desc: 'A fusion of organic adaptability and synthetic hardware enhancements.', spriteDir: 'cyborg', check: v => v < 0 && v > -100 },
-          { id: 'automaton', name: 'Automaton', desc: 'Fully synthetic chassis offering hardware durability and complexity slots.', spriteDir: 'automaton', check: v => v === -100 }
-        ]
-      },
-      primal: {
-        name: 'Primal',
-        description: 'Ancient entities from dimensional or mythic origins. As a Primal, you are naturally attuned to Arcane and biological energies, possessing high energy pools and an innate resistance to psychological debuffs. Your path lies in harnessing these raw, unbridled forces to endure and outlast your opposition.',
-        splash: 'assets/images/ui/creator/splashes/primal.png',
-        affinities: [
-          { id: 'elven', name: 'Elven', desc: 'High energy pools and resistance to psychological debuffs.', spriteDir: 'primal', check: v => v >= -70 && v <= 70 },
-          { id: 'fae', name: 'Fae', desc: 'Innate mystical resonance and enhanced agility.', spriteDir: 'primal', check: v => v >= -70 && v <= 70 },
-          { id: 'gnome', name: 'Gnome', desc: 'Compact frame with high energy recovery and mystical assist compatibility.', spriteDir: 'primal', check: v => v >= -70 && v <= 70 },
-          { id: 'djinn', name: 'Djinn', desc: 'Ancient elemental entity. Innate environmental manipulation and thermal resistance.', spriteDir: 'primal', check: v => v > 70 },
-          { id: 'celestial', name: 'Celestial', desc: 'Entities forged from astral essence and starlight. High arcane capacity.', spriteDir: 'primal', check: v => v > 70 }
-        ]
-      },
-      mutated: {
-        name: 'Mutated',
-        description: 'Species forged by extreme environmental toxins or biological instability. You possess immense Biomorphic growth potential, allowing for rapid natural regeneration and specialized organic mutations. Your unpredictable, volatile nature makes you an absolute force of devastation.',
-        splash: 'assets/images/ui/creator/splashes/mutated.png',
-        affinities: [
-          { id: 'goblins', name: 'Goblins', desc: 'High scavenging and craft speed.', spriteDir: 'mutated', check: v => v >= -70 && v <= 70 },
-          { id: 'giant', name: 'Giant', desc: 'Humans mutated by environmental toxins. High physical power.', spriteDir: 'mutated', check: v => v >= -50 && v <= 50 },
-          { id: 'minotaur', name: 'Minotaur', desc: 'Beast-humanoid mutation. High momentum combat and unyielding stance.', spriteDir: 'mutated', check: v => v >= 25 && v <= 75 },
-          { id: 'ogre', name: 'Ogre', desc: 'Absolute mutation. Massive health pools and metabolic damage.', spriteDir: 'mutated', check: v => v > 70 },
-          { id: 'troll', name: 'Troll', desc: 'Absolute mutation. Massive health pools and metabolic damage.', spriteDir: 'mutated', check: v => v > 70 }
-        ]
-      },
-      hybrid: {
-        name: 'Hybrid',
-        description: 'Currently Locked: Requires Creation Discovery via Ptouille or The Neon Girl. Hybrids achieve true multi-path mastery, fusing conflicting integrities—such as synthetic hardware and biomorphic flesh—into a single, dominant vessel.',
-        splash: 'assets/images/ui/creator/splashes/standard.png',
-        affinities: []
-      }
-    };
 
     const updateIntegrityWarning = () => {
       const integrityVal = parseInt(integrityScrollbar.value, 10);
@@ -205,25 +272,25 @@ export class CharacterCreatorUIManager {
     });
 
     if (heightSlider) {
-        heightSlider.addEventListener('input', () => {
+      heightSlider.addEventListener('input', () => {
         const scaleY = parseFloat(heightSlider.value);
 
         const widthRatio = 0.4;
         const scaleX = 1.0 + ((scaleY - 1.0) * widthRatio);
 
         playerPreviews.forEach(p => {
-                if (p) {
-                p.style.transform = `translateY(380px) scale(9) scaleX(${scaleX}) scaleY(${scaleY})`;
-                }
+          if (p) {
+            p.style.transform = `translateY(380px) scale(9) scaleX(${scaleX}) scaleY(${scaleY})`;
+          }
         });
 
         const totalInches = Math.round(50 * scaleY + 20);
         const feet = Math.floor(totalInches / 12);
         const inches = totalInches % 12;
         heightDisplay.innerText = `${feet}'${inches}"`;
-        });
+      });
 
-        heightSlider.dispatchEvent(new Event('input'));
+      heightSlider.dispatchEvent(new Event('input'));
     }
 
     const idCardName = document.getElementById('id-card-name');
@@ -312,51 +379,6 @@ export class CharacterCreatorUIManager {
     const styleSkillsList = document.getElementById('style-skills-list');
     const equipDetailsBox = document.getElementById('equip-details-box');
     const defaultEquipText = `<p>Hover over an item to view its details. This area can now hold significantly more text about the item's stats, history, and Integrity requirements without breaking your UI layout. If it gets too long, it will simply scroll!</p>`;
-
-    const styleData = {
-      standard: {
-        description: 'Recommended for new players. The baseline experience where players function as independent entities. You can team up with others or run solo without penalties. Standard players typically originate as Manifested, are created synthetically, or are brought to the city by normal means.',
-        splash: 'assets/images/ui/creator/splashes/standard.png',
-        skills: [
-          { name: 'Diversity Synergy', desc: 'Gains Efficiency and Recovery boosts for every standard player in your party.' },
-          { name: 'Integrity Versatility', desc: 'Can maintain moderate levels of both Synthetic and Mutation Integrity simultaneously.' },
-          { name: 'Adaptive Link', desc: 'Efficiency scales with the proximity of other players in the party.' }
-        ],
-        equipment: {
-          'chest': { name: 'Standard Issue Vest', desc: 'Basic Kevlar weave for street-level protection. Reliable and easy to repair.' },
-          'left-hand': { name: 'Vibro-Knife', desc: 'Standard close-quarters blade. Emits a low-frequency hum.' },
-          'feet': { name: 'Tactical Boots', desc: 'Durable footwear with excellent grip for urban environments.' }
-        }
-      },
-      ironman: {
-        description: 'Reject the collective to maximize your Sovereign potential. You become the raid boss of your own story, gaining massive stat multipliers but losing strength when other players interfere with your proximity. You can be affected by other players but cannot aid or trade with others.',
-        splash: 'assets/images/ui/creator/splashes/standard.png',
-        skills: [
-          { name: 'Tactical Advantage', desc: 'High base defense and damage that increases when enemies surround you.' },
-          { name: 'Self Sustain', desc: 'High Max HP and Energy; regenerative abilities are most effective when solo.' },
-          { name: 'Unyielding Mind', desc: 'Immune to signal interference and status effects because there is no network link to exploit.' }
-        ],
-        equipment: {
-          'helmet': { name: 'Sovereign Visor', desc: 'Heavily armored headgear with an integrated lone-wolf HUD.' },
-          'chest': { name: 'Heavy Plating', desc: 'Thick armor plating designed to withstand blows from multiple attackers.' },
-          'right-hand': { name: 'Assault Gauntlet', desc: 'Hydraulic-powered gauntlet for devastating melee strikes.' }
-        }
-      },
-      neural: {
-        description: 'The Neural or Pet type players - operators controlling multiple entities like a hivemind pathogen or a coordinated robotic network. You multiply your efficiency through shared systems, mirroring the command structure of The Galactic Federation of B.',
-        splash: 'assets/images/ui/creator/splashes/standard.png',
-        skills: [
-          { name: 'Shared Vision', desc: 'If one unit sees an enemy, the entire group detects it regardless of individual line-of-sight.' },
-          { name: 'Distributed Efficiency', desc: 'Efficiency and critical multipliers scale exponentially when units are in close proximity.' },
-          { name: 'Distributed Trauma', desc: 'The ability to share incoming damage across the group to prevent unit loss.' }
-        ],
-        equipment: {
-          'helmet': { name: 'Neural Uplink Band', desc: 'High-bandwidth neural transmitter for commanding networked units.' },
-          'backpack': { name: 'Signal Amplifier', desc: 'Boosts command range and minimizes signal degradation.' },
-          'amulet': { name: 'Processing Core', desc: 'External co-processor to handle simultaneous unit commands.' }
-        }
-      }
-    };
 
     const renderStyle = (styleKey) => {
       if (styleSkillsList) styleSkillsList.innerHTML = '';
@@ -466,28 +488,6 @@ export class CharacterCreatorUIManager {
       });
     }
 
-    const archetypesData = [
-        { id: 'civilian', name: 'Civilian', desc: 'No Archetype, choose later. Pick 3 powers from a single powerset, or not.', cols: [{ label: 'Primary Powerset', picks: 3 }] },
-        { id: 'brute', name: 'Brute', desc: 'Melee Focus. High melee damage.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-        { id: 'blaster', name: 'Blaster', desc: 'Ranged Focus. High ranged damage.', cols: [{ label: 'Primary (Ranged)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-        { id: 'tank', name: 'Tank', desc: 'Defense Focus. Avoidance and survival.', cols: [{ label: 'Primary (Defense)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-        { id: 'team_support', name: 'Team Support', desc: 'Support Focus. Team buffs.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-        { id: 'controller', name: 'Controller', desc: 'Control Focus. Crowd control and status effect dominance.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-        { id: 'hivemind_simple', name: 'Hivemind', desc: 'Neural Focus. Multitasking via summoned or linked units.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-        { id: 'super_tank', name: 'Super Tank', desc: 'Pure mitigation followed by avoidance.', cols: [{ label: 'Primary (Resistance)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
-        { id: 'scrapper', name: 'Scrapper', desc: 'Balanced melee survival and output.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
-        { id: 'sentinel', name: 'Sentinel', desc: 'Durable ranged combatant.', cols: [{ label: 'Primary (Ranged)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
-        { id: 'dominator', name: 'Dominator', desc: 'Direct control with aggressive melee backup.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] },
-        { id: 'archon', name: 'Archon', desc: 'Disrupting enemies while bolstering allies.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary (Support)', picks: 2 }] },
-        { id: 'defender', name: 'Defender', desc: 'Team buffs and healing with ranged utility.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] },
-        { id: 'hardline', name: 'Hardline', desc: 'Team buffs mixed with defensive focus.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
-        { id: 'catalyst', name: 'Catalyst', desc: 'Multi-unit management with support focus.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary (Support)', picks: 2 }] },
-        { id: 'tactician', name: 'Tactician', desc: 'Unit management mixed with field control.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary (Control)', picks: 2 }] },
-        { id: 'enforcer', name: 'Enforcer', desc: 'Melee damage that debuffs or heals.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Support/Control)', picks: 2 }] },
-        { id: 'paladin', name: 'Paladin', desc: 'Close quarters combat that buffs the party.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Support)', picks: 2 }] },
-        { id: 'glass_cannon', name: 'Glass Cannon', desc: 'Absolute high-damage glass cannon.', cols: [{ label: 'Primary (Ranged/Melee)', picks: 2 }, { label: 'Secondary (Melee/Ranged)', picks: 2 }] }
-    ];
-
     let rawPowersetsData = { Melee: [], Ranged: [], Defense: [], Resistance: [], Support: [], Control: [], Neural: [], Travel: [], Innate: [] };
 
     const loadPowersets = async () => {
@@ -534,11 +534,11 @@ export class CharacterCreatorUIManager {
 
             let powers = [];
             if (ps.Powers && Array.isArray(ps.Powers)) {
-              powers = ps.Powers.map((p, i) => ({ id: p.Id || p.id || `${ps.Id || ps.id}-p${i+1}`, name: p.Name || p.name || `Power ${i+1}`, desc: p.Description || p.desc || p.Focus || '', tier: p.UnlockTier || p.tier || i + 1 }));
+              powers = ps.Powers.map((p, i) => ({ id: p.Id || p.id || `${ps.Id || ps.id}-p${i + 1}`, name: p.Name || p.name || `Power ${i + 1}`, desc: p.Description || p.desc || p.Focus || '', tier: p.UnlockTier || p.tier || i + 1 }));
             } else if (ps.powers && Array.isArray(ps.powers)) {
-              powers = ps.powers.map((p, i) => ({ id: p.id || p.Id || `${ps.id || ps.Id}-p${i+1}`, name: p.name || p.Name || `Power ${i+1}`, desc: p.desc || p.description || p.Description || p.Focus || '', tier: p.UnlockTier || p.tier || i + 1 }));
+              powers = ps.powers.map((p, i) => ({ id: p.id || p.Id || `${ps.id || ps.Id}-p${i + 1}`, name: p.name || p.Name || `Power ${i + 1}`, desc: p.desc || p.description || p.Description || p.Focus || '', tier: p.UnlockTier || p.tier || i + 1 }));
             } else {
-              powers = Array.from({ length: 6 }, (_, i) => ({ id: `${ps.Id || ps.id}-p${i+1}`, name: `${ps.Name || ps.name} Rank ${i+1}`, desc: `Unlocks Rank ${i+1} capabilities of the ${ps.Name || ps.name} skillset.`, tier: i + 1 }));
+              powers = Array.from({ length: 6 }, (_, i) => ({ id: `${ps.Id || ps.id}-p${i + 1}`, name: `${ps.Name || ps.name} Rank ${i + 1}`, desc: `Unlocks Rank ${i + 1} capabilities of the ${ps.Name || ps.name} skillset.`, tier: i + 1 }));
             }
 
             // Sort powers by their unlock tier to ensure correct order in selection lists
@@ -558,7 +558,7 @@ export class CharacterCreatorUIManager {
       }
 
       if (Object.values(rawPowersetsData).flat().length === 0) {
-        rawPowersetsData['Melee'].push({ id: 'fallback', name: 'Fallback Powerset', desc: 'No JSON loaded.', check: () => true, powers: Array.from({ length: 6 }, (_, i) => ({ id: `fb${i}`, name: `Power ${i+1}`, desc: 'Fallback' })) });
+        rawPowersetsData['Melee'].push({ id: 'fallback', name: 'Fallback Powerset', desc: 'No JSON loaded.', check: () => true, powers: Array.from({ length: 6 }, (_, i) => ({ id: `fb${i}`, name: `Power ${i + 1}`, desc: 'Fallback' })) });
       }
 
       renderArchetypes();
@@ -745,8 +745,8 @@ export class CharacterCreatorUIManager {
       archetypeListEl.innerHTML = '';
       archetypesData.forEach((arch, index) => {
         const item = document.createElement('div');
-            item.className = `list-item ${index === 0 ? 'active' : ''}`;
-            item.dataset.id = arch.id;
+        item.className = `list-item ${index === 0 ? 'active' : ''}`;
+        item.dataset.id = arch.id;
         item.innerHTML = `<h4>${arch.name}</h4><p style="font-size: 0.8rem; margin-top: 5px;">${arch.desc}</p>`;
         item.addEventListener('click', () => {
           document.querySelectorAll('#archetype-list .list-item').forEach(i => i.classList.remove('active'));
@@ -774,32 +774,32 @@ export class CharacterCreatorUIManager {
     const nameCheckIcon = document.querySelector('.name-check');
 
     if (nameCheckIcon) {
-        nameCheckIcon.addEventListener('click', async () => {
+      nameCheckIcon.addEventListener('click', async () => {
         const charName = charNameInput.value.trim();
 
         if (!charName) {
-            return this.app.showModal("Input Error", "Character name cannot be empty.");
+          return this.app.showModal("Input Error", "Character name cannot be empty.");
         }
 
         try {
-            const response = await fetch('/check-char-name', {
+          const response = await fetch('/check-char-name', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ charName })
-            });
+          });
 
-            const result = await response.json();
+          const result = await response.json();
 
-            if (result.available) {
+          if (result.available) {
             this.app.showModal("Name Available", `The name "${charName}" is available!`);
-            } else {
+          } else {
             this.app.showModal("Name Unavailable", `The name "${charName}" is already taken.`);
-            }
+          }
         } catch (error) {
-            this.app.showModal("Error", "Could not check name availability. Please try again later.");
-            console.error("Error checking name availability:", error);
+          this.app.showModal("Error", "Could not check name availability. Please try again later.");
+          console.error("Error checking name availability:", error);
         }
-        });
+      });
     }
 
     if (btnSaveChar) {
@@ -855,19 +855,19 @@ export class CharacterCreatorUIManager {
             const select = col.querySelector('.powerset-dropdown');
             const activeItems = col.querySelectorAll('.power-item.active');
             if (select && (select.value === '' || activeItems.length === 0)) {
-                if (arch && arch.cols && arch.cols[index]) {
-                    const label = arch.cols[index].label;
-                    const match = label.match(/\(([^)]+)\)/);
-                    if (match) {
-                        let types = match[1].toLowerCase().split('/');
-                        types = types.map(t => t.trim() === 'neural' ? 'neural-minion' : t.trim());
-                        unspentPowersetPicks.push(types.join('/'));
-                    } else {
-                        unspentPowersetPicks.push("any");
-                    }
+              if (arch && arch.cols && arch.cols[index]) {
+                const label = arch.cols[index].label;
+                const match = label.match(/\(([^)]+)\)/);
+                if (match) {
+                  let types = match[1].toLowerCase().split('/');
+                  types = types.map(t => t.trim() === 'neural' ? 'neural-minion' : t.trim());
+                  unspentPowersetPicks.push(types.join('/'));
                 } else {
-                    unspentPowersetPicks.push("any");
+                  unspentPowersetPicks.push("any");
                 }
+              } else {
+                unspentPowersetPicks.push("any");
+              }
             }
           });
         }

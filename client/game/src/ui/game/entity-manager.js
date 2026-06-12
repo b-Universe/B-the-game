@@ -833,6 +833,11 @@ export class EntityManager {
 
   updateOtherPlayers(dt) {
     Object.values(this.engine.otherPlayers).forEach(op => {
+      if (op.serverX !== undefined && op.serverY !== undefined) {
+        op.x += (op.serverX - op.x) * 10 * (dt / 1000);
+        op.y += (op.serverY - op.y) * 10 * (dt / 1000);
+      }
+
       if (op.hurtTimer > 0) op.hurtTimer -= dt;
       op.frameTimer = (op.frameTimer || 0) + dt;
       let opInterval = this.engine.player.frameInterval;

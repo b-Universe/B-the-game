@@ -1,3 +1,5 @@
+import { COMMAND_LIST } from './constants.js?v=cache-bust-005';
+
 export class CommandHandler {
   constructor(engine, chatManager) {
     this.engine = engine;
@@ -7,8 +9,7 @@ export class CommandHandler {
   handleTabComplete(val) {
     let matches = [];
     if (val.startsWith('/') && !val.includes(' ')) {
-      const cmds = ['/teleport', '/tp', '/tpo', '/teleport-other', '/teleport_zone', '/tpz', '/speed', '/stuck', '/editmode', '/reload', '/dev', '/npc', '/players', '/pm', '/time', '/patchnotes', '/news', '/announce', '/weather', '/afk', '/givemoney', '/level', '/integrity', '/save', '/load', '/applymap', '/grant', '/revoke'];
-      matches = cmds.filter(c => c.startsWith(val.toLowerCase()));
+      matches = COMMAND_LIST.filter(c => c.startsWith(val.toLowerCase()));
     } else if (val.toLowerCase().startsWith('/tp ') || val.toLowerCase().startsWith('/teleport ')) {
     } else if (val.toLowerCase().startsWith('/tpo ') || val.toLowerCase().startsWith('/teleport-other ') || val.toLowerCase().startsWith('/pm ') || val.toLowerCase().startsWith('/w ') || val.toLowerCase().startsWith('/whisper ')) {
       const spaceIdx = val.indexOf(' ');
@@ -309,7 +310,7 @@ export class CommandHandler {
       const msgBody = args.slice(1).join(' ');
       eng.player.isAFK = true;
       eng.player.afkMessage = msgBody || 'Away from keyboard.';
-      eng.player.lastActionTime = 0; // Force AFK state locally to prevent immediate overwrite
+      eng.player.isManuallyAFK = true;
       eng.network.sendLogCommand(msg); // Send to server to store the custom afkMessage
       eng.ui.showSystemMessage(`You are now AFK${msgBody ? ': ' + msgBody : '.'}`);
     } else if (cmd.startsWith('/')) {
