@@ -4,6 +4,10 @@ import { POWER_REGISTRY } from './registry.js?v=cache-bust-005';
 import { updateDrones, getRoboticsFrameCount } from './entities/robotics.js?v=cache-bust-005';
 
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
+const DIR_COLS = {
+  'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
+  'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
+};
 
 export class EntityManager {
   constructor(engine) {
@@ -55,17 +59,20 @@ export class EntityManager {
     for (let id in this.engine.otherPlayers) updateBubbles(this.engine.otherPlayers[id]);
     this.engine.npcs.forEach(npc => updateBubbles(npc));
 
-    this.engine.entityGrid = new Map();
+    if (!this.engine.entityGrid) this.engine.entityGrid = new Map();
+    for (const arr of this.engine.entityGrid.values()) arr.length = 0; // Clear without destroying!
+
     const cellSize = 128;
-    const addToGrid = (ent, type, id) => {
+    const addToGrid = (ent) => {
       const gx = Math.floor(ent.x / cellSize);
       const gy = Math.floor(ent.y / cellSize);
       const key = `${gx}_${gy}`;
-      if (!this.engine.entityGrid.has(key)) this.engine.entityGrid.set(key, []);
-      this.engine.entityGrid.get(key).push({ ent, type, id });
+      let cell = this.engine.entityGrid.get(key);
+      if (!cell) { cell = []; this.engine.entityGrid.set(key, cell); }
+      cell.push(ent);
     };
-    this.engine.npcs.forEach(npc => addToGrid(npc, 'npc', npc.uuid));
-    for (let id in this.engine.otherPlayers) addToGrid(this.engine.otherPlayers[id], 'player', id);
+    this.engine.npcs.forEach(npc => addToGrid(npc));
+    for (let id in this.engine.otherPlayers) addToGrid(this.engine.otherPlayers[id]);
 
     this.updatePlayer(dt);
     this.updateNpcs(dt);
@@ -1057,11 +1064,7 @@ export class EntityManager {
           if (isFlipped) frameIdx += (1 / dFrames);
           sprite.material.map.offset.set(frameIdx, 0);
         } else {
-          let dirCols = {
-            'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
-            'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
-          };
-          const colIndex = dirCols[relDir] !== undefined ? dirCols[relDir] : 3;
+          const colIndex = DIR_COLS[relDir] !== undefined ? DIR_COLS[relDir] : 3;
           const rows = tex.userData.rows || 8;
           sprite.material.map.offset.x = colIndex / 8;
           sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);

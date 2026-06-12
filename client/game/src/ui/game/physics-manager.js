@@ -4,6 +4,17 @@ import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 export class PhysicsManager {
   constructor(engine) {
     this.engine = engine;
+
+    // Pre-allocate raycasting boundary checks
+    this.exactCorners = [{ dx: 0, dy: 0 }];
+    this.terrainCorners = [
+      { dx: 0, dy: 0 }, { dx: -14, dy: -14 }, { dx: 14, dy: -14 },
+      { dx: -14, dy: 14 }, { dx: 14, dy: 14 }
+    ];
+    this.collisionCorners = [
+      { dx: -14, dy: -14 }, { dx: 14, dy: -14 },
+      { dx: -14, dy: 14 }, { dx: 14, dy: 14 }
+    ];
   }
 
   getVoxelTop(voxel, zIndex, x, y) {
@@ -138,11 +149,7 @@ export class PhysicsManager {
   getTerrainZ(x, y, currentZ, exactOnly = false) {
     const eng = this.engine;
     if (!eng.mapManager) return -96;
-    const radius = 14;
-    const corners = exactOnly ? [{ dx: 0, dy: 0 }] : [
-      { dx: 0, dy: 0 }, { dx: -radius, dy: -radius }, { dx: radius, dy: -radius },
-      { dx: -radius, dy: radius }, { dx: radius, dy: radius }
-    ];
+    const corners = exactOnly ? this.exactCorners : this.terrainCorners;
 
     const maxZ = currentZ !== undefined ? currentZ + 24 : 10000;
     const startZ = currentZ !== undefined ? Math.min(15, Math.floor(maxZ / 32) + 1) : 15;
@@ -251,11 +258,7 @@ export class PhysicsManager {
 
   checkCollision(nextX, nextY, overrideZ) {
     const eng = this.engine;
-    const radius = 14;
-    const corners = [
-      { dx: -radius, dy: -radius }, { dx: radius, dy: -radius },
-      { dx: -radius, dy: radius }, { dx: radius, dy: radius }
-    ];
+    const corners = this.collisionCorners;
 
     const pZ = overrideZ !== undefined ? overrideZ : (eng.player.z || 0);
     const currentGridZ = Math.floor((pZ + 5) / 32);
@@ -360,8 +363,7 @@ export class PhysicsManager {
         for (let gy = minGy; gy <= maxGy; gy++) {
           const cell = eng.entityGrid.get(`${gx}_${gy}`);
           if (!cell) continue;
-          for (let item of cell) {
-            const ent = item.ent;
+          for (let ent of cell) {
             if (ent.state === 'dead' || ent.state === 'death') continue;
             if (Math.abs((ent.z || 0) - pZ) >= 48) continue;
 

@@ -9,6 +9,11 @@ import { LightingManager } from './lighting-manager.js?v=cache-bust-005';
 import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 import { SpriteBatcher } from './sprite-batcher.js?v=cache-bust-005';
 
+const DIR_ANGLE_MAP = {
+  'down-left': 0, 'down': Math.PI / 4, 'down-right': Math.PI / 2, 'right': Math.PI * 0.75,
+  'up-right': Math.PI, 'up': -Math.PI * 0.75, 'up-left': -Math.PI / 2, 'left': -Math.PI / 4
+};
+
 export class Renderer {
   constructor(engine) {
     this.engine = engine;
@@ -44,6 +49,15 @@ export class Renderer {
     this.lightingManager = new LightingManager(this);
     this.assetManager = new AssetManager(this);
     this.assetManager.loadAssets();
+
+    // Object pooling for door matrix calculations
+    this.doorMat = new THREE.Matrix4();
+    this.doorHinge = new THREE.Vector3();
+    this.doorZAxis = new THREE.Vector3(0, 0, 1);
+    this.doorColor = new THREE.Color();
+    this.doorTempMat1 = new THREE.Matrix4();
+    this.doorTempMat2 = new THREE.Matrix4();
+    this.doorTempMat3 = new THREE.Matrix4();
   }
 
   setupWebGL() {
@@ -107,7 +121,6 @@ export class Renderer {
 
     this.engine.clientSettings.cameraAngle = this.cameraAngle;
     localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-    if (this.engine.network) this.engine.network.sendClientSettings(this.engine.clientSettings);
     this.updateCameraRotation();
   }
 
@@ -1266,25 +1279,30 @@ export class Renderer {
           }
         }
 
-        const m = new THREE.Matrix4();
-        m.makeTranslation(d.x, d.y, d.z);
+        this.doorMat.makeTranslation(d.x, d.y, d.z);
 
-        let hingeOffset = new THREE.Vector3(-16, 0, 0);
-        if (isFlip) hingeOffset.set(16, 0, 0);
-        hingeOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), rot);
+        this.doorHinge.set(isFlip ? 16 : -16, 0, 0);
+        this.doorHinge.applyAxisAngle(this.doorZAxis, rot);
 
-        m.multiply(new THREE.Matrix4().makeTranslation(hingeOffset.x, hingeOffset.y, 0));
-        m.multiply(new THREE.Matrix4().makeRotationZ(state.currentRot));
+        this.doorTempMat1.makeTranslation(this.doorHinge.x, this.doorHinge.y, 0);
+        this.doorMat.multiply(this.doorTempMat1);
+
+        this.doorTempMat2.makeRotationZ(state.currentRot);
+        this.doorMat.multiply(this.doorTempMat2);
+
         if (isFlip) {
-          m.multiply(new THREE.Matrix4().makeTranslation(-16, 0, 0));
-          m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
+          this.doorTempMat3.makeTranslation(-16, 0, 0);
+          this.doorMat.multiply(this.doorTempMat3);
+          this.doorTempMat1.makeRotationZ(Math.PI);
+          this.doorMat.multiply(this.doorTempMat1);
         } else {
-          m.multiply(new THREE.Matrix4().makeTranslation(16, 0, 0));
+          this.doorTempMat3.makeTranslation(16, 0, 0);
+          this.doorMat.multiply(this.doorTempMat3);
         }
 
-        mesh.setMatrixAt(i, m);
+        mesh.setMatrixAt(i, this.doorMat);
 
-        const color = new THREE.Color();
+        const color = this.doorColor;
         let cHex = d.color;
         if (!cHex || typeof cHex !== 'string' || !cHex.startsWith('#') || cHex.includes('NaN')) cHex = '#ffffff';
         color.setStyle(cHex);
@@ -1594,11 +1612,7 @@ export class Renderer {
       if (isFlashlightOn) {
         this.playerLight.angle = Math.PI / 4;
         this.playerLight.penumbra = 0.5;
-        const dirAngleMap = {
-          'down-left': 0, 'down': Math.PI / 4, 'down-right': Math.PI / 2, 'right': Math.PI * 0.75,
-          'up-right': Math.PI, 'up': -Math.PI * 0.75, 'up-left': -Math.PI / 2, 'left': -Math.PI / 4
-        };
-        const targetAngle = dirAngleMap[eng.player.dir] || 0;
+        const targetAngle = DIR_ANGLE_MAP[eng.player.dir] || 0;
 
         if (this.playerLight.userData.currentAngle === undefined) {
           this.playerLight.userData.currentAngle = targetAngle;
@@ -1649,11 +1663,7 @@ export class Renderer {
       }
       opLight.intensity = 20000 * flickerMult;
 
-      const dirAngleMap = {
-        'down-left': 0, 'down': Math.PI / 4, 'down-right': Math.PI / 2, 'right': Math.PI * 0.75,
-        'up-right': Math.PI, 'up': -Math.PI * 0.75, 'up-left': -Math.PI / 2, 'left': -Math.PI / 4
-      };
-      const targetAngle = dirAngleMap[op.dir] || 0;
+      const targetAngle = DIR_ANGLE_MAP[op.dir] || 0;
 
       if (opLight.userData.currentAngle === undefined) opLight.userData.currentAngle = targetAngle;
       let diff = targetAngle - opLight.userData.currentAngle;

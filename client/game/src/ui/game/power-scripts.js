@@ -32,6 +32,8 @@ const baseScripts = {
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
     eng.player.actionTimer = 500;
+    eng.player.movePath = null;
+    eng.player.moveTarget = null;
 
     if (eng.network && eng.network.socket) {
       eng.network.socket.emit('summon_entity', { powerId });
@@ -86,6 +88,8 @@ const baseScripts = {
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
     eng.player.actionTimer = 7 * (eng.player.frameInterval / 2);
+    eng.player.movePath = null;
+    eng.player.moveTarget = null;
 
     const px = eng.player.x;
     const py = eng.player.y;
@@ -240,6 +244,8 @@ const baseScripts = {
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
     eng.player.actionTimer = 7 * (eng.player.frameInterval / 2);
+    eng.player.movePath = null;
+    eng.player.moveTarget = null;
 
     const px = eng.player.x;
     const py = eng.player.y;
@@ -362,6 +368,8 @@ export const PowerScripts = new Proxy(baseScripts, {
          if (seqData && powerDef.visuals.casterVisuals[0].sequence !== 'None') animDuration = seqData.frames * seqData.speed;
        }
        eng.player.actionTimer = animDuration;
+     eng.player.movePath = null;
+     eng.player.moveTarget = null;
 
        const px = eng.player.x;
        const py = eng.player.y;
@@ -508,6 +516,8 @@ export const PowerExecutors = {
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
     eng.player.actionTimer = 500;
+    eng.player.movePath = null;
+    eng.player.moveTarget = null;
     const px = eng.player.x;
     const py = eng.player.y;
     const pz = eng.player.z || 0;

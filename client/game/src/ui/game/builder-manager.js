@@ -19,7 +19,7 @@ export class BuilderManager {
       eng.redoHistory.push(redoAction);
       if (eng.redoHistory.length > 30) eng.redoHistory.shift();
       eng.renderer.needsVoxelUpdate = true;
-      updates.forEach(u => eng.network.sendUpdateBlock(u));
+      eng.network.sendUpdateBlocks(updates);
     }
   }
 
@@ -39,7 +39,7 @@ export class BuilderManager {
       eng.history.push(undoAction);
       if (eng.history.length > 30) eng.history.shift();
       eng.renderer.needsVoxelUpdate = true;
-      updates.forEach(u => eng.network.sendUpdateBlock(u));
+      eng.network.sendUpdateBlocks(updates);
     }
   }
 

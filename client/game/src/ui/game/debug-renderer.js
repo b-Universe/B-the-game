@@ -5,6 +5,9 @@ export class DebugRenderer {
   constructor(renderer) {
     this.renderer = renderer;
     this.engine = renderer.engine;
+    this.raycaster = new THREE.Raycaster();
+    this.mouseVec = new THREE.Vector2();
+    this.dummyObj = new THREE.Object3D();
   }
 
   setupDebugMeshes() {
@@ -286,7 +289,7 @@ export class DebugRenderer {
 
     if (eng.devOptions.showNeighborhoods && eng.neighborhoods) {
       let hitCount = 0;
-      const dummy = new THREE.Object3D();
+      const dummy = this.dummyObj;
 
       let nhList = eng.neighborhoods;
       if (nhList && !Array.isArray(nhList)) nhList = Object.values(nhList);
@@ -349,7 +352,7 @@ export class DebugRenderer {
 
     if (eng.devOptions.showSpawners && eng.spawners) {
       let hitCount = 0;
-      const dummy = new THREE.Object3D();
+      const dummy = this.dummyObj;
       eng.spawners.forEach(s => {
         if (hitCount < 100) {
           dummy.position.set(s.x, s.y, s.z || 0);
@@ -375,7 +378,7 @@ export class DebugRenderer {
       this.renderer.meleeCone.visible = true;
 
       let hitCount = 0;
-      const dummy = new THREE.Object3D();
+      const dummy = this.dummyObj;
       const checkMeleeHit = (tx, ty, tz) => {
         const pz = eng.player.z || 0;
         if (Math.abs(pz - (tz || 0)) > 48) return false;
@@ -454,7 +457,7 @@ export class DebugRenderer {
         return true;
       };
 
-      const dummy = new THREE.Object3D();
+      const dummy = this.dummyObj;
       let hitCount = 0;
       const addLoSBaseplate = (entity) => {
         if (hitCount >= 100) return;
@@ -510,7 +513,7 @@ export class DebugRenderer {
     }
 
     let tileHitCount = 0;
-    const dummy = new THREE.Object3D();
+    const dummy = this.dummyObj;
     const addTileBox = (entity) => {
       if (tileHitCount >= 100) return;
       const tx = Math.round(entity.x / 32) * 32;
@@ -892,12 +895,11 @@ export class DebugRenderer {
       return;
     }
 
-    const mouse = new THREE.Vector2();
-    mouse.x = (eng.input.mousePos.x / window.innerWidth) * 2 - 1;
-    mouse.y = -(eng.input.mousePos.y / window.innerHeight) * 2 + 1;
+    const mouse = this.mouseVec;
+    mouse.set((eng.input.mousePos.x / window.innerWidth) * 2 - 1, -(eng.input.mousePos.y / window.innerHeight) * 2 + 1);
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, this.renderer.camera);
+    this.raycaster.setFromCamera(mouse, this.renderer.camera);
+    const raycaster = this.raycaster;
 
     const mapPos = eng.getMapWorldPosFromScreen(eng.input.mousePos.x, eng.input.mousePos.y);
 

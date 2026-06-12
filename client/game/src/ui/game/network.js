@@ -210,6 +210,14 @@ export class NetworkManager {
       }
     });
 
+    this.socket.on('blocks_updated', (payloads) => {
+      if (eng.mapManager && payloads && payloads.length > 0) {
+        payloads.forEach(({ worldX, worldY, worldZ, voxelData }) => {
+          eng.mapManager.setVoxelAt(worldX, worldY, worldZ, voxelData, false);
+        });
+      }
+    });
+
     this.socket.on('force_teleport', (data) => {
       if (data.zone && data.zone !== eng.currentZone) {
         if (eng.ui && eng.ui.setupLoadingScreen) eng.ui.setupLoadingScreen();
@@ -778,6 +786,10 @@ export class NetworkManager {
 
   sendUpdateBlock(data) {
     if (this.socket) this.socket.emit('update_block', data);
+  }
+
+  sendUpdateBlocks(dataArray) {
+    if (this.socket && dataArray.length > 0) this.socket.emit('update_blocks', dataArray);
   }
 
   sendCombatHit(data) {

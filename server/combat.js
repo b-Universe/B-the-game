@@ -17,11 +17,6 @@ module.exports = function registerCombatSockets(socket, io, state, deps) {
     }
   });
 
-  socket.on('player_teleported', () => {
-    const player = activePlayers[socket.id];
-    if (player) player.exemptNextMove = true;
-  });
-
   socket.on('combat_hit', (data) => {
     const { targetId, targetType, powerId } = data;
     const attacker = activePlayers[socket.id];

@@ -12,6 +12,9 @@ export class InputManager {
     this.lastMouseY = 0;
     this.router = new InputRouter(engine, this);
 
+    this.raycaster = new THREE.Raycaster();
+    this.mouseVec = new THREE.Vector2();
+
     this.setupListeners();
   }
 
@@ -80,7 +83,10 @@ export class InputManager {
           }
           eng.clientSettings.minimapZoom = zoom;
           localStorage.setItem('b_client_settings', JSON.stringify(eng.clientSettings));
-          if (eng.network) eng.network.sendClientSettings(eng.clientSettings);
+          if (eng.zoomSaveTimeout) clearTimeout(eng.zoomSaveTimeout);
+          eng.zoomSaveTimeout = setTimeout(() => {
+            if (eng.network) eng.network.sendClientSettings(eng.clientSettings);
+          }, 500);
           return; // Stop here, don't zoom the 3D camera
         }
       }
@@ -118,11 +124,10 @@ export class InputManager {
 
       if (!eng.renderer || !eng.renderer.camera) return;
 
-      const mouse = new THREE.Vector2();
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      const mouse = this.mouseVec;
+      mouse.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
 
-      const raycaster = new THREE.Raycaster();
+      const raycaster = this.raycaster;
       raycaster.setFromCamera(mouse, eng.renderer.camera);
 
       let clickedTarget = null;
@@ -196,6 +201,7 @@ export class InputManager {
 
         if (!eng.mapOverlay || !eng.mapOverlay.active) {
           if ((this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) && eng.mouseWorldPos) {
+            if (eng.player.actionTimer > 0) return;
             eng.player.movePath = eng.physics.findPath(eng.player.x, eng.player.y, eng.player.z || 0, eng.mouseWorldPos.x, eng.mouseWorldPos.y);
             eng.player.moveTarget = { x: eng.mouseWorldPos.x, y: eng.mouseWorldPos.y, sprint: !!this.keys['shift'], timer: 15 };
             eng.lastPathCalc = Date.now();
@@ -438,6 +444,7 @@ export class InputManager {
 
       if (eng.clientSettings.clickToMove && !eng.editMode && this.keys['mouse0'] && !eng.isDraggingMinimap && !this.isDraggingCamera && !eng.targetingPower) {
         if (eng.mouseWorldPos) {
+          if (eng.player.actionTimer > 0) return;
           const now = Date.now();
           if (!eng.lastPathCalc || now - eng.lastPathCalc > 250) {
             eng.lastPathCalc = now;
@@ -509,6 +516,9 @@ export class InputManager {
         this.isDraggingCamera = false;
         document.body.style.cursor = '';
         if (eng.canvas) eng.canvas.style.cursor = '';
+
+        localStorage.setItem('b_client_settings', JSON.stringify(eng.clientSettings));
+        if (eng.network) eng.network.sendClientSettings(eng.clientSettings);
       }
     };
 

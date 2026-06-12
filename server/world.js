@@ -71,19 +71,19 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     const dronesInZone = {}; for (const id in activeDrones) { if (activeDrones[id].zone === player.zone) dronesInZone[id] = activeDrones[id]; }
     socket.emit('current_drones', dronesInZone);
 
-    const combinedData = [];
-    if (mapChunks[player.zone]) { for (let chunkId in mapChunks[player.zone]) { const chunk = mapChunks[player.zone][chunkId]; for (let vKey in chunk) combinedData.push([vKey, chunk[vKey]]); } }
-    socket.emit('full_map_data_received', { data: combinedData, currentZone: player.zone });
+    const combinedData = {};
+    if (mapChunks[player.zone]) { for (let chunkId in mapChunks[player.zone]) { Object.assign(combinedData, mapChunks[player.zone][chunkId]); } }
+    socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: player.zone });
     socket.emit('weather_update', state.globalWeather);
-    socket.emit('arcade_scores_updated', arcadeScores);
+    socket.compress(true).emit('arcade_scores_updated', arcadeScores);
   });
 
   socket.on('client_ready', () => { const player = activePlayers[socket.id]; if (player) { player.isLoading = false; } });
 
-  socket.on('sync_client_settings', (settings) => {
+  socket.on('sync_client_settings', async (settings) => {
     const player = activePlayers[socket.id];
     if (player && player.accountUuid) {
-      try { const accountFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`); if (fs.existsSync(accountFile)) { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); accData.clientSettings = settings; fs.writeFileSync(accountFile, JSON.stringify(accData, null, 2)); } } catch (e) { console.error(`Error saving client settings for ${player.name}:`, e.message); }
+      try { const accountFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`); if (fs.existsSync(accountFile)) { const accData = JSON.parse(fs.readFileSync(accountFile, 'utf8')); accData.clientSettings = settings; await fs.promises.writeFile(accountFile, JSON.stringify(accData, null, 2)); } } catch (e) { console.error(`Error saving client settings for ${player.name}:`, e.message); }
     }
   });
 
@@ -92,15 +92,8 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     if (player) {
       const isRespawning = player.state === 'death' && data.state === 'idle';
       if (!isRespawning && player.x !== undefined && player.y !== undefined) {
-        if (player.exemptNextMove) { player.exemptNextMove = false; }
-        else {
-          const now = Date.now(); const timeDelta = player.lastMoveTime ? (now - player.lastMoveTime) / 1000 : 0; const dist = Math.hypot(data.x - player.x, data.y - player.y);
-          const maxMapSize = 511 * 32;
-          if (data.x < 0 || data.x > maxMapSize || data.y < 0 || data.y > maxMapSize) { logSystem(`OUT OF BOUNDS HACK DETECTED: ${player.name}`, "WARN"); socket.emit('force_teleport', { x: Math.max(0, Math.min(player.x, maxMapSize)), y: Math.max(0, Math.min(player.y, maxMapSize)), z: player.z }); return; }
-          const effectiveDelta = Math.max(timeDelta, 0.1); const speed = dist / effectiveDelta;
-          const pName = player.name.toLowerCase(); const perms = permissionsCatalog['speed'] || []; const hasSpeedPerms = perms.includes('*') || perms.includes(pName);
-          if (speed > 2000 && !hasSpeedPerms) { logSystem(`SPEED / WARP HACK DETECTED: ${player.name} moved at ${Math.round(speed)} units/sec`, "WARN"); socket.emit('force_teleport', { x: player.x, y: player.y, z: player.z }); return; }
-        }
+        const maxMapSize = 511 * 32;
+        if (data.x < 0 || data.x > maxMapSize || data.y < 0 || data.y > maxMapSize) { logSystem(`OUT OF BOUNDS HACK DETECTED: ${player.name}`, "WARN"); socket.emit('force_teleport', { x: Math.max(0, Math.min(player.x, maxMapSize)), y: Math.max(0, Math.min(player.y, maxMapSize)), z: player.z }); return; }
       }
       if (data.state === 'dash' && player.state !== 'dash') { if (player.energy >= 50) player.energy -= 50; }
       if (data.state === 'jump' && player.state !== 'jump') { if (player.energy >= 25) player.energy -= 25; }
@@ -111,7 +104,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         player.activePowers = incomingPowers;
       }
       if (data.isAFK !== undefined) { if (player.isAFK && !data.isAFK) { player.afkMessage = null; } player.isAFK = data.isAFK; }
-      socket.to(player.zone).emit('player_moved', player);
+      socket.to(player.zone).emit('player_moved', { id: player.id, x: Math.round(player.x), y: Math.round(player.y), z: Math.round(player.z || 0), state: player.state, dir: player.dir, hp: Math.floor(player.hp), energy: Math.floor(player.energy), level: player.level, activePowers: player.activePowers, isAFK: player.isAFK, afkMessage: player.afkMessage });
     }
   });
 
@@ -137,14 +130,14 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     socket.to(zone).emit('map_update', updates);
   });
 
-  socket.on('request_patch_notes', () => { if (fs.existsSync(PATCH_NOTES_FILE)) { try { const data = fs.readFileSync(PATCH_NOTES_FILE, 'utf8'); socket.emit('patch_notes_data', JSON.parse(data)); } catch (e) { console.error("Error sending patch notes over socket:", e.message); } } });
-  socket.on('submit_arcade_score', (data) => { const player = activePlayers[socket.id]; if (!player) return; const { gameId, score } = data; if (typeof score !== 'number' || score <= 0) return; if (!arcadeScores[gameId] || score > arcadeScores[gameId].score) { arcadeScores[gameId] = { score, player: player.name }; fs.writeFileSync(ARCADE_SCORES_FILE, JSON.stringify(arcadeScores, null, 2)); io.emit('arcade_scores_updated', arcadeScores); } });
+  socket.on('request_patch_notes', () => { if (fs.existsSync(PATCH_NOTES_FILE)) { try { const data = fs.readFileSync(PATCH_NOTES_FILE, 'utf8'); socket.compress(true).emit('patch_notes_data', JSON.parse(data)); } catch (e) { console.error("Error sending patch notes over socket:", e.message); } } });
+  socket.on('submit_arcade_score', (data) => { const player = activePlayers[socket.id]; if (!player) return; const { gameId, score } = data; if (typeof score !== 'number' || score <= 0) return; if (!arcadeScores[gameId] || score > arcadeScores[gameId].score) { arcadeScores[gameId] = { score, player: player.name }; fs.writeFileSync(ARCADE_SCORES_FILE, JSON.stringify(arcadeScores, null, 2)); io.compress(true).emit('arcade_scores_updated', arcadeScores); } });
   socket.on('arcade_queue_join', (data) => { if (!arcadeQueues[data.gameId]) arcadeQueues[data.gameId] = null; if (arcadeQueues[data.gameId] && arcadeQueues[data.gameId] !== socket.id) { const p1 = arcadeQueues[data.gameId]; const p2 = socket.id; arcadeQueues[data.gameId] = null; const matchId = randomUUID(); arcadeMatches[matchId] = { p1, p2, gameId: data.gameId }; playerMatches[p1] = matchId; playerMatches[p2] = matchId; const p1Name = activePlayers[p1] ? activePlayers[p1].name : 'Opponent'; const p2Name = activePlayers[p2] ? activePlayers[p2].name : 'Opponent'; io.to(p1).emit('arcade_match_found', { role: 1, opponent: p2Name }); io.to(p2).emit('arcade_match_found', { role: 2, opponent: p1Name }); } else { arcadeQueues[data.gameId] = socket.id; } });
   socket.on('arcade_queue_leave', () => { for (let gameId in arcadeQueues) { if (arcadeQueues[gameId] === socket.id) arcadeQueues[gameId] = null; } });
   socket.on('arcade_state_sync', (data) => { const matchId = playerMatches[socket.id]; if (matchId && arcadeMatches[matchId]) { const match = arcadeMatches[matchId]; const opponent = match.p1 === socket.id ? match.p2 : match.p1; io.to(opponent).emit('arcade_state_sync', data); } });
   socket.on('arcade_match_leave', () => { const matchId = playerMatches[socket.id]; if (matchId && arcadeMatches[matchId]) { const match = arcadeMatches[matchId]; const opponent = match.p1 === socket.id ? match.p2 : match.p1; io.to(opponent).emit('arcade_match_ended'); delete playerMatches[match.p1]; delete playerMatches[match.p2]; delete arcadeMatches[matchId]; } });
 
-  socket.on('request_full_map', () => { const player = activePlayers[socket.id]; if (!player || !player.zone) return; const zone = player.zone; const combinedData = []; if (mapChunks[zone]) { for (let chunkId in mapChunks[zone]) { const chunk = mapChunks[zone][chunkId]; for (let vKey in chunk) { combinedData.push([vKey, chunk[vKey]]); } } } socket.emit('full_map_data_received', { data: combinedData, currentZone: zone }); });
+  socket.on('request_full_map', () => { const player = activePlayers[socket.id]; if (!player || !player.zone) return; const zone = player.zone; const combinedData = {}; if (mapChunks[zone]) { for (let chunkId in mapChunks[zone]) { Object.assign(combinedData, mapChunks[zone][chunkId]); } } socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: zone }); });
   socket.on('save_chunk', ({ key, data }) => { const player = activePlayers[socket.id]; if (!player || !player.zone) return; const zone = player.zone; const zoneDir = path.join(CHUNKS_DIR, zone); if (!fs.existsSync(zoneDir)) fs.mkdirSync(zoneDir, { recursive: true }); const chunkFile = path.join(zoneDir, `${key}.json`); try { const chunkObj = {}; data.forEach(entry => { chunkObj[entry[0]] = entry[1]; }); if (!mapChunks[zone]) mapChunks[zone] = {}; mapChunks[zone][key] = chunkObj; fs.writeFileSync(chunkFile, JSON.stringify(chunkObj, null, 2)); } catch (e) { console.error(`Error saving chunk ${key}:`, e.message); } });
 
   socket.on('update_block', (payload) => {
@@ -165,11 +158,35 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     socket.to(zone).emit('block_updated', payload);
   });
 
-  socket.on('sync_character', (data) => {
+  socket.on('update_blocks', (payloads) => {
+    const player = activePlayers[socket.id]; if (!player) return;
+    const pName = player.name.toLowerCase();
+    const hasPerm = ['editmode', 'builder', 'dev', 'admin'].some(role => {
+        const p = permissionsCatalog[role] || [];
+        return p.includes('*') || p.includes(pName);
+    });
+    if (!hasPerm) { logSystem(`UNAUTHORIZED BLOCK UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
+    if (!player.zone || !Array.isArray(payloads) || payloads.length === 0) return;
+    const zone = player.zone;
+    const zoneDir = path.join(CHUNKS_DIR, zone); if (!fs.existsSync(zoneDir)) fs.mkdirSync(zoneDir, { recursive: true });
+    const updatedChunks = new Set();
+    payloads.forEach(payload => {
+      const { worldX, worldY, worldZ, voxelData } = payload;
+      const localX = Math.round(worldX / 32); const localY = Math.round(worldY / 32); const localZ = Math.round(worldZ / 32);
+      const cx = Math.floor(localX / 32); const cy = Math.floor(localY / 32); const chunkId = `chunk_${cx}_${cy}`; const tileKey = `${localX}_${localY}_${localZ}`;
+      if (!mapChunks[zone]) mapChunks[zone] = {}; if (!mapChunks[zone][chunkId]) mapChunks[zone][chunkId] = {};
+      if (voxelData === null) mapChunks[zone][chunkId][tileKey] = null; else mapChunks[zone][chunkId][tileKey] = voxelData;
+      updatedChunks.add(chunkId);
+    });
+    updatedChunks.forEach(chunkId => { const chunkFile = path.join(zoneDir, `${chunkId}.json`); try { fs.writeFileSync(chunkFile, JSON.stringify(mapChunks[zone][chunkId], null, 2)); } catch (e) { console.error(`Error saving chunk ${chunkId}:`, e.message); } });
+    socket.to(zone).emit('blocks_updated', payloads);
+  });
+
+  socket.on('sync_character', async (data) => {
     const player = activePlayers[socket.id]; if (!player) return; if (!data || !data.uuid || !data.charData || !data.charData.name) return;
     if (player.name.toLowerCase() !== data.charData.name.toLowerCase()) { logSystem(`UNAUTHORIZED SYNC ATTEMPT: ${player.name} tried to overwrite ${data.charData.name}`, "WARN"); return; }
     const charFile = path.join(CHAR_DATA_DIR, `${data.charData.name.toLowerCase()}.json`);
-    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.position = data.position; if (data.charData.activePowers !== undefined) charObj.activePowers = data.charData.activePowers; if (data.charData.powerTray !== undefined) charObj.powerTray = data.charData.powerTray; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); } catch(e) { console.error(`Error syncing character ${data.charData.name}:`, e.message); } }
+    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.position = data.position; if (data.charData.activePowers !== undefined) charObj.activePowers = data.charData.activePowers; if (data.charData.powerTray !== undefined) charObj.powerTray = data.charData.powerTray; await fs.promises.writeFile(charFile, JSON.stringify(charObj, null, 2)); } catch(e) { console.error(`Error syncing character ${data.charData.name}:`, e.message); } }
   });
 
   socket.on('dev_load_world', (payload) => {
@@ -192,12 +209,12 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     const playersInZone = {}; for (const id in activePlayers) { if (activePlayers[id].zone === targetZone) playersInZone[id] = activePlayers[id]; }
      socket.emit('current_players', playersInZone); socket.emit('current_npcs', npcsCatalog.filter(n => n.zone === targetZone)); socket.emit('current_spawners', spawnersCatalog.filter(s => s.zone === targetZone)); const dronesInZone = {}; for (const id in activeDrones) { if (activeDrones[id].zone === targetZone) dronesInZone[id] = activeDrones[id]; } socket.emit('current_drones', dronesInZone);
      socket.emit('current_neighborhoods', state.neighborhoods); socket.emit('current_mob_packs', state.mobPacks); socket.emit('current_npc_templates', state.npcTemplates); socket.emit('current_entity_types', state.entityTypes);
-    const combinedData = []; if (mapChunks[targetZone]) { for (let chunkId in mapChunks[targetZone]) { const chunk = mapChunks[targetZone][chunkId]; for (let vKey in chunk) combinedData.push([vKey, chunk[vKey]]); } } socket.emit('full_map_data_received', { data: combinedData, currentZone: targetZone });
+    const combinedData = {}; if (mapChunks[targetZone]) { for (let chunkId in mapChunks[targetZone]) { Object.assign(combinedData, mapChunks[targetZone][chunkId]); } } socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: targetZone });
   });
 
   socket.on('spawn_fx', (data) => { if (!data) return; socket.broadcast.emit('spawn_fx', { x: Number(data.x) || 0, y: Number(data.y) || 0, z: Number(data.z) || 0, vx: Number(data.vx) || 0, vy: Number(data.vy) || 0, vz: Number(data.vz) || 0, life: Number(data.life) || 1, maxLife: Number(data.maxLife) || 1, crumpleTimer: Number(data.crumpleTimer) || 0, wasteTex: String(data.wasteTex).substring(0, 32), isFX: true, color: data.color ? String(data.color).substring(0, 24) : null, flipX: !!data.flipX }); });
 
-  socket.on('learn_power', (data) => {
+  socket.on('learn_power', async (data) => {
     const player = activePlayers[socket.id]; if (!player) return;
     const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`);
     if (fs.existsSync(charFile)) {
@@ -211,14 +228,14 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
             if (!charData.powerTray) charData.powerTray = charData.powers.filter(p => SERVER_POWER_REGISTRY[p] ? SERVER_POWER_REGISTRY[p].type?.toLowerCase() !== 'passive' : true);
             const pDef = SERVER_POWER_REGISTRY[powerId];
                 if (!pDef || pDef.type?.toLowerCase() !== 'passive') { charData.powerTray.push(powerId); } else { if (!charData.activePowers) charData.activePowers = []; if (!charData.activePowers.includes(powerId)) { charData.activePowers.push(powerId); } player.activePowers = charData.activePowers; io.to(socket.id).emit('player_stats_updated', { activePowers: player.activePowers }); const isEquipRobot = powerId === 'equip-robot' || (pDef && pDef.name === 'Equip Robot'); const isUpgradeRobot = powerId === 'upgrade-robot' || powerId === 'upgrade-robots' || (pDef && (pDef.name === 'Upgrade Robot' || pDef.name === 'Upgrade Robots')); const hasUpgradeRobot = player.powers && player.powers.some(pId => pId === 'upgrade-robot' || pId === 'upgrade-robots' || (SERVER_POWER_REGISTRY[pId] && (SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robot' || SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robots'))); const existingDrones = Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id && d.state !== 'dead'); if (isEquipRobot && existingDrones.length === 1) { const droneId = randomUUID(); const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: player.name, x: player.x, y: player.y, z: (player.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: 1, orbitOffset: Math.PI + (Math.random() * Math.PI), hp: hasUpgradeRobot ? 150 : 100, maxHp: hasUpgradeRobot ? 150 : 100, type: 'drone', isCombatDrone: true, isAssaultDrone: false, isUpgraded: hasUpgradeRobot, zone: player.zone }; activeDrones[droneId] = newDrone; io.to(player.zone).emit('drone_spawned', newDrone); } if (isUpgradeRobot && existingDrones.length === 2) { const droneId = randomUUID(); const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: player.name, x: player.x, y: player.y, z: (player.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: 2, orbitOffset: Math.PI + (Math.random() * Math.PI), hp: 150, maxHp: 150, type: 'drone', isCombatDrone: false, isAssaultDrone: true, isUpgraded: true, zone: player.zone }; activeDrones[droneId] = newDrone; io.to(player.zone).emit('drone_spawned', newDrone); } if (isUpgradeRobot) { Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id).forEach(d => { d.isUpgraded = true; d.maxHp = 150; d.hp += 50; io.to(d.zone).emit('drones_moved', { [d.uuid]: d }); }); } }
-            player.powers = charData.powers; fs.writeFileSync(charFile, JSON.stringify(charData, null, 2)); io.to(socket.id).emit('player_data_updated', charData); logSystem(`POWER LEARNED: ${player.name} learned ${powerId}`);
+            player.powers = charData.powers; await fs.promises.writeFile(charFile, JSON.stringify(charData, null, 2)); io.to(socket.id).emit('player_data_updated', charData); logSystem(`POWER LEARNED: ${player.name} learned ${powerId}`);
           }
         } else { logSystem(`LEARN REJECTED: ${player.name} has no power picks left`, "WARN"); }
       } catch(e) {}
     }
   });
 
-  socket.on('learn_powerset', (data) => {
+  socket.on('learn_powerset', async (data) => {
     const player = activePlayers[socket.id]; if (!player) return;
     const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`);
     if (fs.existsSync(charFile)) {
@@ -226,19 +243,19 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         const charData = JSON.parse(fs.readFileSync(charFile, 'utf8')); const psId = data.powerset; const psDef = serverPowersetsById[psId]; if (!psDef) { logSystem(`LEARN REJECTED: Powerset ${psId} does not exist`, "WARN"); return; }
         const integrity = charData.integrity || 0; if (psDef.minIntegrity !== undefined && integrity < psDef.minIntegrity) { logSystem(`LEARN REJECTED: ${player.name} does not meet min integrity for ${psId}`, "WARN"); socket.emit('system_dialog', `You do not meet the minimum Integrity requirements for ${psDef.Name || psId}.`); return; } if (psDef.maxIntegrity !== undefined && integrity > psDef.maxIntegrity) { logSystem(`LEARN REJECTED: ${player.name} does not meet max integrity for ${psId}`, "WARN"); socket.emit('system_dialog', `You exceed the maximum Integrity limits for ${psDef.Name || psId}.`); return; }
         let hasPick = false; if (Array.isArray(charData.unspentPowersetPicks) && charData.unspentPowersetPicks.length > 0) { const psCat = (psDef.category || '').toLowerCase(); const pickIdx = charData.unspentPowersetPicks.findIndex(p => { if (p === 'any') return true; const allowedTypes = p.split('/'); return allowedTypes.some(t => psCat.includes(t) || t.includes(psCat) || psId.toLowerCase().includes(t)); }); if (pickIdx !== -1) { hasPick = true; charData.unspentPowersetPicks.splice(pickIdx, 1); } } else if (typeof charData.unspentPowersetPicks === 'number' && charData.unspentPowersetPicks > 0) { hasPick = true; charData.unspentPowersetPicks--; }
-        if (hasPick) { if (!charData.powersets) charData.powersets = []; if (!charData.powersets.includes(psId)) charData.powersets.push(psId); fs.writeFileSync(charFile, JSON.stringify(charData, null, 2)); io.to(socket.id).emit('player_data_updated', charData); logSystem(`POWERSET LEARNED: ${player.name} unlocked ${data.powerset}`); } else { logSystem(`LEARN REJECTED: ${player.name} has no valid powerset picks for ${psId}`, "WARN"); }
+        if (hasPick) { if (!charData.powersets) charData.powersets = []; if (!charData.powersets.includes(psId)) charData.powersets.push(psId); await fs.promises.writeFile(charFile, JSON.stringify(charData, null, 2)); io.to(socket.id).emit('player_data_updated', charData); logSystem(`POWERSET LEARNED: ${player.name} unlocked ${data.powerset}`); } else { logSystem(`LEARN REJECTED: ${player.name} has no valid powerset picks for ${psId}`, "WARN"); }
       } catch(e) {}
     }
   });
 
-  socket.on('inventory_move', (data) => {
+  socket.on('inventory_move', async (data) => {
     const player = activePlayers[socket.id]; if (!player) return;
     const { fromIndex, toIndex } = data; if (fromIndex === undefined || toIndex === undefined) return;
     const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`);
-    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); if (!charObj.inventory) charObj.inventory = []; const temp = charObj.inventory[toIndex]; charObj.inventory[toIndex] = charObj.inventory[fromIndex]; charObj.inventory[fromIndex] = temp || null; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); } catch(e) {} }
+    if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); if (!charObj.inventory) charObj.inventory = []; const temp = charObj.inventory[toIndex]; charObj.inventory[toIndex] = charObj.inventory[fromIndex]; charObj.inventory[fromIndex] = temp || null; await fs.promises.writeFile(charFile, JSON.stringify(charObj, null, 2)); } catch(e) {} }
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     const player = activePlayers[socket.id];
     if (player) {
       if (player.friends) { player.friends.forEach(friendName => { const friendId = Object.keys(activePlayers).find(id => activePlayers[id].name.toLowerCase() === friendName.toLowerCase() && id !== socket.id); if (friendId) { io.to(friendId).emit('friend_status_update', { name: player.name, status: 'offline' }); } }); }
@@ -248,7 +265,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
 
       try { for (const id in activeDrones) { if (activeDrones[id].ownerSocketId === socket.id) { delete activeDrones[id]; io.emit('drone_despawned', { uuid: id }); } } } catch (err) {}
 
-      try { const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`); if (fs.existsSync(charFile)) { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); if (player.x !== undefined && player.y !== undefined) { charObj.position = { x: player.x, y: player.y, z: player.z }; } if (!player.zone) throw new Error("Missing Zone during disconnect save!"); charObj.zone = player.zone; if (player.hp !== undefined && charObj.stats) { charObj.stats.hp = player.hp; } if (player.synthEnergy !== undefined && charObj.stats) charObj.stats.synthEnergy = player.synthEnergy; if (player.level !== undefined) charObj.level = player.level; if (player.experience !== undefined) charObj.experience = player.experience; if (player.unspentPowerPicks !== undefined) charObj.unspentPowerPicks = player.unspentPowerPicks; if (player.unspentPowersetPicks !== undefined) charObj.unspentPowersetPicks = player.unspentPowersetPicks; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); } } catch (err) {}
+      try { const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`); if (fs.existsSync(charFile)) { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); if (player.x !== undefined && player.y !== undefined) { charObj.position = { x: player.x, y: player.y, z: player.z }; } if (!player.zone) throw new Error("Missing Zone during disconnect save!"); charObj.zone = player.zone; if (player.hp !== undefined && charObj.stats) { charObj.stats.hp = player.hp; } if (player.synthEnergy !== undefined && charObj.stats) charObj.stats.synthEnergy = player.synthEnergy; if (player.level !== undefined) charObj.level = player.level; if (player.experience !== undefined) charObj.experience = player.experience; if (player.unspentPowerPicks !== undefined) charObj.unspentPowerPicks = player.unspentPowerPicks; if (player.unspentPowersetPicks !== undefined) charObj.unspentPowersetPicks = player.unspentPowersetPicks; await fs.promises.writeFile(charFile, JSON.stringify(charObj, null, 2)); } } catch (err) {}
 
       try {
         const index = getIndex(); let accEntry = null;

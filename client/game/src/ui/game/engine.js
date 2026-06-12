@@ -88,6 +88,15 @@ export class GameEngine {
 
     this.waypoints = [];
     this.mapPings = [];
+    this.mapPingPool = [];
+    this.mapPings.push = (...args) => {
+      args.forEach(data => {
+        let obj = this.mapPingPool.length > 0 ? this.mapPingPool.pop() : {};
+        Object.assign(obj, data);
+        Array.prototype.push.call(this.mapPings, obj);
+      });
+      return this.mapPings.length;
+    };
     this.fps = 0;
     this.framesThisSecond = 0;
     this.lastFpsTime = performance.now();
@@ -154,7 +163,40 @@ export class GameEngine {
 
     this.npcs = [];
     this.projectiles = [];
+    this.projectilePool = [];
+    this.projectiles.push = (...args) => {
+      args.forEach(data => {
+        let obj = this.projectilePool.length > 0 ? this.projectilePool.pop() : {};
+        // Reset critical tracking variables to prevent bleeding into recycled objects
+        obj.id = undefined; obj.hasHit = false; obj.lastAngle = undefined; obj.loopPitch = 0;
+        obj.lastX = undefined; obj.lastY = undefined; obj.lastZ = undefined;
+        Object.assign(obj, data);
+        Array.prototype.push.call(this.projectiles, obj);
+      });
+      return this.projectiles.length;
+    };
+
+    this.lightnings = [];
+    this.lightningPool = [];
+    this.lightnings.push = (...args) => {
+      args.forEach(data => {
+        let obj = this.lightningPool.length > 0 ? this.lightningPool.pop() : {};
+        Object.assign(obj, data);
+        Array.prototype.push.call(this.lightnings, obj);
+      });
+      return this.lightnings.length;
+    };
     this.debris = [];
+    this.debrisPool = [];
+    this.debris.push = (...args) => {
+      args.forEach(data => {
+        let obj = this.debrisPool.length > 0 ? this.debrisPool.pop() : {};
+        obj.id = undefined; obj.vx = 0; obj.vy = 0; obj.vz = 0; obj.crumpleTimer = 0; obj.rotation = 0; obj.scale = 1; obj.flipX = false; obj.isCharred = false; obj.color = null; obj.isFX = false;
+        Object.assign(obj, data);
+        Array.prototype.push.call(this.debris, obj);
+      });
+      return this.debris.length;
+    };
     this.drones = {};
 
     this.input = new InputManager(this);
@@ -216,6 +258,16 @@ export class GameEngine {
     this.editMode = false;
 
     this.floatingTexts = [];
+    this.floatingTextPool = [];
+    this.floatingTexts.push = (...args) => {
+      args.forEach(data => {
+        let obj = this.floatingTextPool.length > 0 ? this.floatingTextPool.pop() : {};
+        obj.offsetY = 130; obj.rndX = 0; obj.rndY = 0; obj.isDoT = false; obj.isCrit = false;
+        Object.assign(obj, data);
+        Array.prototype.push.call(this.floatingTexts, obj);
+      });
+      return this.floatingTexts.length;
+    };
 
     this.otherPlayers = {};
 
@@ -668,20 +720,29 @@ export class GameEngine {
       let ft = this.floatingTexts[i];
       ft.life -= dt / 1000;
       ft.offsetY += 40 * (dt / 1000);
-      if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+      if (ft.life <= 0) {
+        this.floatingTextPool.push(ft);
+        this.floatingTexts.splice(i, 1);
+      }
     }
 
     for (let i = this.mapPings.length - 1; i >= 0; i--) {
       let p = this.mapPings[i];
       p.life -= dt / 1000;
-      if (p.life <= 0) this.mapPings.splice(i, 1);
+      if (p.life <= 0) {
+        this.mapPingPool.push(p);
+        this.mapPings.splice(i, 1);
+      }
     }
 
     if (this.lightnings) {
       for (let i = this.lightnings.length - 1; i >= 0; i--) {
         let l = this.lightnings[i];
         l.life -= dt / 1000;
-        if (l.life <= 0) this.lightnings.splice(i, 1);
+        if (l.life <= 0) {
+          this.lightningPool.push(l);
+          this.lightnings.splice(i, 1);
+        }
       }
     }
 
@@ -832,6 +893,7 @@ export class GameEngine {
       if (d.crumpleTimer > 0) d.crumpleTimer -= dt / 1000;
 
       if (d.life <= 0) {
+        this.debrisPool.push(d);
         this.debris.splice(i, 1);
         continue;
       }
@@ -1081,13 +1143,14 @@ export class GameEngine {
 
       if (proj.distTravelled >= proj.maxDist) {
         if (proj.onHit && !proj.hasHit) proj.onHit();
+        this.projectilePool.push(proj);
         this.projectiles.splice(i, 1);
       }
     }
 
     if (!this.lastEmitTime) this.lastEmitTime = 0;
 
-    if (now - this.lastEmitTime >= 50) { // Throttle client position packets to max 20 per second
+    if (now - this.lastEmitTime >= 100) { // Throttle client position packets to max 10 per second
       if (
         Math.abs(this.player.x - this.lastEmit.x) > 1 ||
         Math.abs(this.player.y - this.lastEmit.y) > 1 ||
@@ -1099,9 +1162,9 @@ export class GameEngine {
         this.player.isAFK !== this.lastEmit.isAFK
       ) {
         this.network.sendPlayerMoved({
-          x: this.player.x, y: this.player.y, z: this.player.z,
+          x: Math.round(this.player.x * 10) / 10, y: Math.round(this.player.y * 10) / 10, z: this.player.z !== undefined ? Math.round(this.player.z * 10) / 10 : 0,
           state: this.player.state, dir: this.player.dir,
-          hp: this.player.hp, activePowers: this.player.activePowers,
+          hp: Math.floor(this.player.hp), activePowers: this.player.activePowers,
           isAFK: this.player.isAFK
         });
         this.lastEmit = { x: this.player.x, y: this.player.y, z: this.player.z, state: this.player.state, dir: this.player.dir, hp: this.player.hp, activePowers: this.player.activePowers.join(','), isAFK: this.player.isAFK };

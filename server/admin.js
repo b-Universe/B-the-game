@@ -16,7 +16,6 @@ module.exports = function registerAdminSockets(socket, io, state, deps) {
       const maxMapSize = 511 * 32;
       const clampedX = Math.max(0, Math.min(data.x, maxMapSize));
       const clampedY = Math.max(0, Math.min(data.y, maxMapSize));
-      activePlayers[targetSocketId].exemptNextMove = true;
       io.to(targetSocketId).emit('force_teleport', { x: clampedX, y: clampedY, z: data.z });
       logSystem(`ADMIN TELEPORT: ${player.name} teleported ${data.targetName} to X:${clampedX}, Y:${clampedY}, Z:${data.z !== undefined ? data.z : 'Top Z'}`);
     }

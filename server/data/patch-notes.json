@@ -1,5 +1,33 @@
 [
   {
+  "version": "v2.5.3",
+  "color": "#ffaa00",
+  "changes": [
+    { "type": "Engine", "text": "Compressed the full map payload to heavily reduce data transfer when players load zones." },
+    { "type": "Engine", "text": "Added native WebSocket compression." },
+    { "type": "Engine", "text": "Implemented client-side hashing for chunks." },
+    { "type": "Engine", "text": "Added socket.io compression to arcade leaderboards and the patch-updates API." },
+    { "type": "Engine", "text": "Rounded massive object ints." },
+    { "type": "Engine", "text": "Removed fat player object sync." },
+    { "type": "Engine", "text": "Added state efficiency to drone and NPC loops." },
+    { "type": "Engine", "text": "Updated engine delta time tracking." },
+    { "type": "Fix", "text": "Fixed an object leak in entity-manager.js." },
+    { "type": "Fix", "text": "Fixed an object leak in physics-manager.js." },
+    { "type": "Fix", "text": "Fixed a memory leak in DebugRenderer." },
+    { "type": "Engine", "text": "Moved dirAngleMap out of the renderer.js draw loop." },
+    { "type": "Engine", "text": "Converted floatingTexts, mapPings, and debris arrays to object pools." },
+    { "type": "Engine", "text": "Converted projectiles and lightnings into object pools." },
+    { "type": "Engine", "text": "Added an --inspect flag for profiling memory leaks." },
+    { "type": "Engine", "text": "Implemented throttling for A* pathfinding." },
+    { "type": "Engine", "text": "Cached projectile origin lookups." },
+    { "type": "Engine", "text": "Avoided Math.hypot in high volume scanners." },
+    { "type": "Fix", "text": "Fixed renderer async nonblocking writes." },
+    { "type": "Engine", "text": "Removed stupid sauce." },
+    { "type": "Gameplay", "text": "Added an action-lock to click-to-move." },
+    { "type": "UI", "text": "Batched builder tool updates." }
+    ]
+  },
+  {
     "version": "v2.5.2",
     "color": "#39ff14",
     "changes": [
