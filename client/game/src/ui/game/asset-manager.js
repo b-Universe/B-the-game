@@ -391,6 +391,7 @@ export class AssetManager {
 
     this.atlasMap = {
       'white': { x: 0, y: 1 },
+      'solid-color': { x: 0, y: 1 },
       'mud1': { x: 2, y: 1 },
       'mud2': { x: 3, y: 1 },
       'mud3': { x: 0, y: 2 },

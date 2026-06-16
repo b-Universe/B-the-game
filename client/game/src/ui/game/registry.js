@@ -117,6 +117,13 @@ export const BlockRegistry = {
     solid: true,
     faces: { top: [4, 0], bottom: [4, 0], sides: [4, 0] }
   },
+  55: {
+    name: 'solid-color',
+    type: 'block',
+    shape: 'cube',
+    solid: true,
+    faces: { top: [0, 1], bottom: [0, 1], sides: [0, 1] }
+  },
   50: {
     name: 'light_block',
     type: 'block',
@@ -330,32 +337,35 @@ export const BlockRegistry = {
 };
 
 export const FURNITURE_REGISTRY = {
-  'wood-bookshelf-small': { name: 'Small Wood Bookhelf' },
-  'wood-bookshelf-tall': { name: 'Tall Wood Bookhelf' },
-  'wood-chair': { name: 'Wood Chair' },
-  'wood-bench-small': { name: 'Small Bench' },
-  'wood-bench-medium': { name: 'Medium Bench' },
-  'wood-bench-large': { name: 'Large Bench' },
-  'wood-table-2x2': { name: '2x2 Wood Table' },
-  'wood-table-3x3': { name: '3x3 Wood Table' },
-  'plant-pot-small': { name: 'Small Plant Pot' },
-  'plant-pot-medium': { name: 'Medium Plant Pot' },
+  'wood-bookshelf-small': { name: 'Small Wood Bookhelf', category: 'wood' },
+  'wood-bookshelf-tall': { name: 'Tall Wood Bookhelf', category: 'wood' },
+  'wood-chair': { name: 'Wood Chair', category: 'wood' },
+  'wood-bench-small': { name: 'Small Bench', category: 'wood' },
+  'wood-bench-medium': { name: 'Medium Bench', category: 'wood' },
+  'wood-bench-large': { name: 'Large Bench', category: 'wood' },
+  'wood-table-2x2': { name: '2x2 Wood Table', category: 'wood' },
+  'wood-table-3x3': { name: '3x3 Wood Table', category: 'wood' },
+  'plant-pot-small': { name: 'Small Plant Pot', category: 'decor' },
+  'plant-pot-medium': { name: 'Medium Plant Pot', category: 'decor' },
   'wooden-door-1': {
     name: 'Wooden Door 1',
+    category: 'doors',
     useMeshUV: true,
     customTexture: 'assets/tiles/base/interactable/wooden-door-1.png',
     collisionHeight: 2
   },
   'wooden-door-2': {
     name: 'Wooden Door 2',
+    category: 'doors',
     useMeshUV: true,
     customTexture: 'assets/tiles/base/interactable/wooden-door-2.png',
     collisionHeight: 2
   },
-  'neon-sign-1': { name: 'Neon Sign 1' },
-  'neon-sign-2': { name: 'Neon Sign 2' },
+  'neon-sign-1': { name: 'Neon Sign 1', category: 'signs' },
+  'neon-sign-2': { name: 'Neon Sign 2', category: 'signs' },
   'arcade-box-1': {
     name: 'Arcade Cabinet',
+    category: 'arcade',
     customTexture: 'assets/tiles/base/industrial/arcade-box.png',
     collisionHeight: 3,
     useMeshUV: true,

@@ -36,7 +36,8 @@ export class BaseWindow {
     this.element.style.display = 'none'; // Hidden by default
     this.element.style.opacity = '0';
     this.element.style.transform = 'scale(0.95)';
-    this.element.style.transition = 'opacity 0.15s ease-out, transform 0.15s ease-out';
+    this.element.style.overflow = 'hidden';
+    this.element.style.transition = 'opacity 0.15s ease-out, transform 0.15s ease-out, height 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
 
     // Header (32px, Neon-rainbow theme via CSS)
     const header = document.createElement('div');
@@ -70,6 +71,8 @@ export class BaseWindow {
     // Body (8px Grid Spacing via CSS)
     this.body = document.createElement('div');
     this.body.className = 'b-window-body';
+    this.body.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out';
+    this.body.style.transformOrigin = 'top center';
 
     this.element.appendChild(header);
     this.element.appendChild(this.body);
@@ -91,7 +94,7 @@ export class BaseWindow {
     const state = {
       left: this.element.style.left,
       top: this.element.style.top,
-      minimized: this.body.style.display === 'none'
+      minimized: this.element.dataset.minimized === 'true'
     };
     localStorage.setItem(this.stateKey, JSON.stringify(state));
   }
@@ -109,9 +112,24 @@ export class BaseWindow {
           const topVal = parseInt(state.top, 10);
           this.element.style.top = `${Math.max(0, Math.min(topVal, window.innerHeight - 32))}px`;
         }
+
+        if (this.body && this.body.style.display === 'none') {
+          this.body.style.display = 'flex';
+        }
+
         if (state.minimized) {
-          this.body.style.display = 'none';
+          this.element.dataset.minimized = 'true';
+          this.element.style.overflow = 'hidden';
           this.element.style.height = '32px';
+          this.body.style.transform = 'translateY(-20px)';
+          this.body.style.opacity = '0';
+          this.body.style.pointerEvents = 'none';
+        } else {
+          this.element.dataset.minimized = 'false';
+          this.element.style.overflow = 'visible';
+          this.body.style.transform = 'translateY(0)';
+          this.body.style.opacity = '1';
+          this.body.style.pointerEvents = 'auto';
         }
       } catch (e) {
         console.warn('Failed to restore window state for', this.id);
@@ -155,12 +173,27 @@ export class BaseWindow {
   }
 
   toggleMinimize() {
-    if (this.body.style.display === 'none') {
-      this.body.style.display = 'flex';
+    const isMinimized = this.element.dataset.minimized === 'true';
+    if (isMinimized) {
+      this.element.dataset.minimized = 'false';
       this.element.style.height = typeof this.height === 'number' ? `${this.height}px` : this.height;
+      setTimeout(() => {
+        if (this.element.dataset.minimized === 'false') {
+           if (this.height === 'auto') this.element.style.height = 'auto';
+           this.element.style.overflow = 'visible'; // Restore overflow so dropdowns aren't clipped
+        }
+      }, 200);
     } else {
-      this.body.style.display = 'none';
+      this.element.dataset.minimized = 'true';
+      this.element.style.overflow = 'hidden'; // Hide during animation
+      if (this.element.style.height === 'auto' || !this.element.style.height) {
+        this.element.style.height = `${this.element.offsetHeight}px`;
+        void this.element.offsetWidth; // Force reflow
+      }
       this.element.style.height = '32px'; // Snap to header height
+      this.body.style.transform = 'translateY(-20px)'; // Suck up effect
+      this.body.style.opacity = '0';
+      this.body.style.pointerEvents = 'none';
     }
     this.saveState();
   }
@@ -205,7 +238,7 @@ export class BaseWindow {
         try {
           const settings = JSON.parse(localStorage.getItem('b_client_settings') || '{}');
           isEnergyMerged = settings.mergeSynthBar === true;
-          isAlternativeUI = settings.uiMode === 'alternative';
+          isAlternativeUI = (settings.uiMode || 'alternative') === 'alternative';
         } catch (e) { }
 
         // Calculate reserved bottom space (e.g., 60px if merged, 95px if split, 0 if alt UI)

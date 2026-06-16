@@ -153,9 +153,12 @@ export class InGameMenuUIManager {
 
       document.getElementById('btn-friends').addEventListener('click', () => {
         gameDropdown.style.display = 'none';
-        const modal = document.getElementById('friends-modal');
-        if (modal) modal.style.display = 'flex';
-        if (window.currentGameEngine?.ui?.friendsList) window.currentGameEngine.ui.friendsList.renderFriendsList();
+        if (window.currentGameEngine && window.currentGameEngine.ui && window.currentGameEngine.ui.friendsList) {
+           window.currentGameEngine.ui.friendsList.toggle();
+        } else {
+           const modal = document.getElementById('friends-modal');
+           if (modal) modal.style.display = 'flex';
+        }
       });
 
       document.getElementById('btn-help').addEventListener('click', () => {
@@ -172,23 +175,32 @@ export class InGameMenuUIManager {
 
         if (e.key === '\\' || e.key === '|') {
           e.preventDefault();
-          btnGameMenu.click();
+          const eng = window.currentGameEngine;
+          if (eng && eng.clientSettings && eng.clientSettings.uiMode === 'alternative') {
+             const altMenuBtn = document.getElementById('alt-ui-menu-btn');
+             if (altMenuBtn) altMenuBtn.click();
+          } else {
+             if (btnGameMenu) btnGameMenu.click();
+          }
         }
 
-        if (gameDropdown.style.display === 'flex') {
+        const altDropdown = document.getElementById('alt-ui-dropdown');
+        const isAltDropdownOpen = altDropdown && altDropdown.style.display === 'flex';
+
+        if (gameDropdown.style.display === 'flex' || isAltDropdownOpen) {
           const key = e.key.toLowerCase();
-          if (key === 'i') { e.preventDefault(); document.getElementById('btn-edit-id').click(); }
+          if (key === 'i') { e.preventDefault(); document.getElementById('btn-edit-id')?.click(); }
           if (key === 'k') {
             e.preventDefault();
-            document.getElementById('btn-settings').click();
+            document.getElementById('btn-settings')?.click();
             const kbTabBtn = document.querySelector('.settings-tab-btn[data-tab="tab-keybinds"]');
             if (kbTabBtn) kbTabBtn.click();
           }
-          if (key === 's') { e.preventDefault(); document.getElementById('btn-settings').click(); }
-          if (key === 'f') { e.preventDefault(); document.getElementById('btn-friends').click(); }
-          if (key === 'h') { e.preventDefault(); document.getElementById('btn-help').click(); }
-          if (key === 'c') { e.preventDefault(); document.getElementById('btn-char-select').click(); }
-          if (key === 'q') { e.preventDefault(); document.getElementById('btn-logout').click(); }
+          if (key === 's') { e.preventDefault(); document.getElementById('btn-settings')?.click(); }
+          if (key === 'f') { e.preventDefault(); document.getElementById('btn-friends')?.click(); }
+          if (key === 'h') { e.preventDefault(); document.getElementById('btn-help')?.click(); }
+          if (key === 'c') { e.preventDefault(); document.getElementById('btn-char-select')?.click(); }
+          if (key === 'q') { e.preventDefault(); document.getElementById('btn-logout')?.click(); }
         }
       });
     }

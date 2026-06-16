@@ -190,7 +190,7 @@ export class EntityManager {
     if (player.actionTimer > 0) {
       player.actionTimer -= dt;
       if (player.actionTimer <= 0) {
-        if (player.state !== 'death') player.state = 'idle';
+        if (player.state !== 'death' && !player.castingPower) player.state = 'idle';
       }
     }
 
@@ -666,15 +666,28 @@ export class EntityManager {
     const isEffectivelyMoving = Math.hypot(player.momentumX, player.momentumY) > 0.5;
     player.doorPushedThisFrame = false;
 
+    if (isEffectivelyMoving && player.actionTimer > 0 && player.castingPower) {
+      player.actionTimer = 0;
+      player.castingPower = null;
+      player.state = 'walk';
+    if (this.showFloatingText) this.showFloatingText('Interrupted', '#ff4757');
+    }
+
     if (isEffectivelyMoving) {
       let nextX = player.x + totalMoveX;
       let nextY = player.y + totalMoveY;
-      const maxMapSize = 511 * 32;
+      let maxMapX = 511 * 32;
+      let maxMapY = 511 * 32;
+
+      if (eng.currentZone && eng.currentZone.startsWith('apt_')) {
+        maxMapX = 95 * 32 * 32;
+        maxMapY = 95 * 32 * 32;
+      }
 
       if (nextX < 0) { nextX = 0; player.momentumX = 0; }
-      if (nextX > maxMapSize) { nextX = maxMapSize; player.momentumX = 0; }
+      if (nextX > maxMapX) { nextX = maxMapX; player.momentumX = 0; }
       if (nextY < 0) { nextY = 0; player.momentumY = 0; }
-      if (nextY > maxMapSize) { nextY = maxMapSize; player.momentumY = 0; }
+      if (nextY > maxMapY) { nextY = maxMapY; player.momentumY = 0; }
 
       const finalMoveX = nextX - player.x;
       const finalMoveY = nextY - player.y;
@@ -980,6 +993,13 @@ export class EntityManager {
       }
 
       sprite.scale.set(width, height, 1);
+
+      if (entity.hurtTimer > 0) {
+        const flashIntensity = Math.min(1.0, entity.hurtTimer / 300) * 0.9;
+        sprite.material.emissive.setRGB(flashIntensity, flashIntensity, flashIntensity);
+      } else {
+        sprite.material.emissive.setHex(0x000000);
+      }
 
       // By shifting the sprite 37 units along the camera's local Y axis,
       // its physical feet perfectly anchor to the exact center of the world group!

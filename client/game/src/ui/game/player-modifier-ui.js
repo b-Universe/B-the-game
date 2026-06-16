@@ -16,23 +16,27 @@ export class PlayerModifierUIManager {
   }
 
   setupUI() {
-    document.getElementById('btn-pm-save').onclick = () => this.save();
+    const pwEl = this.playerWindow.element;
+    const amEl = this.accountWindow.element;
+    const aeEl = this.accountEditWindow.element;
 
-    document.getElementById('btn-pm-kick').onclick = () => {
+    pwEl.querySelector('#btn-pm-save').onclick = () => this.save();
+
+    pwEl.querySelector('#btn-pm-kick').onclick = () => {
       if (confirm(`Kick ${this.targetName}?`)) {
         this.engine.network.sendAdminKickPlayer(this.targetName);
       }
     };
-    document.getElementById('btn-pm-tp-to').onclick = () => {
+    pwEl.querySelector('#btn-pm-tp-to').onclick = () => {
       const pData = this.allPlayersList?.find(p => p.name === this.targetName);
       if (pData) {
         this.engine.network.sendAdminTeleport({ targetName: this.engine.playerData.name, x: pData.x, y: pData.y, z: pData.z, zone: pData.zone || 'untitled' });
       }
     };
-    document.getElementById('btn-pm-tp-me').onclick = () => {
+    pwEl.querySelector('#btn-pm-tp-me').onclick = () => {
       this.engine.network.sendAdminTeleport({ targetName: this.targetName, x: this.engine.player.x, y: this.engine.player.y, z: this.engine.player.z, zone: this.engine.currentZone || 'untitled' });
     };
-    document.getElementById('btn-pm-manage-account').onclick = () => {
+    pwEl.querySelector('#btn-pm-manage-account').onclick = () => {
       if (this.currentAccountUuid) {
         this.engine.network.sendAdminRequestAccount(this.currentAccountUuid);
       } else {
@@ -40,46 +44,47 @@ export class PlayerModifierUIManager {
       }
     };
 
-    document.getElementById('btn-pm-grant').onclick = () => {
-      const perm = document.getElementById('pm-permission-input').value.trim();
+    pwEl.querySelector('#btn-pm-grant').onclick = () => {
+      const perm = pwEl.querySelector('#pm-permission-input').value.trim();
       if (perm && this.targetName) {
         this.engine.network.socket.emit('admin_grant_permission', { targetName: this.targetName, permission: perm, revoke: false });
-        document.getElementById('pm-permission-input').value = '';
+        pwEl.querySelector('#pm-permission-input').value = '';
         setTimeout(() => this.updatePermissionsDisplay(), 250);
       }
     };
-    document.getElementById('btn-pm-revoke').onclick = () => {
-      const perm = document.getElementById('pm-permission-input').value.trim();
+    pwEl.querySelector('#btn-pm-revoke').onclick = () => {
+      const perm = pwEl.querySelector('#pm-permission-input').value.trim();
       if (perm && this.targetName) {
         this.engine.network.socket.emit('admin_grant_permission', { targetName: this.targetName, permission: perm, revoke: true });
-        document.getElementById('pm-permission-input').value = '';
+        pwEl.querySelector('#pm-permission-input').value = '';
         setTimeout(() => this.updatePermissionsDisplay(), 250);
       }
     };
 
-    document.getElementById('am-search-input').addEventListener('input', () => this.renderAccountManagerList());
+    amEl.querySelector('#am-search-input').addEventListener('input', () => this.renderAccountManagerList());
 
-    document.getElementById('btn-am-ban-toggle').onclick = () => {
+    aeEl.querySelector('#btn-am-ban-toggle').onclick = () => {
       this.currentAccountIsBanned = !this.currentAccountIsBanned;
-      const btn = document.getElementById('btn-am-ban-toggle');
+      const btn = aeEl.querySelector('#btn-am-ban-toggle');
       btn.innerText = this.currentAccountIsBanned ? 'Yes' : 'No';
       btn.classList.toggle('b-btn-danger', this.currentAccountIsBanned);
     };
-    document.getElementById('btn-am-unban').onclick = () => {
-      const uuid = document.getElementById('am-uuid').value;
+    aeEl.querySelector('#btn-am-unban').onclick = () => {
+      const uuid = aeEl.querySelector('#am-uuid').value;
       this.engine.network.sendAdminUpdateAccount(uuid, { isBanned: false });
       this.currentAccountIsBanned = false;
-      const btnToggle = document.getElementById('btn-am-ban-toggle');
+      const btnToggle = aeEl.querySelector('#btn-am-ban-toggle');
       btnToggle.innerText = 'No';
       btnToggle.classList.remove('b-btn-danger');
-      document.getElementById('btn-am-unban').style.display = 'none';
+      aeEl.querySelector('#btn-am-unban').style.display = 'none';
       this.engine.network.sendAdminRequestAllAccounts();
       this.ui.showSystemMessage('Account unbanned instantly. (Reason preserved)');
     };
-    document.getElementById('btn-am-save').onclick = () => {
-      const uuid = document.getElementById('am-uuid').value;
-      const reason = document.getElementById('am-ban-reason').value;
-      this.engine.network.sendAdminUpdateAccount(uuid, { isBanned: this.currentAccountIsBanned, banReason: reason });
+    aeEl.querySelector('#btn-am-save').onclick = () => {
+      const uuid = aeEl.querySelector('#am-uuid').value;
+      const reason = aeEl.querySelector('#am-ban-reason').value;
+      const currency = parseInt(aeEl.querySelector('#am-currency').value, 10) || 0;
+      this.engine.network.sendAdminUpdateAccount(uuid, { isBanned: this.currentAccountIsBanned, banReason: reason, currency: currency });
       this.accountEditWindow.close();
       this.engine.network.sendAdminRequestAllAccounts();
     };
@@ -92,7 +97,7 @@ export class PlayerModifierUIManager {
     for (const [node, users] of Object.entries(this.engine.permissions)) {
       if (users.includes(targetLower)) perms.push(node);
     }
-    document.getElementById('pm-permissions-list').innerText = perms.length > 0 ? perms.join(', ') : 'None';
+    this.playerWindow.element.querySelector('#pm-permissions-list').innerText = perms.length > 0 ? perms.join(', ') : 'None';
   }
 
   open(charData) {
@@ -100,19 +105,19 @@ export class PlayerModifierUIManager {
     this.targetName = charData.name;
     this.currentAccountUuid = charData.accountUuid;
     this.playerWindow.setTitle(`Player Modifier - ${charData.name}`);
+    const pw = this.playerWindow.element;
 
-    document.getElementById('pm-account-username').value = charData.accountUsername || 'N/A';
-    document.getElementById('pm-level').value = charData.level || 1;
-    document.getElementById('pm-currency').value = charData.currency || 0;
-    document.getElementById('pm-integrity').value = charData.integrity || 0;
-    document.getElementById('pm-maxhp').value = charData.stats?.maxHp || 1000;
-    document.getElementById('pm-maxenergy').value = charData.stats?.maxEnergy || 1000;
-    document.getElementById('pm-maxsynth').value = charData.stats?.maxSynthEnergy || 1000;
-    document.getElementById('pm-power-picks').value = charData.unspentPowerPicks || 0;
+    pw.querySelector('#pm-account-username').value = charData.accountUsername || 'N/A';
+    pw.querySelector('#pm-level').value = charData.level || 1;
+    pw.querySelector('#pm-integrity').value = charData.integrity || 0;
+    pw.querySelector('#pm-maxhp').value = charData.stats?.maxHp || 1000;
+    pw.querySelector('#pm-maxenergy').value = charData.stats?.maxEnergy || 1000;
+    pw.querySelector('#pm-maxsynth').value = charData.stats?.maxSynthEnergy || 1000;
+    pw.querySelector('#pm-power-picks').value = charData.unspentPowerPicks || 0;
     const psPicksRaw = charData.unspentPowersetPicks;
-    document.getElementById('pm-powerset-picks').value = Array.isArray(psPicksRaw) ? psPicksRaw.length : (typeof psPicksRaw === 'number' ? psPicksRaw : 0);
-    document.getElementById('pm-powersets').value = (charData.powersets || []).join(', ');
-    document.getElementById('pm-powers').value = (charData.powers || []).join(', ');
+    pw.querySelector('#pm-powerset-picks').value = Array.isArray(psPicksRaw) ? psPicksRaw.length : (typeof psPicksRaw === 'number' ? psPicksRaw : 0);
+    pw.querySelector('#pm-powersets').value = (charData.powersets || []).join(', ');
+    pw.querySelector('#pm-powers').value = (charData.powers || []).join(', ');
     this.updatePermissionsDisplay();
     this.playerWindow.open();
   }
@@ -128,11 +133,11 @@ export class PlayerModifierUIManager {
 
   renderAccountManagerList() {
     if (!this.allAccountsList) return;
-    const list = document.getElementById('account-manager-list');
+    const list = this.accountWindow.element.querySelector('#account-manager-list');
     if (!list) return;
     list.innerHTML = '';
 
-    const searchVal = document.getElementById('am-search-input')?.value.toLowerCase() || '';
+    const searchVal = this.accountWindow.element.querySelector('#am-search-input')?.value.toLowerCase() || '';
     const filtered = this.allAccountsList.filter(a => a.username.toLowerCase().includes(searchVal) || (a.email && a.email.toLowerCase().includes(searchVal)));
     filtered.sort((a, b) => a.username.localeCompare(b.username));
 
@@ -146,6 +151,8 @@ export class PlayerModifierUIManager {
             <div style="flex: 1.5; color: #aaa;" title="Email">${acc.email || 'N/A'}</div>
             <div style="flex: 1; color: #aaa;" title="Last IP">${acc.lastIp || 'Unknown'}</div>
             <div style="flex: 1.2; color: #aaa;" title="Account Age">${creationDate}</div>
+            <div style="flex: 0.8; color: #f1c40f;" title="Account Level">${acc.totalLevel || 0}</div>
+            <div style="flex: 0.8; color: #2ecc71;" title="Currency">$${(acc.currency || 0).toLocaleString()}</div>
             <div style="flex: 0.8; color: #aaa;" title="Total Characters">${(acc.characters || []).length}</div>
             <button class="btn-edit btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;">Edit</button>
         `;
@@ -158,36 +165,38 @@ export class PlayerModifierUIManager {
 
   save() {
     if (!this.targetName) return;
+    const pw = this.playerWindow.element;
     const updates = {
-      level: parseInt(document.getElementById('pm-level').value, 10) || 1,
-      currency: parseInt(document.getElementById('pm-currency').value, 10) || 0,
-      integrity: parseInt(document.getElementById('pm-integrity').value, 10) || 0,
-      maxHp: parseInt(document.getElementById('pm-maxhp').value, 10) || 1000,
-      maxEnergy: parseInt(document.getElementById('pm-maxenergy').value, 10) || 1000,
-      maxSynthEnergy: parseInt(document.getElementById('pm-maxsynth').value, 10) || 1000,
-      unspentPowerPicks: parseInt(document.getElementById('pm-power-picks').value, 10) || 0,
-      unspentPowersetPicks: parseInt(document.getElementById('pm-powerset-picks').value, 10) || 0,
-      powersets: document.getElementById('pm-powersets').value.split(',').map(s => s.trim()).filter(Boolean),
-      powers: document.getElementById('pm-powers').value.split(',').map(s => s.trim()).filter(Boolean)
+      level: parseInt(pw.querySelector('#pm-level').value, 10) || 1,
+      integrity: parseInt(pw.querySelector('#pm-integrity').value, 10) || 0,
+      maxHp: parseInt(pw.querySelector('#pm-maxhp').value, 10) || 1000,
+      maxEnergy: parseInt(pw.querySelector('#pm-maxenergy').value, 10) || 1000,
+      maxSynthEnergy: parseInt(pw.querySelector('#pm-maxsynth').value, 10) || 1000,
+      unspentPowerPicks: parseInt(pw.querySelector('#pm-power-picks').value, 10) || 0,
+      unspentPowersetPicks: parseInt(pw.querySelector('#pm-powerset-picks').value, 10) || 0,
+      powersets: pw.querySelector('#pm-powersets').value.split(',').map(s => s.trim()).filter(Boolean),
+      powers: pw.querySelector('#pm-powers').value.split(',').map(s => s.trim()).filter(Boolean)
     };
     this.engine.network.sendAdminUpdatePlayer(this.targetName, updates);
   }
 
   openAccountManager(accData) {
-    document.getElementById('am-uuid').value = accData.uuid;
-    document.getElementById('am-username').value = accData.username;
-    document.getElementById('am-email').value = accData.email || 'N/A';
+    const ae = this.accountEditWindow.element;
+    ae.querySelector('#am-uuid').value = accData.uuid;
+    ae.querySelector('#am-username').value = accData.username;
+    ae.querySelector('#am-email').value = accData.email || 'N/A';
+    ae.querySelector('#am-currency').value = accData.currency || 0;
     this.currentAccountIsBanned = !!accData.isBanned;
 
-    const btn = document.getElementById('btn-am-ban-toggle');
+    const btn = ae.querySelector('#btn-am-ban-toggle');
     btn.innerText = this.currentAccountIsBanned ? 'Yes' : 'No';
     if (this.currentAccountIsBanned) btn.classList.add('b-btn-danger');
     else btn.classList.remove('b-btn-danger');
 
-    document.getElementById('btn-am-unban').style.display = this.currentAccountIsBanned ? 'block' : 'none';
-    document.getElementById('am-ban-reason').value = accData.banReason || '';
+    ae.querySelector('#btn-am-unban').style.display = this.currentAccountIsBanned ? 'block' : 'none';
+    ae.querySelector('#am-ban-reason').value = accData.banReason || '';
 
-    const charList = document.getElementById('am-char-list');
+    const charList = ae.querySelector('#am-char-list');
     charList.innerHTML = '';
     if (accData.characters && accData.characters.length > 0) {
       accData.characters.forEach(c => {

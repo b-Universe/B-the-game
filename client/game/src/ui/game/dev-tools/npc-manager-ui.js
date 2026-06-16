@@ -184,7 +184,7 @@ export class NpcUIManager {
       document.getElementById('et-targetable').value = t.isTargetable !== false ? 'true' : 'false';
     }
 
-    const options = keys.length > 0 ? keys.map(k => `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`).join('') : '<option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option>';
+    const options = keys.length > 0 ? keys.map(k => `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`).join('') : '<option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option><option value="banker">Banker</option>';
     ['npct-type', 'edit-spawner-type', 'edit-npc-type'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { const val = el.value; el.innerHTML = options; if (val) el.value = val; }
@@ -388,6 +388,24 @@ export class NpcUIManager {
     if (!list) return;
     list.innerHTML = '';
 
+    const btnCreate = document.getElementById('btn-npc-manager-create');
+    if (btnCreate && !btnCreate.onclick) {
+      btnCreate.onclick = () => {
+        this.engine.network.sendCreateNpc({
+          name: 'New Generic NPC',
+          x: Math.round(this.engine.player.x),
+          y: Math.round(this.engine.player.y),
+          z: Math.round(this.engine.player.z || 0),
+          maxHp: 100,
+          type: 'generic',
+          group: 'Civilian',
+          aggroRadius: 200,
+          dir: this.engine.player.dir || 'down'
+        });
+        this.engine.ui.showSystemMessage('Spawned a new generic NPC at your location!');
+      };
+    }
+
     if (this.engine.npcs.length === 0) {
       list.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px;">No NPCs found in the world.</div>`;
       return;
@@ -422,10 +440,10 @@ export class NpcUIManager {
       row.querySelector('.btn-edit').onclick = () => {
         document.getElementById('edit-npc-uuid').value = npc.uuid;
         document.getElementById('edit-npc-name').value = npc.name;
-        document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
-        document.getElementById('edit-npc-maxhp').value = npc.maxHp;
-        document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
-        document.getElementById('edit-npc-battery').value = Math.floor(npc.synthEnergy || 1000);
+        document.getElementById('edit-npc-hp').value = isNaN(npc.hp) || npc.hp === null ? (npc.maxHp || 100) : Math.floor(npc.hp);
+        document.getElementById('edit-npc-maxhp').value = isNaN(npc.maxHp) || npc.maxHp === null ? 100 : Math.floor(npc.maxHp);
+        document.getElementById('edit-npc-energy').value = isNaN(npc.energy) || npc.energy === null ? 1000 : Math.floor(npc.energy);
+        document.getElementById('edit-npc-battery').value = isNaN(npc.synthEnergy) || npc.synthEnergy === null ? 1000 : Math.floor(npc.synthEnergy);
         document.getElementById('edit-npc-x').value = Math.round(npc.x);
         document.getElementById('edit-npc-y').value = Math.round(npc.y);
         document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);

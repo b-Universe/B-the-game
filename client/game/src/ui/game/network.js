@@ -60,7 +60,7 @@ export class NetworkManager {
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log(`%c[Network] Server is undergoing maintenance briefly. Reason: ${reason}`, 'color: #f1c40f; font-weight: bold; font-size: 1.1em;');
+      console.log(`%c[Network] Connection to the server was lost! Reason: ${reason}`, 'color: #ff4757; font-weight: bold; font-size: 1.1em;');
 
       if (reason === 'io server disconnect') {
         eng.stop();
@@ -95,13 +95,10 @@ export class NetworkManager {
         const customModal = document.getElementById('custom-modal');
         if (modalTitle && modalBody && customModal) {
           modalTitle.innerText = 'Disconnected';
-          modalBody.innerText = 'You have been disconnected from the server.';
+          modalBody.innerText = 'You have been disconnected from the server. Please reload the page to log back in.';
           customModal.style.display = 'flex';
         }
       } else if (reason !== 'io client disconnect') {
-        if (eng.ui && eng.ui.showSystemMessage) {
-          eng.ui.showSystemMessage(`Lost connection to the server. (${reason})<br><br>Attempting to reconnect...`);
-        }
         if (eng.ui && eng.ui.showReconnecting) eng.ui.showReconnecting(true);
       }
     });
@@ -176,6 +173,20 @@ export class NetworkManager {
         await eng.worldSerializer.deserialize(payload);
       }
 
+      if (eng.currentZone && eng.currentZone.startsWith('apt_')) {
+          const zc = eng.zonesConfig && eng.zonesConfig[eng.currentZone] ? eng.zonesConfig[eng.currentZone] : {};
+          const ownedChunks = zc.ownedChunks || ['1_1'];
+          const pChunkX = Math.floor((eng.player.x / 32) / 32);
+          const pChunkY = Math.floor((eng.player.y / 32) / 32);
+          if (!ownedChunks.includes(`${pChunkX}_${pChunkY}`)) {
+              eng.player.x = 48 * 32;
+              eng.player.y = 48 * 32;
+              eng.player.z = 64;
+              eng.camera.x = eng.player.x;
+              eng.camera.y = eng.player.y;
+          }
+      }
+
       if (eng.mapManager && eng.player) {
         const pxChunk = Math.floor(eng.player.x / 512);
         const pyChunk = Math.floor(eng.player.y / 512);
@@ -202,6 +213,25 @@ export class NetworkManager {
       }
 
       if (eng.renderer) eng.renderer.checkInitialLoad();
+
+      if (typeof eng.updateBGM === 'function') eng.updateBGM();
+
+      setTimeout(() => {
+          const pName = eng.playerData?.name?.toLowerCase();
+          const isMyApartment = eng.currentZone && eng.currentZone.startsWith('apt_' + pName);
+
+          let isAptGuestBuilder = false;
+          if (eng.currentZone && eng.currentZone.startsWith('apt_') && eng.zonesConfig && eng.zonesConfig[eng.currentZone]) {
+              const zc = eng.zonesConfig[eng.currentZone];
+              if (zc.builders && zc.builders.includes(pName)) {
+                  isAptGuestBuilder = true;
+              }
+          }
+
+          if (!isMyApartment && !isAptGuestBuilder) {
+              if (eng.editMode) eng.chat.commandHandler.processCommand('/editmode');
+          }
+      }, 500); // Give the UI components a moment to settle after load
     });
 
     this.socket.on('block_updated', ({ worldX, worldY, worldZ, voxelData }) => {
@@ -382,6 +412,9 @@ export class NetworkManager {
     });
 
     this.socket.on('chat_message', (data) => {
+      if (data.type === 'pm' && data.sender) {
+        if (eng.ui && eng.ui.pmUI) eng.ui.pmUI.addMessage(data.sender, data.sender, data.text);
+      }
       eng.chat.addMessage(data.type, data.name, data.text);
       for (let id in eng.otherPlayers) {
         if (eng.otherPlayers[id].name === data.name) {
@@ -409,8 +442,10 @@ export class NetworkManager {
     });
 
     this.socket.on('player_data_updated', (newCharData) => {
+      const prevStats = eng.playerData.stats || {};
       Object.assign(eng.playerData, newCharData);
       if (newCharData.stats) {
+        eng.playerData.stats = { ...prevStats, ...newCharData.stats };
         if (newCharData.stats.maxHp !== undefined) eng.player.maxHp = newCharData.stats.maxHp;
         if (newCharData.stats.maxEnergy !== undefined) eng.player.maxEnergy = newCharData.stats.maxEnergy;
         if (newCharData.stats.maxSynthEnergy !== undefined) eng.player.maxSynthEnergy = newCharData.stats.maxSynthEnergy;
@@ -449,6 +484,12 @@ export class NetworkManager {
         if (data.damage > 0) {
           eng.player.hurtTimer = 300;
           const isCrit = data.isCrit || (!data.isDoT && ((data.damage >= 6 && data.damage <= 10) || data.damage >= 300 || data.damage === 35 || data.damage === 3));
+
+          if (isCrit && eng.clientSettings.enableCameraShake !== false) {
+            const shakeIntensity = data.damage >= 500 ? 30 : 15;
+            eng.cameraShake = Math.max(eng.cameraShake, shakeIntensity);
+          }
+
           const color = data.isDoT ? '#e67e22' : (isCrit ? '#f39c12' : '#ff4757');
           const textStr = data.damage.toString() + (isCrit ? '!' : '');
           const life = data.isDoT ? 0.6 : 1.0;
@@ -576,7 +617,9 @@ export class NetworkManager {
       if (data.wasteTex && data.wasteTex !== 'None') {
         if (eng.debris) eng.debris.push(data);
       }
-      if (data.particle && data.particle !== 'none') eng.spawnEventParticles(data);
+      if (data.particle && data.particle !== 'none') {
+         if (eng.spawnEventParticles) eng.spawnEventParticles(data);
+      }
     });
 
     this.socket.on('force_refresh', () => {
@@ -642,9 +685,31 @@ export class NetworkManager {
       if (eng.playerData && eng.playerData.friends) {
         const friend = eng.playerData.friends.find(f => f.name.toLowerCase() === data.name.toLowerCase());
         if (friend) {
+          const wasOnline = friend.online;
           friend.online = data.status === 'online';
+
+          if (!wasOnline && friend.online) {
+            eng.chat.addMessage('system', 'System', `${friend.name} has logged in.`);
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position: fixed; top: 15%; right: -300px; background: rgba(5,7,10,0.9); border: 2px solid #2ecc71; padding: 10px 20px; border-radius: 8px; z-index: 9999999; display: flex; align-items: center; gap: 10px; color: #fff; font-family: var(--font-header); font-size: 1.1rem; box-shadow: 0 0 15px rgba(46,204,113,0.4); transition: right 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;';
+            toast.innerHTML = '<span style="font-size: 1.5rem;">👋</span><div><div style="color: #2ecc71; font-size: 0.8rem; text-transform: uppercase;">Friend Online</div><div>' + friend.name + '</div></div>';
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => { toast.style.right = '20px'; });
+            setTimeout(() => {
+              toast.style.right = '-300px';
+              setTimeout(() => toast.remove(), 500);
+            }, 4000);
+          }
+
           if (eng.ui && eng.ui.friendsList) eng.ui.friendsList.renderFriendsList();
         }
+      }
+    });
+
+    this.socket.on('apartment_invite_received', (data) => {
+      if (eng.ui && eng.ui.showSystemMessage) {
+        eng.ui.showSystemMessage(`${data.senderName} has invited you to their apartment. <br><br><button class="b-btn btn-primary" onclick="window.currentGameEngine.chat.commandHandler.processCommand('/tpz ${data.senderZone}'); this.disabled=true; this.innerText='Accepted!';">Accept Invite</button>`);
       }
     });
 
@@ -730,6 +795,67 @@ export class NetworkManager {
         eng.arcadeSystem.vm.onMatchEnded();
       }
     });
+
+    this.socket.on('current_map_badges', (badges) => {
+      eng.mapBadges = badges;
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.mapBadgeManagerWindow && eng.ui.devTools.mapBadgeManagerWindow.element.style.display === 'flex') {
+        eng.ui.devTools.renderMapBadgeManager();
+      }
+    });
+    this.socket.on('map_badge_spawned', (badge) => {
+      if (!eng.mapBadges) eng.mapBadges = []; eng.mapBadges.push(badge);
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.mapBadgeManagerWindow && eng.ui.devTools.mapBadgeManagerWindow.element.style.display === 'flex') eng.ui.devTools.renderMapBadgeManager();
+    });
+    this.socket.on('map_badge_updated', (badge) => {
+      if (!eng.mapBadges) return;
+      const idx = eng.mapBadges.findIndex(b => b.uuid === badge.uuid);
+      if (idx !== -1) { Object.assign(eng.mapBadges[idx], badge); if (eng.ui && eng.ui.devTools && eng.ui.devTools.mapBadgeManagerWindow && eng.ui.devTools.mapBadgeManagerWindow.element.style.display === 'flex') eng.ui.devTools.renderMapBadgeManager(); }
+    });
+    this.socket.on('map_badge_deleted', (uuid) => {
+      if (!eng.mapBadges) return;
+      const idx = eng.mapBadges.findIndex(b => b.uuid === uuid);
+      if (idx !== -1) { eng.mapBadges.splice(idx, 1); if (eng.ui && eng.ui.devTools && eng.ui.devTools.mapBadgeManagerWindow && eng.ui.devTools.mapBadgeManagerWindow.element.style.display === 'flex') eng.ui.devTools.renderMapBadgeManager(); }
+    });
+
+    this.socket.on('badge_obtained', (data) => {
+      if (!eng.playerData.badges) eng.playerData.badges = [];
+      if (!eng.playerData.badges.includes(data.id)) eng.playerData.badges.push(data.id);
+
+      if (!eng.playerData.unseenBadges) eng.playerData.unseenBadges = [];
+      if (!eng.playerData.unseenBadges.includes(data.id)) eng.playerData.unseenBadges.push(data.id);
+
+      eng.ui.showSystemMessage(`Badge Obtained: ${data.name}!`);
+
+      const toast = document.createElement('div');
+      toast.style.cssText = `position: fixed; top: 20%; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(5,7,10,0.9); border: 2px solid #f1c40f; padding: 15px 25px; border-radius: 8px; z-index: 9999999; display: flex; align-items: center; gap: 15px; color: #fff; font-family: var(--font-header); font-size: 1.5rem; text-shadow: 1px 1px 0 #000; box-shadow: 0 0 20px rgba(241,196,15,0.4); opacity: 0; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;`;
+      toast.innerHTML = `<span style="font-size: 2.5rem; filter: drop-shadow(0 0 10px rgba(241,196,15,0.8));">🗺️</span><div><div style="color: #f1c40f; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;">Badge Obtained!</div><div style="font-size: 1.8rem; margin-top: 5px;">${data.name}</div></div>`;
+      document.body.appendChild(toast);
+
+      requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)'; });
+      setTimeout(() => {
+        toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(-20px)';
+        setTimeout(() => toast.remove(), 500);
+      }, 4000);
+
+      if (eng.ui && eng.ui.badges && eng.ui.badges.window && eng.ui.badges.window.element.style.display !== 'none') {
+        eng.ui.badges.renderBadges();
+      }
+    });
+
+    this.socket.on('zones_config_data', (data) => {
+      eng.zonesConfig = data;
+      if (typeof eng.updateBGM === 'function') eng.updateBGM();
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.populateZoneConfig) eng.ui.devTools.populateZoneConfig();
+      if (eng.ui && eng.ui.homeEditor && eng.ui.homeEditor.refreshModal) eng.ui.homeEditor.refreshModal();
+    });
+
+    this.socket.on('apartment_expanded', () => {
+      if (eng.mapManager) {
+        eng.mapManager.chunks.clear();
+        eng.mapManager.generatedChunks.clear();
+        eng.mapManager.loadFullMap();
+      }
+    });
   }
 
   disconnect() {
@@ -742,193 +868,241 @@ export class NetworkManager {
   }
 
   sendTradeAccept(senderId) {
-    if (this.socket) this.socket.emit('trade_accept', senderId);
+    if (this.socket && this.socket.connected) this.socket.emit('trade_accept', senderId);
   }
 
   sendClientSettings(settings) {
-    if (this.socket) this.socket.emit('sync_client_settings', settings);
+    if (this.socket && this.socket.connected) this.socket.emit('sync_client_settings', settings);
   }
 
   sendJoinGame(data) {
-    if (this.socket) this.socket.emit('join_game', data);
+    if (this.socket && this.socket.connected) this.socket.emit('join_game', data);
   }
 
   sendPlayerSync(uuid, charData, position) {
-    if (this.socket) this.socket.emit('sync_character', { uuid, charData, position });
+    if (this.socket && this.socket.connected) this.socket.emit('sync_character', { uuid, charData, position });
   }
 
   sendPlayerMoved(data) {
-    if (this.socket) this.socket.emit('player_moved', data);
+    if (this.socket && this.socket.connected) this.socket.emit('player_moved', data);
   }
 
   sendTradeRequest(targetId) {
-    if (this.socket) this.socket.emit('trade_request', targetId);
+    if (this.socket && this.socket.connected) this.socket.emit('trade_request', targetId);
   }
 
   sendClientReady() {
-    if (this.socket) this.socket.emit('client_ready');
+    if (this.socket && this.socket.connected) this.socket.emit('client_ready');
   }
 
   sendRequestFullMap() {
-    if (this.socket) this.socket.emit('request_full_map');
+    if (this.socket && this.socket.connected) this.socket.emit('request_full_map');
   }
 
   sendMapPing(data) {
-    if (this.socket) this.socket.emit('map_ping', data);
+    if (this.socket && this.socket.connected) this.socket.emit('map_ping', data);
   }
 
   sendRequestPatchNotes(forceShow = false) {
-    if (this.socket) {
+    if (this.socket && this.socket.connected) {
       this.forceNextPatchNotes = forceShow;
       this.socket.emit('request_patch_notes');
     }
   }
 
   sendUpdateBlock(data) {
-    if (this.socket) this.socket.emit('update_block', data);
+    if (this.socket && this.socket.connected) this.socket.emit('update_block', data);
   }
 
   sendUpdateBlocks(dataArray) {
-    if (this.socket && dataArray.length > 0) this.socket.emit('update_blocks', dataArray);
+    if (this.socket && this.socket.connected && dataArray.length > 0) this.socket.emit('update_blocks', dataArray);
   }
 
   sendCombatHit(data) {
-    if (this.socket) this.socket.emit('combat_hit', data);
+    if (this.socket && this.socket.connected) this.socket.emit('combat_hit', data);
   }
 
   sendPlayerTeleported() {
-    if (this.socket) this.socket.emit('player_teleported');
+    if (this.socket && this.socket.connected) this.socket.emit('player_teleported');
   }
 
   sendPlayerTyping(isTyping) {
-    if (this.socket) this.socket.emit('player_typing', { isTyping });
+    if (this.socket && this.socket.connected) this.socket.emit('player_typing', { isTyping });
   }
 
   sendChatMessage(data) {
-    if (this.socket) this.socket.emit('chat_message', data);
+    if (this.socket && this.socket.connected) this.socket.emit('chat_message', data);
   }
 
   sendLogCommand(command) {
-    if (this.socket) this.socket.emit('log_command', { command });
+    if (this.socket && this.socket.connected) this.socket.emit('log_command', { command });
   }
 
   sendFriendRequest(targetName) {
-    if (this.socket) this.socket.emit('friend_request', { targetName });
+    if (this.socket && this.socket.connected) this.socket.emit('friend_request', { targetName });
   }
 
   sendAcceptFriendRequest(senderName) {
-    if (this.socket) this.socket.emit('accept_friend_request', { senderName });
+    if (this.socket && this.socket.connected) this.socket.emit('accept_friend_request', { senderName });
   }
 
   sendRemoveFriend(friendName) {
-    if (this.socket) this.socket.emit('remove_friend', { friendName });
+    if (this.socket && this.socket.connected) this.socket.emit('remove_friend', { friendName });
   }
 
   sendAdminTeleport(data) {
-    if (this.socket) this.socket.emit('admin_teleport', data);
+    if (this.socket && this.socket.connected) this.socket.emit('admin_teleport', data);
   }
 
   sendRequestEntityGroups() {
-    if (this.socket) this.socket.emit('request_entity_groups');
+    if (this.socket && this.socket.connected) this.socket.emit('request_entity_groups');
   }
 
   sendSaveEntityGroup(group, settings) {
-    if (this.socket) this.socket.emit('save_entity_group', { group, settings });
+    if (this.socket && this.socket.connected) this.socket.emit('save_entity_group', { group, settings });
   }
 
   sendCreateNpc(data) {
-    if (this.socket) this.socket.emit('create_npc', data);
+    if (this.socket && this.socket.connected) this.socket.emit('create_npc', data);
   }
 
   sendLearnPower(data) {
-    if (this.socket) this.socket.emit('learn_power', data);
+    if (this.socket && this.socket.connected) this.socket.emit('learn_power', data);
   }
 
   sendLearnPowerset(data) {
-    if (this.socket) this.socket.emit('learn_powerset', data);
+    if (this.socket && this.socket.connected) this.socket.emit('learn_powerset', data);
+  }
+
+  sendPetCommand(command, targetId = null, selectedTarget = null) {
+    if (this.socket && this.socket.connected) this.socket.emit('pet_command', { command, targetId, selectedTarget });
   }
 
   sendEditNpc(uuid, updates) {
-    if (this.socket) this.socket.emit('edit_npc', { uuid, updates });
+    if (this.socket && this.socket.connected) this.socket.emit('edit_npc', { uuid, updates });
   }
 
   sendDeleteNpc(uuid) {
-    if (this.socket) this.socket.emit('delete_npc', uuid);
+    if (this.socket && this.socket.connected) this.socket.emit('delete_npc', uuid);
   }
 
   sendCreateSpawner(data) {
-    if (this.socket) this.socket.emit('create_spawner', data);
+    if (this.socket && this.socket.connected) this.socket.emit('create_spawner', data);
   }
 
   sendEditSpawner(uuid, updates) {
-    if (this.socket) this.socket.emit('edit_spawner', { uuid, updates });
+    if (this.socket && this.socket.connected) this.socket.emit('edit_spawner', { uuid, updates });
   }
 
   sendDeleteSpawner(uuid) {
-    if (this.socket) this.socket.emit('delete_spawner', uuid);
+    if (this.socket && this.socket.connected) this.socket.emit('delete_spawner', uuid);
   }
 
   sendProjectile(data) {
-    if (this.socket) this.socket.emit('spawn_projectile', data);
+    if (this.socket && this.socket.connected) this.socket.emit('spawn_projectile', data);
   }
 
   sendSpawnFX(data) {
-    if (this.socket) this.socket.emit('spawn_fx', data);
+    if (this.socket && this.socket.connected) this.socket.emit('spawn_fx', data);
   }
 
   sendInventoryMove(fromIndex, toIndex) {
-    if (this.socket) this.socket.emit('inventory_move', { fromIndex, toIndex });
+    if (this.socket && this.socket.connected) this.socket.emit('inventory_move', { fromIndex, toIndex });
   }
 
   sendRequestAllPlayers() {
-    if (this.socket) this.socket.emit('request_all_players');
+    if (this.socket && this.socket.connected) this.socket.emit('request_all_players');
   }
 
   sendRequestPlayerData(targetName) {
-    if (this.socket) this.socket.emit('request_player_data', { targetName });
+    if (this.socket && this.socket.connected) this.socket.emit('request_player_data', { targetName });
   }
 
   sendAdminUpdatePlayer(targetName, updates) {
-    if (this.socket) this.socket.emit('admin_update_player', { targetName, updates });
+    if (this.socket && this.socket.connected) this.socket.emit('admin_update_player', { targetName, updates });
   }
 
   sendAdminRequestAccount(uuid) {
-    if (this.socket) this.socket.emit('admin_request_account', { uuid });
+    if (this.socket && this.socket.connected) this.socket.emit('admin_request_account', { uuid });
   }
 
   sendAdminRequestAccountByUsername(username) {
-    if (this.socket) this.socket.emit('admin_request_account', { username });
+    if (this.socket && this.socket.connected) this.socket.emit('admin_request_account', { username });
   }
 
   sendAdminRequestAllAccounts() {
-    if (this.socket) this.socket.emit('admin_request_all_accounts');
+    if (this.socket && this.socket.connected) this.socket.emit('admin_request_all_accounts');
   }
 
   sendAdminUpdateAccount(uuid, updates) {
-    if (this.socket) this.socket.emit('admin_update_account', { uuid, ...updates });
+    if (this.socket && this.socket.connected) this.socket.emit('admin_update_account', { uuid, ...updates });
   }
 
   sendAdminKickPlayer(targetName) {
-    if (this.socket) this.socket.emit('admin_kick_player', { targetName });
+    if (this.socket && this.socket.connected) this.socket.emit('admin_kick_player', { targetName });
+  }
+
+  sendDiscordInvite() {
+    if (this.socket && this.socket.connected) this.socket.emit('discord_invite');
   }
 
   sendArcadeScore(gameId, score) {
-    if (this.socket) this.socket.emit('submit_arcade_score', { gameId, score });
+    if (this.socket && this.socket.connected) this.socket.emit('submit_arcade_score', { gameId, score });
   }
 
   sendArcadeQueueJoin(gameId) {
-    if (this.socket) this.socket.emit('arcade_queue_join', { gameId });
+    if (this.socket && this.socket.connected) this.socket.emit('arcade_queue_join', { gameId });
   }
 
   sendArcadeQueueLeave() {
-    if (this.socket) this.socket.emit('arcade_queue_leave');
+    if (this.socket && this.socket.connected) this.socket.emit('arcade_queue_leave');
   }
 
   sendArcadeStateSync(data) {
-    if (this.socket) this.socket.emit('arcade_state_sync', data);
+    if (this.socket && this.socket.connected) this.socket.emit('arcade_state_sync', data);
   }
 
   sendArcadeMatchLeave() {
-    if (this.socket) this.socket.emit('arcade_match_leave');
+    if (this.socket && this.socket.connected) this.socket.emit('arcade_match_leave');
+  }
+
+  sendCreateMapBadge(data) {
+    if (this.socket && this.socket.connected) this.socket.emit('create_map_badge', data);
+  }
+
+  sendEditMapBadge(data) {
+    if (this.socket && this.socket.connected) this.socket.emit('edit_map_badge', data);
+  }
+
+  sendDeleteMapBadge(uuid) {
+    if (this.socket && this.socket.connected) this.socket.emit('delete_map_badge', uuid);
+  }
+
+  sendRequestMapBadges() {
+    if (this.socket && this.socket.connected) this.socket.emit('request_map_badges');
+  }
+
+  sendApartmentInvite(targetName) {
+    if (this.socket && this.socket.connected) this.socket.emit('apartment_invite', { targetName });
+  }
+
+  sendApartmentToggleLock() {
+    if (this.socket && this.socket.connected) this.socket.emit('apartment_toggle_lock');
+  }
+
+  sendApartmentToggleVisitor(targetName) {
+    if (this.socket && this.socket.connected) this.socket.emit('apartment_toggle_visitor', { targetName });
+  }
+
+  sendApartmentToggleBuilder(targetName) {
+    if (this.socket && this.socket.connected) this.socket.emit('apartment_toggle_builder', { targetName });
+  }
+
+  sendApartmentKick(targetName) {
+    if (this.socket && this.socket.connected) this.socket.emit('apartment_kick', { targetName });
+  }
+
+  sendApartmentKickAll() {
+    if (this.socket && this.socket.connected) this.socket.emit('apartment_kick_all');
   }
 }

@@ -90,6 +90,7 @@ export class CombatManager {
 
         let isEnemy = true;
         if (isPlayer) {
+          if (eng.currentZone === 'atlas-city' || !eng.currentZone) isEnemy = false;
           const opAlignment = ent.alignment || 'hero';
           if (myAlignment === 'hero' && opAlignment === 'hero') isEnemy = false;
         } else if (isDrone) {

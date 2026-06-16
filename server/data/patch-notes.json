@@ -1,5 +1,32 @@
 [
   {
+    "version": "v2.6.0",
+    "color": "#2ecc71",
+    "changes": [
+      { "type": "Design", "text": "Migrated Player Currency to the Account level. All characters on the same account now share a unified currency pool." },
+      { "type": "Content", "text": "Introduced the Account Bank Vault! You can now safely deposit and withdraw items and currency to share across all your characters." },
+      { "type": "Gameplay", "text": "Added a 1% daily interest rate to the Bank Vault. Money safely secured in the vault will now slowly grow over time!" },
+      { "type": "Content", "text": "Added the 'Banker' NPC type. Interact with them to easily access your Account Vault." },
+      { "type": "Content", "text": "Expanded the maximum Apartment boundaries from 31x31 chunks to 95x95 chunks." },
+      { "type": "Design", "text": "Added the ability to 'Un-Expand' apartment chunks, refunding $5,000 while permanently deleting any blocks inside them." },
+      { "type": "UI", "text": "Added affordability checks to Apartment expansions so you know exactly how much currency you need." },
+      { "type": "UI", "text": "Locked the height of the Account Editor window to ensure the Save button remains accessible." },
+      { "type": "Fix", "text": "Purged legacy currency stats from character files to prevent the server from accidentally overwriting your live balance." }
+    ]
+  },
+  {
+    "version": "v2.5.4",
+    "color": "#1dd1a1",
+    "changes": [
+      { "type": "Content", "text": "Introduced Personal Apartments! Every player now has their own private, persistent instanced zone accessible via the '/home' command." },
+      { "type": "Design", "text": "Added the Home Editor UI for managing your apartment, customizing base styles (floor/wall textures), and controlling music playlists." },
+      { "type": "Gameplay", "text": "Added robust Apartment permissions! You can invite friends, grant temporary builder access, kick rowdy guests, or lock the doors to the public." },
+      { "type": "Gameplay", "text": "Builder Tools are now globally unlocked for all players exclusively within their own personal apartments." },
+      { "type": "Engine", "text": "Implemented server-side blueprint saving and instanced chunk loading specific to player accounts." },
+      { "type": "Content", "text": "Added the '/resetapt' command to completely wipe your apartment clean and start fresh." }
+    ]
+  },
+  {
   "version": "v2.5.3",
   "color": "#ffaa00",
   "changes": [

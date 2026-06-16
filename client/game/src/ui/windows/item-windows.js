@@ -47,3 +47,27 @@ export class TradeWindow extends BaseWindow {
     if (titleEl) titleEl.innerText = `Trade: ${name}`;
   }
 }
+
+export class BankWindow extends BaseWindow {
+  constructor() {
+    super('bank-panel', 'Account Vault', { width: 350, x: window.innerWidth / 2 - 175, y: 150 });
+
+    this.setContent(`
+      <div style="display: flex; gap: var(--spacing-1); margin-bottom: var(--spacing-1);">
+        <div style="flex: 1; border: 1px solid var(--text-dim); padding: var(--spacing-1); border-radius: var(--border-radius); background: rgba(0,0,0,0.5);">
+          <div id="bank-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; min-height: 200px; align-content: start;"></div>
+          <div style="margin-top: var(--spacing-1); display: flex; justify-content: space-between; align-items: center;">
+            <input type="number" id="bank-currency-input" class="b-input" min="0" value="0" style="width: 80px;">
+            <div style="display: flex; gap: 5px;">
+              <button id="btn-bank-deposit" class="b-btn btn-secondary" style="padding: 4px 8px;">Deposit</button>
+              <button id="btn-bank-withdraw" class="b-btn btn-secondary" style="padding: 4px 8px;">Withdraw</button>
+            </div>
+          </div>
+          <div style="margin-top: 5px; text-align: right; color: var(--rainbow-green); font-family: var(--font-mono); font-weight: bold;">
+            Vault: $<span id="bank-currency-display">0</span>
+          </div>
+        </div>
+      </div>
+    `);
+  }
+}

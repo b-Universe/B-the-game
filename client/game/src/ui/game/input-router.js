@@ -44,7 +44,9 @@ export class InputRouter {
             eng.chat.commandHandler.processCommand('/editmode');
           }
         } else {
-          el.style.display = 'none';
+              el.style.opacity = '0';
+              el.style.transform = 'scale(0.95)';
+              setTimeout(() => { el.style.display = 'none'; }, 150);
         }
         e.preventDefault();
         return;

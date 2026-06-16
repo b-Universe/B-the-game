@@ -1,8 +1,9 @@
 import { BaseWindow } from '../components/base-window.js?v=cache-bust-005';
+import { GUI_DEFAULT_POSITIONS } from '../game/constants.js?v=cache-bust-005';
 
 export class PlayerModifierWindow extends BaseWindow {
   constructor() {
-    super('player-modifier-panel', 'Player Modifier', { width: 450, x: window.innerWidth / 2 - 225, y: 100 });
+    super('player-modifier-panel', 'Player Modifier', { width: 450, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.playerModifier.xCenterOffset, y: GUI_DEFAULT_POSITIONS.playerModifier.y });
 
     this.setContent(`
       <div class="b-input-group">
@@ -14,10 +15,6 @@ export class PlayerModifierWindow extends BaseWindow {
         <div class="b-input-group" style="flex: 1;">
           <label class="b-label">Level</label>
           <input type="number" id="pm-level" class="b-input" min="1">
-        </div>
-        <div class="b-input-group" style="flex: 1;">
-          <label class="b-label">Currency</label>
-          <input type="number" id="pm-currency" class="b-input">
         </div>
         <div class="b-input-group" style="flex: 1;">
           <label class="b-label">Integrity (%)</label>
@@ -93,7 +90,7 @@ export class PlayerModifierWindow extends BaseWindow {
 
 export class AccountManagerWindow extends BaseWindow {
   constructor() {
-    super('account-manager-panel', 'Account Manager', { width: 850, height: 600, x: window.innerWidth / 2 - 425, y: 100 });
+    super('account-manager-panel', 'Account Manager', { width: 850, height: 600, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.accountManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.accountManager.y });
 
     this.setContent(`
         <div class="b-input-group" style="margin-bottom: 0; flex-shrink: 0;">
@@ -104,6 +101,8 @@ export class AccountManagerWindow extends BaseWindow {
             <div style="flex: 1.5;">Email</div>
             <div style="flex: 1;">Last IP</div>
             <div style="flex: 1.2;">Created</div>
+            <div style="flex: 0.8;">Acc. Level</div>
+            <div style="flex: 0.8;">Currency</div>
             <div style="flex: 0.8;">Characters</div>
             <div style="width: 42px;"></div>
         </div>
@@ -114,14 +113,16 @@ export class AccountManagerWindow extends BaseWindow {
 
 export class AccountEditWindow extends BaseWindow {
   constructor() {
-    super('account-edit-modal', 'Edit Account', { width: 500, x: window.innerWidth / 2 - 250, y: 120 });
+    super('account-edit-modal', 'Edit Account', { width: 500, height: 550, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.accountEdit.xCenterOffset, y: GUI_DEFAULT_POSITIONS.accountEdit.y });
 
     this.setContent(`
+      <div style="display: flex; flex-direction: column; height: 100%;">
       <input type="hidden" id="am-uuid">
 
       <div class="b-input-row">
           <div class="b-input-group" style="flex: 1;"><label class="b-label">Username</label><input type="text" id="am-username" class="b-input" readonly></div>
           <div class="b-input-group" style="flex: 1;"><label class="b-label">Email</label><input type="text" id="am-email" class="b-input" readonly></div>
+      <div class="b-input-group" style="flex: 1;"><label class="b-label">Account Currency</label><input type="number" id="am-currency" class="b-input"></div>
       </div>
 
       <div style="background: rgba(231, 76, 60, 0.1); padding: var(--spacing-2); border: 1px solid var(--rainbow-red); border-radius: var(--border-radius); margin-bottom: var(--spacing-1);">
@@ -142,13 +143,14 @@ export class AccountEditWindow extends BaseWindow {
       </div>
 
       <button id="btn-am-save" class="b-btn" style="border-color: var(--rainbow-purple); color: var(--rainbow-purple); margin-top: auto;">Save Account Changes</button>
+      </div>
     `);
   }
 }
 
 export class PlayerManagerWindow extends BaseWindow {
   constructor() {
-    super('player-manager-panel', 'Player Manager', { width: 850, height: 600, x: window.innerWidth / 2 - 425, y: 100 });
+    super('player-manager-panel', 'Player Manager', { width: 850, height: 600, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.playerManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.playerManager.y });
 
     this.setContent(`
         <div class="b-input-group" style="margin-bottom: 0; flex-shrink: 0;">

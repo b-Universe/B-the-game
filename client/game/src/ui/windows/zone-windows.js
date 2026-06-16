@@ -2,19 +2,45 @@ import { BaseWindow } from '../components/base-window.js?v=cache-bust-005';
 
 export class ZoneManagerWindow extends BaseWindow {
   constructor() {
-    super('zone-manager-panel', 'Zone Manager', { width: 350, x: 120, y: 120 });
+    super('zone-manager-panel', 'Zone Manager', { width: 650, height: 450, x: 120, y: 120 });
 
     this.setContent(`
-      <div class="b-input-group">
-        <label class="b-label">Create New Zone</label>
-        <div class="b-input-row">
-          <input type="text" id="zm-new-zone-input" class="b-input" placeholder="e.g., sewers" style="flex: 1;">
-          <button id="btn-zm-create" class="b-btn">Create</button>
+      <div style="display: flex; gap: 15px; height: 100%;">
+        <!-- Left Side: List -->
+        <div style="flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--text-dim); padding-right: 10px;">
+          <div class="b-input-group">
+            <label class="b-label">Create New Zone</label>
+            <div class="b-input-row">
+              <input type="text" id="zm-new-zone-input" class="b-input" placeholder="e.g., sewers" style="flex: 1;">
+              <button id="btn-zm-create" class="b-btn">Create</button>
+            </div>
+          </div>
+          <label class="b-label" style="display: block; margin-top: 10px; margin-bottom: 5px;">Available Zones</label>
+          <div id="zone-manager-list" class="scroll-list" style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; overflow-y: auto;">
+          </div>
         </div>
-      </div>
-      <div style="border-top: 1px solid var(--text-dim); margin-top: var(--spacing-1); padding-top: var(--spacing-1);">
-        <label class="b-label" style="display: block; margin-bottom: var(--spacing-1);">Available Zones</label>
-        <div id="zone-manager-list" style="display: flex; flex-direction: column; gap: var(--spacing-1); max-height: 250px; overflow-y: auto; padding-right: 5px;">
+
+        <!-- Right Side: Edit Config -->
+        <div style="flex: 1.5; display: flex; flex-direction: column; gap: 10px;">
+          <h3 style="margin: 0; color: var(--accent-neon); font-family: var(--font-header);" id="zm-edit-title">Select a Zone</h3>
+          <input type="hidden" id="zm-edit-id">
+
+          <div class="b-input-group">
+            <label class="b-label">Zone Display Name</label>
+            <input type="text" id="zm-edit-name" class="b-input" placeholder="e.g. The Sewers">
+          </div>
+
+          <div class="b-input-group">
+            <label class="b-label" title="Awarded automatically upon entering the zone.">Discovery Badge ID (Optional)</label>
+            <input type="text" id="zm-edit-badge" class="b-input" placeholder="e.g. exp_sewers">
+          </div>
+
+          <div class="b-input-row">
+            <div class="b-input-group" style="flex: 1;"><label class="b-label">PvP Mode</label><select id="zm-edit-pvp" class="b-select"><option value="none">Disabled (Safe Zone)</option><option value="faction">Faction vs Faction</option><option value="free">Free for All</option></select></div>
+            <div class="b-input-group" style="flex: 1;"><label class="b-label">Weather Lock</label><select id="zm-edit-weather" class="b-select"><option value="auto">Dynamic (Global)</option><option value="clear">Always Clear</option><option value="rain">Always Raining</option><option value="snow">Always Snowing</option></select></div>
+          </div>
+
+          <button id="btn-zm-save" class="b-btn btn-primary" style="margin-top: auto;">Save Zone Configuration</button>
         </div>
       </div>
     `);

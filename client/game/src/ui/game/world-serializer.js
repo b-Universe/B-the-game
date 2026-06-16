@@ -67,6 +67,10 @@ export class WorldSerializer {
     if (this.engine.renderer) {
       this.engine.renderer.initialLoadComplete = false;
 
+      if (this.engine.renderer.chunkMesher && this.engine.renderer.chunkMesher.pendingChunkUpdates) {
+          this.engine.renderer.chunkMesher.pendingChunkUpdates.clear();
+      }
+
       for (const key of this.engine.renderer.chunkMeshes.keys()) {
         const mesh = this.engine.renderer.chunkMeshes.get(key);
         this.engine.renderer.scene.remove(mesh);

@@ -264,6 +264,30 @@ export class InputManager {
           return;
         }
 
+        // NEW: Interaction check for Lore Badges on Right-Click!
+        if (!eng.editMode && eng.mapBadges) {
+          const rc = eng.getIsoRaycast(e.clientX, e.clientY);
+          const clickX = rc.gx * 32;
+          const clickY = rc.gy * 32;
+          const clickZ = rc.z * 32;
+
+          const loreBadge = eng.mapBadges.find(b => b.type === 'lore' &&
+            Math.abs(clickX - b.x) <= (b.width || 32)/2 + 32 &&
+            Math.abs(clickY - b.y) <= (b.depth || 32)/2 + 32 &&
+            Math.abs(clickZ - (b.z || 0)) <= (b.height || 32)/2 + 32
+          );
+
+          if (loreBadge) {
+            const pDist = Math.hypot(eng.player.x - loreBadge.x, eng.player.y - loreBadge.y);
+            if (pDist <= 160) {
+              eng.network.socket.emit('interact_lore', loreBadge.uuid);
+            } else {
+              eng.showFloatingText('Too far away to read', '#e74c3c');
+            }
+            return; // Intercept right click so we don't open a context menu
+          }
+        }
+
         if (eng.targetingPower) {
           eng.targetingPower = null;
           document.body.style.cursor = '';
@@ -416,7 +440,13 @@ export class InputManager {
             const btnPower = document.getElementById('ctx-btn-arcade-power');
 
             if (btnTrade) btnTrade.style.display = clickedTarget.type === 'player' ? 'block' : 'none';
-            if (btnTalk) btnTalk.style.display = clickedTarget.type === 'npc' ? 'block' : 'none';
+            if (btnTalk) {
+              btnTalk.style.display = clickedTarget.type === 'npc' ? 'block' : 'none';
+              if (clickedTarget.type === 'npc') {
+                 const npc = eng.npcs.find(n => n.uuid === clickedTarget.id);
+                 btnTalk.innerText = (npc && npc.type === 'banker') ? 'Open Bank' : 'Talk';
+              }
+            }
             if (btnPlay) btnPlay.style.display = clickedTarget.type === 'arcade' ? 'block' : 'none';
 
             const pName = eng.playerData.name ? eng.playerData.name.toLowerCase() : '';
@@ -624,7 +654,24 @@ export class InputManager {
     const updates = [];
     const previousStates = [];
 
+    let boundsWarningShown = false;
+    const currentZone = eng.currentZone || '';
+    const isApartment = currentZone.startsWith('apt_');
+
     eng.selectedTiles.forEach(tile => {
+      if (isApartment) {
+          const isBorder = (tile.x === 0 || tile.x === 31 * 32 || tile.y === 0 || tile.y === 31 * 32);
+          const isFloor = tile.z <= 0;
+          const isWall = isBorder && tile.z > 0 && tile.z <= 3 * 32;
+
+          if (isFloor || isWall) {
+              if (isDeleting || eng.selectionMode === 'build') {
+                  if (!boundsWarningShown) { eng.showFloatingText('Cannot modify base structure', '#e74c3c'); boundsWarningShown = true; }
+                  return;
+              }
+          }
+      }
+
       const clickedVoxelOld = eng.mapManager.getVoxelAt(tile.x, tile.y, tile.z);
       previousStates.push({ worldX: tile.x, worldY: tile.y, worldZ: tile.z, voxelData: clickedVoxelOld ? { ...clickedVoxelOld } : null });
 

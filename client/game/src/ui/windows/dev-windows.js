@@ -1,8 +1,9 @@
 import { BaseWindow } from '../components/base-window.js?v=cache-bust-005';
+import { GUI_DEFAULT_POSITIONS } from '../game/constants.js?v=cache-bust-005';
 
 export class DevToolsWindow extends BaseWindow {
   constructor() {
-    super('dev-panel', 'Developer Tools', { width: 320, height: 450, x: window.innerWidth - 340, y: 70 });
+    super('dev-panel', 'Developer Tools', { width: 320, height: 450, x: window.innerWidth + GUI_DEFAULT_POSITIONS.devTools.xOffset, y: GUI_DEFAULT_POSITIONS.devTools.y });
 
     this.setContent(`
       <div style="display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 1px solid var(--text-dim); padding-bottom: 10px;">
@@ -31,6 +32,7 @@ export class DevToolsWindow extends BaseWindow {
         <button id="btn-dev-spawners" class="b-btn btn-secondary" style="width: 100%;">Toggle Spawner Bounds</button>
         <button id="btn-dev-arcade-hover" class="b-btn btn-secondary" style="width: 100%;">Toggle Arcade Hover</button>
         <button id="btn-dev-neighborhoods" class="b-btn btn-secondary" style="width: 100%;">Toggle Neighborhood Bounds</button>
+        <button id="btn-dev-ui-pos" class="b-btn btn-secondary" style="width: 100%;">Toggle GUI Pos Debug</button>
       </div>
 
       <div id="dev-tab-entities" class="dev-tab-panel" style="display: none; flex-direction: column; gap: 5px; overflow-y: auto; padding-right: 5px;">
@@ -58,7 +60,7 @@ export class DevToolsWindow extends BaseWindow {
 
 export class BuilderToolsWindow extends BaseWindow {
   constructor() {
-    super('builder-panel', 'Builder Tools', { width: 260, x: window.innerWidth - 290, y: 70 });
+    super('builder-panel', 'Builder Tools', { width: 260, x: window.innerWidth + GUI_DEFAULT_POSITIONS.builderTools.xOffset, y: GUI_DEFAULT_POSITIONS.builderTools.y });
     this.setContent(`
       <div style="display: flex; flex-direction: column; gap: 5px;">
         <button id="btn-build-chunk" class="b-btn btn-secondary" style="width: 100%;">Toggle Chunk Bounds</button>
@@ -86,14 +88,14 @@ export class LosEditWindow extends BaseWindow {
 
 export class ObjectLibraryWindow extends BaseWindow {
   constructor() {
-    super('object-library-panel', 'Object Library', { width: 260, x: window.innerWidth - 310, y: 70 });
-    this.setContent(`<div id="obj-lib-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding-top: 5px; overflow-y: auto; flex-grow: 1; min-height: 168px; padding-right: 5px; align-content: start;"></div><div id="obj-lib-color-picker" style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;"></div>`);
+    super('object-library-panel', 'Object Library', { width: 260, x: window.innerWidth + GUI_DEFAULT_POSITIONS.objectLibrary.xOffset, y: GUI_DEFAULT_POSITIONS.objectLibrary.y });
+    this.setContent(`<div id="obj-lib-tabs-container" style="display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid var(--text-dim);"></div><div id="obj-lib-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding-top: 5px; overflow-y: auto; flex-grow: 1; min-height: 168px; padding-right: 5px; align-content: start;"></div><div id="obj-lib-color-picker" style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;"></div>`);
   }
 }
 
 export class TexturePaletteWindow extends BaseWindow {
   constructor() {
-    super('builder-hotbar', 'Texture Palette', { width: 260, x: window.innerWidth - 300, y: 280 });
+    super('builder-hotbar', 'Texture Palette', { width: 260, x: window.innerWidth + GUI_DEFAULT_POSITIONS.textureLibrary.xOffset, y: GUI_DEFAULT_POSITIONS.textureLibrary.y });
     this.setContent(`<div id="hotbar-controls-container" style="display: flex; flex-direction: column; gap: 5px;"></div><div id="builder-tabs-container" style="display: flex; gap: 5px; flex-wrap: wrap; padding-bottom: 5px; margin-bottom: 5px;"></div><div id="hotbar-grids-wrapper" style="position: relative; overflow-y: auto; flex-grow: 1; min-height: 168px; padding-right: 5px;"></div>`);
   }
 }

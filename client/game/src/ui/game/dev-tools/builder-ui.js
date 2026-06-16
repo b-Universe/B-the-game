@@ -157,12 +157,40 @@ export class BuilderUIManager {
     }
 
     const objLibGrid = document.getElementById('obj-lib-grid');
-    if (objLibGrid) {
+    const tabsContainer = document.getElementById('obj-lib-tabs-container');
+
+    if (objLibGrid && tabsContainer) {
+      const categories = new Set();
+      for (const data of Object.values(FURNITURE_REGISTRY)) {
+        categories.add(data.category || 'misc');
+      }
+
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'b-btn btn-secondary obj-lib-tab-btn';
+        btn.style.cssText = `padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; border-color: ${UI_COLORS.primary}; color: ${UI_COLORS.primary}; flex-shrink: 0; background: rgba(0,0,0,0.8); border-radius: 4px; cursor: pointer; transition: all 0.2s;`;
+        btn.innerText = cat.charAt(0).toUpperCase() + cat.slice(1);
+        btn.dataset.cat = cat;
+        btn.onclick = () => {
+          tabsContainer.querySelectorAll('.obj-lib-tab-btn').forEach(b => {
+            b.style.background = 'rgba(0,0,0,0.8)';
+            b.style.color = UI_COLORS.primary;
+          });
+          btn.style.background = 'rgba(52, 152, 219, 0.4)';
+          btn.style.color = UI_COLORS.textBright;
+
+          objLibGrid.querySelectorAll('.obj-lib-item').forEach(item => {
+            item.style.display = item.dataset.cat === cat ? 'flex' : 'none';
+          });
+        };
+        tabsContainer.appendChild(btn);
+      });
 
       for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
         const btnObj = document.createElement('button');
         btnObj.id = `btn-obj-${id}`;
-        btnObj.className = 'b-btn btn-secondary';
+        btnObj.className = 'b-btn btn-secondary obj-lib-item';
+        btnObj.dataset.cat = data.category || 'misc';
         btnObj.innerHTML = `
           <img src="models/icons/${id}.png" style="width: 24px; height: 24px; object-fit: contain; image-rendering: pixelated;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
           <span style="display:none; font-size: 0.9rem; font-weight: bold; color: #fff;">${data.name.substring(0, 2).toUpperCase()}</span>
@@ -228,6 +256,9 @@ export class BuilderUIManager {
         };
         objLibGrid.appendChild(btnObj);
       }
+
+      const firstTab = tabsContainer.querySelector('.obj-lib-tab-btn');
+      if (firstTab) firstTab.click();
     }
 
     const colorPickerContainer = document.getElementById('obj-lib-color-picker');

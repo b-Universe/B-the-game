@@ -65,6 +65,10 @@ export class CommandHandler {
       eng.player.speed = parseFloat(args[1]) || eng.player.speed;
       eng.player.runSpeed = eng.player.speed * 2.25;
       eng.ui.showSystemMessage(`Speed set to ${eng.player.speed}`);
+    } else if (cmd === '/bank') {
+      if (eng.ui && eng.ui.inventory) {
+         eng.ui.inventory.toggleBank();
+      }
     } else if (cmd === '/stuck') {
       let found = false;
       const maxMapSize = 511 * 32;
@@ -101,67 +105,54 @@ export class CommandHandler {
       eng.ui.showSystemMessage('Nudged out of stuck position.');
     } else if (cmd === '/editmode') {
       const hasEditPerm = ['editmode', 'builder', 'dev', 'admin'].some(role => checkPerm(role));
+      const isDev = ['dev', 'admin'].some(role => checkPerm(role));
+      const isApartment = eng.currentZone && eng.currentZone.startsWith('apt_' + pName);
+
+      let isAptGuestBuilder = false;
+      if (eng.currentZone && eng.currentZone.startsWith('apt_') && eng.zonesConfig && eng.zonesConfig[eng.currentZone]) {
+          const zc = eng.zonesConfig[eng.currentZone];
+          if (zc.builders && zc.builders.includes(pName)) {
+              isAptGuestBuilder = true;
+          }
+      }
+
       if (!hasEditPerm) return eng.ui.showSystemMessage('You do not have permission to use /editmode.');
+
+      if (!isDev && !isApartment && !isAptGuestBuilder) {
+        return eng.ui.showSystemMessage('Builder tools are currently restricted to personal Apartments. You cannot build in public open-world zones.');
+      }
+
       eng.editMode = !eng.editMode;
       if (eng.renderer) eng.renderer.needsVoxelUpdate = true;
-      const bPanel = document.getElementById('builder-panel');
+
+      const dtUI = eng.ui?.devTools;
       const bHotbar = document.getElementById('builder-hotbar');
-      const bObjLib = document.getElementById('object-library-panel');
-      if (bPanel) {
-        bPanel.style.display = eng.editMode ? 'flex' : 'none';
+
+      if (dtUI && dtUI.builderToolsWindow) {
         if (eng.editMode) {
-          if (eng.clientSettings.lockBuilderPanel) {
-            const savedPos = localStorage.getItem('b_builder_pos');
-            if (savedPos) {
-              try {
-                const pos = JSON.parse(savedPos);
-                bPanel.style.left = pos.left; bPanel.style.top = pos.top; bPanel.style.right = 'auto';
-              } catch (e) { }
+          dtUI.builderToolsWindow.open();
+        } else {
+          dtUI.builderToolsWindow.close();
+        }
+      } else {
+        const bPanel = document.getElementById('builder-panel');
+        if (bPanel) {
+          bPanel.style.display = eng.editMode ? 'flex' : 'none';
+          if (eng.editMode) {
+            bPanel.style.opacity = '1';
+            bPanel.style.transform = 'none';
+            if (!eng.clientSettings.lockBuilderPanel) {
+              bPanel.style.top = '70px';
+              bPanel.style.left = 'auto';
+              bPanel.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
             }
-          } else {
-            bPanel.style.top = '70px';
-            bPanel.style.left = 'auto';
-            bPanel.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
           }
         }
       }
-      if (bHotbar) {
-        if (!eng.editMode) bHotbar.style.display = 'none';
-        if (eng.editMode) {
-          bHotbar.style.bottom = 'auto';
-          if (eng.clientSettings.lockBuilderPanel) {
-            const savedHotbarPos = localStorage.getItem('b_hotbar_pos');
-            if (savedHotbarPos) {
-              try {
-                const pos = JSON.parse(savedHotbarPos);
-                bHotbar.style.left = pos.left; bHotbar.style.top = pos.top; bHotbar.style.right = 'auto';
-              } catch (e) { }
-            } else {
-              bHotbar.style.top = '280px'; bHotbar.style.left = 'auto'; bHotbar.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
-            }
-          } else {
-            bHotbar.style.top = '280px'; bHotbar.style.left = 'auto'; bHotbar.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
-          }
-        }
-      }
-      if (bObjLib) {
-        if (!eng.editMode) bObjLib.style.display = 'none';
-        if (eng.editMode) {
-          if (eng.clientSettings.lockBuilderPanel) {
-            const savedPos = localStorage.getItem('b_objlib_pos');
-            if (savedPos) {
-              try {
-                const pos = JSON.parse(savedPos);
-                bObjLib.style.left = pos.left; bObjLib.style.top = pos.top; bObjLib.style.right = 'auto';
-              } catch (e) { }
-            } else {
-              bObjLib.style.top = '70px'; bObjLib.style.left = 'auto'; bObjLib.style.right = eng.clientSettings.showMinimap ? '570px' : '310px';
-            }
-          } else {
-            bObjLib.style.top = '70px'; bObjLib.style.left = 'auto'; bObjLib.style.right = eng.clientSettings.showMinimap ? '570px' : '310px';
-          }
-        }
-      }
+
+      if (dtUI && dtUI.objectLibraryWindow && !eng.editMode) dtUI.objectLibraryWindow.close();
+      if (dtUI && dtUI.texturePaletteWindow && !eng.editMode) dtUI.texturePaletteWindow.close();
+
       if (!eng.editMode) {
         eng.selectedTiles = [];
         eng.isDraggingSelection = false;
@@ -179,8 +170,14 @@ export class CommandHandler {
       // Handled by the 'force_refresh' network event
     } else if (cmd === '/dev') {
       if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /dev.');
-      const devPanel = document.getElementById('dev-panel');
-      if (devPanel) devPanel.style.display = devPanel.style.display === 'none' ? 'flex' : 'none';
+      const dtWindow = eng.ui?.devTools?.devToolsWindow;
+      if (dtWindow) {
+         if (dtWindow.element.style.display === 'none') dtWindow.open();
+         else dtWindow.close();
+      } else {
+         const devPanel = document.getElementById('dev-panel');
+         if (devPanel) devPanel.style.display = devPanel.style.display === 'none' ? 'flex' : 'none';
+      }
     } else if (cmd === '/npc') {
       if (!checkPerm('npc')) return eng.ui.showSystemMessage('You do not have permission to use /npc commands.');
       if (args.length >= 4 && args[1] === 'create') {
@@ -288,7 +285,59 @@ export class CommandHandler {
       if (!targetZone) return eng.ui.showSystemMessage('Usage: /tpz <zoneName>');
       eng.ui.setupLoadingScreen();
       eng.network.socket.emit('join_zone', { zone: targetZone });
+      if (targetZone.startsWith('apt_')) {
+          eng.player.x = 48 * 32;
+          eng.player.y = 48 * 32;
+          eng.player.z = 64;
+          eng.camera.x = eng.player.x;
+          eng.camera.y = eng.player.y;
+      }
       eng.ui.showSystemMessage(`Joining zone: ${targetZone}...`);
+    } else if (cmd === '/home' || cmd === '/apartment') {
+      eng.ui.setupLoadingScreen();
+      const targetZone = `apt_${pName}`;
+      eng.network.socket.emit('join_zone', { zone: targetZone });
+
+      eng.player.x = 48 * 32;
+      eng.player.y = 48 * 32;
+      eng.player.z = 64;
+      eng.camera.x = eng.player.x;
+      eng.camera.y = eng.player.y;
+
+      eng.ui.showSystemMessage(`Traveling to your personal apartment...`);
+    } else if (cmd === '/resetapt' || cmd === '/resetapartment') {
+      const targetZone = `apt_${pName}`;
+      if (eng.currentZone !== targetZone) {
+        return eng.ui.showSystemMessage('You must be inside your own apartment to reset it.');
+      }
+      eng.ui.showConfirmModal("Reset Apartment", "WARNING: This will completely wipe all blocks, furniture, and custom changes in your apartment. This cannot be undone. Are you absolutely sure?", () => {
+        eng.network.socket.emit('dev_reset_apartment');
+      }, 3);
+    } else if (cmd === '/invite') {
+      const targetName = args[1];
+      if (!targetName) return eng.ui.showSystemMessage('Usage: /invite <player>');
+      const myAptZone = `apt_${pName}`;
+      if (eng.currentZone !== myAptZone) {
+        return eng.ui.showSystemMessage('You must be inside your apartment to invite someone.');
+      }
+      if (eng.network) eng.network.sendApartmentInvite(targetName);
+    } else if (cmd === '/kick') {
+      const targetName = args[1];
+      if (!targetName) return eng.ui.showSystemMessage('Usage: /kick <player>');
+      const myAptZone = `apt_${pName}`;
+      if (eng.currentZone !== myAptZone) {
+        return eng.ui.showSystemMessage('You must be inside your apartment to kick someone.');
+      }
+      if (eng.network) eng.network.sendApartmentKick(targetName);
+    } else if (cmd === '/music') {
+      if (args[1] === 'toggle') {
+        eng.clientSettings.muteBGM = !eng.clientSettings.muteBGM;
+        localStorage.setItem('b_client_settings', JSON.stringify(eng.clientSettings));
+        eng.ui.showSystemMessage(`Apartment music is now ${eng.clientSettings.muteBGM ? 'MUTED' : 'UNMUTED'}.`);
+        eng.updateBGM();
+      } else {
+        eng.ui.showSystemMessage('Usage: /music toggle');
+      }
     } else if (cmd === '/patchnotes' || cmd === '/news') {
       eng.network.sendRequestPatchNotes(true);
     } else if (cmd === '/announce') {
@@ -305,6 +354,7 @@ export class CommandHandler {
       if (!targetName || !pmMsg) return eng.ui.showSystemMessage('Usage: /pm <name> <message>');
 
       this.chat.addMessage('pm', `To [${targetName}]`, pmMsg);
+      if (eng.ui && eng.ui.pmUI) eng.ui.pmUI.addMessage(targetName, eng.playerData.name, pmMsg);
       eng.network.sendChatMessage({ type: 'pm', target: targetName, text: pmMsg });
     } else if (cmd === '/afk') {
       const msgBody = args.slice(1).join(' ');

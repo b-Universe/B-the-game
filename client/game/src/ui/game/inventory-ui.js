@@ -1,4 +1,4 @@
-import { InventoryWindow, TradeWindow } from '../windows/item-windows.js?v=cache-bust-005';
+import { InventoryWindow, TradeWindow, BankWindow } from '../windows/item-windows.js?v=cache-bust-005';
 
 export class InventoryUIManager {
   constructor(engine, mainUIManager) {
@@ -8,9 +8,38 @@ export class InventoryUIManager {
 
     this.inventoryWindow = new InventoryWindow();
     this.tradeWindow = new TradeWindow();
+    this.bankWindow = new BankWindow();
 
     this.setupInventory();
     this.setupTradeUI();
+    this.setupBankUI();
+  }
+
+  toggleBank() {
+    if (this.bankWindow.element.style.display === 'none') {
+      this.bankWindow.open();
+      if (this.inventoryWindow.element.style.display === 'none') {
+        this.inventoryWindow.open();
+      }
+      this.engine.network.socket.emit('request_bank_data');
+      this.renderInventory();
+    } else {
+      this.bankWindow.close();
+    }
+  }
+
+  setupBankUI() {
+    const btnDeposit = document.getElementById('btn-bank-deposit');
+    if (btnDeposit) btnDeposit.onclick = () => {
+      const amt = parseInt(document.getElementById('bank-currency-input').value, 10) || 0;
+      if (amt > 0) this.engine.network.socket.emit('bank_deposit_currency', { amount: amt });
+    };
+
+    const btnWithdraw = document.getElementById('btn-bank-withdraw');
+    if (btnWithdraw) btnWithdraw.onclick = () => {
+      const amt = parseInt(document.getElementById('bank-currency-input').value, 10) || 0;
+      if (amt > 0) this.engine.network.socket.emit('bank_withdraw_currency', { amount: amt });
+    };
   }
 
   setupInventory() {
@@ -80,6 +109,8 @@ export class InventoryUIManager {
           inv[data.index] = temp || null;
           this.renderInventory();
           this.engine.network.sendInventoryMove(data.index, i);
+        } else if (data.source === 'bank') {
+          this.engine.network.socket.emit('bank_withdraw_item', { fromBankIdx: data.index, toInvIdx: i });
         }
       };
 
@@ -223,5 +254,47 @@ export class InventoryUIManager {
     }
 
     this.renderTradeGrids();
+  }
+
+  renderBank(bankData) {
+    this.engine.playerData.bankItems = bankData.items || [];
+    this.engine.playerData.bankCurrency = bankData.currency || 0;
+
+    const grid = document.getElementById('bank-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const items = this.engine.playerData.bankItems;
+    for (let i = 0; i < 20; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'inv-slot';
+      if (items[i]) {
+        slot.innerHTML = `<span>${items[i].icon || '📦'}</span><span class="inv-qty">${items[i].qty}</span>`;
+        slot.draggable = true;
+        slot.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'bank', index: i }));
+
+        slot.onmouseenter = (e) => {
+          const tooltip = document.getElementById('item-tooltip');
+          if (tooltip) {
+            tooltip.innerHTML = `<strong style="color: var(--accent-neon);">${items[i].name}</strong><br><span style="color: #aaa;">Quantity: ${items[i].qty}</span>`;
+            tooltip.style.display = 'block'; tooltip.style.left = (e.clientX + 15) + 'px'; tooltip.style.top = (e.clientY + 15) + 'px';
+          }
+        };
+        slot.onmousemove = (e) => { const tooltip = document.getElementById('item-tooltip'); if (tooltip) { tooltip.style.left = (e.clientX + 15) + 'px'; tooltip.style.top = (e.clientY + 15) + 'px'; } };
+        slot.onmouseleave = () => { const tooltip = document.getElementById('item-tooltip'); if (tooltip) tooltip.style.display = 'none'; };
+      }
+
+      slot.ondragover = (e) => e.preventDefault();
+      slot.ondrop = (e) => {
+        e.preventDefault();
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        if (data.source === 'inventory') this.engine.network.socket.emit('bank_deposit_item', { fromInvIdx: data.index, toBankIdx: i });
+        else if (data.source === 'bank') this.engine.network.socket.emit('bank_move_item', { fromIdx: data.index, toIdx: i });
+      };
+      grid.appendChild(slot);
+    }
+
+    const currencyDisplay = document.getElementById('bank-currency-display');
+    if (currencyDisplay) currencyDisplay.innerText = (this.engine.playerData.bankCurrency || 0).toLocaleString();
   }
 }

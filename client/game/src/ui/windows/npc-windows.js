@@ -1,4 +1,5 @@
 import { BaseWindow } from '../components/base-window.js?v=cache-bust-005';
+import { GUI_DEFAULT_POSITIONS } from '../game/constants.js?v=cache-bust-005';
 
 export class PowerSelectorWindow extends BaseWindow {
   constructor() {
@@ -15,16 +16,15 @@ export class PowerSelectorWindow extends BaseWindow {
 export class NPCManagerWindow extends BaseWindow {
   constructor() {
     // Options: width 850, center screen, y=100
-    super('npc-manager-panel', 'NPC Manager', { width: 850, height: 500, x: window.innerWidth / 2 - 425, y: 100 });
+    super('npc-manager-panel', 'NPC Manager', { width: 850, height: 500, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.npcManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.npcManager.y });
 
-    // Retaining the original ID so your list population scripts don't break
-    this.listContainer = document.createElement('div');
-    this.listContainer.id = 'npc-manager-list';
-    this.listContainer.style.display = 'flex';
-    this.listContainer.style.flexDirection = 'column';
-    this.listContainer.style.gap = 'var(--spacing-1)';
-
-    this.setContent(this.listContainer);
+    this.setContent(`
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-1); border-bottom: 1px solid var(--text-dim); padding-bottom: var(--spacing-1);">
+        <span style="color: var(--text-dim); font-size: 0.85rem;">Manage active NPCs in the current zone.</span>
+        <button id="btn-npc-manager-create" class="b-btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; border-color: #2ecc71; color: #2ecc71;">+ Spawn Generic NPC Here</button>
+      </div>
+      <div id="npc-manager-list" style="display: flex; flex-direction: column; gap: var(--spacing-1); overflow-y: auto; flex: 1;"></div>
+    `);
   }
 }
 
@@ -100,6 +100,7 @@ export class NPCEditWindow extends BaseWindow {
             <option value="generic">Generic</option>
             <option value="civilian">Civilian (No Combat)</option>
             <option value="trainer">Trainer</option>
+            <option value="banker">Banker</option>
           </select>
         </div>
         <div class="b-input-group" style="flex: 1;">
@@ -157,7 +158,7 @@ export class NPCEditWindow extends BaseWindow {
 
 export class SpawnerManagerWindow extends BaseWindow {
   constructor() {
-    super('spawner-manager-panel', 'Spawner Manager', { width: 850, height: 500, x: window.innerWidth / 2 - 425, y: 100 });
+    super('spawner-manager-panel', 'Spawner Manager', { width: 850, height: 500, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.spawnerManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.spawnerManager.y });
 
     this.listContainer = document.createElement('div');
     this.listContainer.id = 'spawner-manager-list';
@@ -255,6 +256,7 @@ export class SpawnerEditWindow extends BaseWindow {
             <option value="generic">Generic</option>
             <option value="civilian">Civilian (No Combat)</option>
             <option value="trainer">Trainer</option>
+            <option value="banker">Banker</option>
           </select>
         </div>
         <div class="b-input-group" style="flex: 1;"><label class="b-label">Aggro Radius (px)</label><input type="number" id="edit-spawner-aggro" class="b-input" value="500"></div>
@@ -291,7 +293,7 @@ export class SpawnerEditWindow extends BaseWindow {
 
 export class MobPackManagerWindow extends BaseWindow {
   constructor() {
-    super('mobpack-manager-panel', 'Mob Pack Presets', { width: 900, height: 600, x: window.innerWidth / 2 - 450, y: 100 });
+    super('mobpack-manager-panel', 'Mob Pack Presets', { width: 900, height: 600, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.mobPackManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.mobPackManager.y });
 
     this.setContent(`
       <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
@@ -330,7 +332,7 @@ export class MobPackManagerWindow extends BaseWindow {
 
 export class EntityGroupManagerWindow extends BaseWindow {
   constructor() {
-    super('entity-group-manager-panel', 'Entity Group Manager', { width: 900, height: 550, x: window.innerWidth / 2 - 450, y: 150 });
+    super('entity-group-manager-panel', 'Entity Group Manager', { width: 900, height: 550, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.entityGroupManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.entityGroupManager.y });
 
     this.setContent(`
       <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
@@ -367,7 +369,7 @@ export class EntityGroupManagerWindow extends BaseWindow {
 
 export class NPCTemplateManagerWindow extends BaseWindow {
   constructor() {
-    super('npc-template-manager-panel', 'NPC Template Manager', { width: 800, height: 500, x: window.innerWidth / 2 - 400, y: 150 });
+    super('npc-template-manager-panel', 'NPC Template Manager', { width: 800, height: 500, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.npcTemplateManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.npcTemplateManager.y });
 
     this.setContent(`
       <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
@@ -399,7 +401,7 @@ export class NPCTemplateManagerWindow extends BaseWindow {
                 <option value="4">+4 (Arch-Villain)</option><option value="5">+5 (Raid Boss)</option>
               </select>
             </div>
-            <div class="b-input-group" style="flex: 1;"><label class="b-label">NPC Type</label><select id="npct-type" class="b-select"><option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option></select></div>
+            <div class="b-input-group" style="flex: 1;"><label class="b-label">NPC Type</label><select id="npct-type" class="b-select"><option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option><option value="banker">Banker</option></select></div>
           </div>
           <div class="b-input-row">
              <div class="b-input-group" style="flex: 1;"><label class="b-label">Speed Variant (Multiplier)</label><input type="number" id="npct-speed" class="b-input" value="1.0" step="0.1"></div>
@@ -419,7 +421,7 @@ export class NPCTemplateManagerWindow extends BaseWindow {
 
 export class EntityTypeManagerWindow extends BaseWindow {
   constructor() {
-    super('entity-type-manager-panel', 'Entity Type Manager', { width: 600, height: 400, x: window.innerWidth / 2 - 300, y: 150 });
+    super('entity-type-manager-panel', 'Entity Type Manager', { width: 600, height: 400, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.entityTypeManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.entityTypeManager.y });
 
     this.setContent(`
       <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">

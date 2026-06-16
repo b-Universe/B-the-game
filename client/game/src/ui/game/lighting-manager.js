@@ -50,51 +50,50 @@ export class LightingManager {
       realAngle = Math.PI + ((realT - (2 / 3)) / (1 / 3)) * Math.PI;
     }
 
+    const isApartment = engine.currentZone && engine.currentZone.startsWith('apt_');
+    const zc = isApartment ? (engine.zonesConfig && engine.zonesConfig[engine.currentZone] ? engine.zonesConfig[engine.currentZone] : {}) : {};
+    const baseStyle = zc.baseStyle || {};
+
     const sunDist = 2000;
     const height = Math.sin(visualAngle);
-    renderer.sunOffsetZ = Math.abs(height) * sunDist;
-    renderer.sunOffsetY = Math.cos(visualAngle) * sunDist;
-    renderer.sunOffsetX = Math.cos(visualAngle) * sunDist * 0.5;
 
-    if (height > 0) {
-      renderer.sunLight.shadow.radius = 1.0 + Math.pow(1.0 - height, 3) * 5.0; // Soften shadows near the horizon
+    if (isApartment) {
+        const ambColorHex = engine.previewAmbientColor || baseStyle.ambientColor || '#ffffff';
+        const ambIntensity = engine.previewAmbientIntensity !== undefined ? engine.previewAmbientIntensity : (baseStyle.ambientIntensity !== undefined ? baseStyle.ambientIntensity : 0.8);
+
+        renderer.hemiLight.color.setStyle(ambColorHex);
+        renderer.hemiLight.groundColor.setHex(0x222222);
+        renderer.hemiLight.intensity = ambIntensity;
+
+        renderer.sunLight.color.setStyle(ambColorHex);
+        renderer.sunLight.intensity = ambIntensity * 0.4;
+        renderer.sunLight.shadow.radius = 2.0;
+
+        const cx = renderer.camera.position.x;
+        const cy = renderer.camera.position.y;
+        const cz = renderer.camera.position.z;
+        renderer.sunLight.position.set(cx - 500, cy - 500, cz + 1500);
+        renderer.sunLight.target.position.set(cx, cy, cz);
+        renderer.sunLight.target.updateMatrixWorld();
     } else {
-      renderer.sunLight.shadow.radius = 2.0; // Moonlight shadow softness
-    }
+      renderer.sunOffsetZ = Math.abs(height) * sunDist;
+      renderer.sunOffsetY = Math.cos(visualAngle) * sunDist;
+      renderer.sunOffsetX = Math.cos(visualAngle) * sunDist * 0.5;
 
-    const dayHemiInt = 0.7;
-    const daySunInt = 1.2;
-    const duskHemiInt = 0.55;
-    const duskSunInt = 0.9;
-    const nightHemiInt = 0.4;
-    const nightSunInt = 0.6;
+      if (height > 0) renderer.sunLight.shadow.radius = 1.0 + Math.pow(1.0 - height, 3) * 5.0;
+      else renderer.sunLight.shadow.radius = 2.0;
 
-    if (height >= 0.2) {
-      renderer.hemiLight.color.copy(this.dayHemi);
-      renderer.hemiLight.groundColor.copy(this.dayGround);
-      renderer.hemiLight.intensity = dayHemiInt;
-      renderer.sunLight.color.copy(this.daySun);
-      renderer.sunLight.intensity = daySunInt;
-    } else if (height >= 0) {
-      const t = height / 0.2; // 0 at dusk, 1 at day
-      renderer.hemiLight.color.copy(this.duskHemi).lerp(this.dayHemi, t);
-      renderer.hemiLight.groundColor.copy(this.duskGround).lerp(this.dayGround, t);
-      renderer.hemiLight.intensity = duskHemiInt + (dayHemiInt - duskHemiInt) * t;
-      renderer.sunLight.color.copy(this.duskSun).lerp(this.daySun, t);
-      renderer.sunLight.intensity = duskSunInt + (daySunInt - duskSunInt) * t;
-    } else if (height >= -0.2) {
-      const t = (height + 0.2) / 0.2; // 0 at night, 1 at dusk
-      renderer.hemiLight.color.copy(this.nightHemi).lerp(this.duskHemi, t);
-      renderer.hemiLight.groundColor.copy(this.nightGround).lerp(this.duskGround, t);
-      renderer.hemiLight.intensity = nightHemiInt + (duskHemiInt - nightHemiInt) * t;
-      renderer.sunLight.color.copy(this.nightSun).lerp(this.duskSun, t);
-      renderer.sunLight.intensity = nightSunInt + (duskSunInt - nightSunInt) * t;
-    } else {
-      renderer.hemiLight.color.copy(this.nightHemi);
-      renderer.hemiLight.groundColor.copy(this.nightGround);
-      renderer.hemiLight.intensity = nightHemiInt;
-      renderer.sunLight.color.copy(this.nightSun);
-      renderer.sunLight.intensity = nightSunInt;
+      const dayHemiInt = 0.7; const daySunInt = 1.2; const duskHemiInt = 0.55; const duskSunInt = 0.9; const nightHemiInt = 0.4; const nightSunInt = 0.6;
+
+      if (height >= 0.2) {
+        renderer.hemiLight.color.copy(this.dayHemi); renderer.hemiLight.groundColor.copy(this.dayGround); renderer.hemiLight.intensity = dayHemiInt; renderer.sunLight.color.copy(this.daySun); renderer.sunLight.intensity = daySunInt;
+      } else if (height >= 0) {
+        const t = height / 0.2; renderer.hemiLight.color.copy(this.duskHemi).lerp(this.dayHemi, t); renderer.hemiLight.groundColor.copy(this.duskGround).lerp(this.dayGround, t); renderer.hemiLight.intensity = duskHemiInt + (dayHemiInt - duskHemiInt) * t; renderer.sunLight.color.copy(this.duskSun).lerp(this.daySun, t); renderer.sunLight.intensity = duskSunInt + (daySunInt - duskSunInt) * t;
+      } else if (height >= -0.2) {
+        const t = (height + 0.2) / 0.2; renderer.hemiLight.color.copy(this.nightHemi).lerp(this.duskHemi, t); renderer.hemiLight.groundColor.copy(this.nightGround).lerp(this.duskGround, t); renderer.hemiLight.intensity = nightHemiInt + (duskHemiInt - nightHemiInt) * t; renderer.sunLight.color.copy(this.nightSun).lerp(this.duskSun, t); renderer.sunLight.intensity = nightSunInt + (duskSunInt - nightSunInt) * t;
+      } else {
+        renderer.hemiLight.color.copy(this.nightHemi); renderer.hemiLight.groundColor.copy(this.nightGround); renderer.hemiLight.intensity = nightHemiInt; renderer.sunLight.color.copy(this.nightSun); renderer.sunLight.intensity = nightSunInt;
+      }
     }
 
     if (renderer.playerLight) {

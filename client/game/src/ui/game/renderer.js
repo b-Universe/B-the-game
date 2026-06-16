@@ -1382,7 +1382,9 @@ export class Renderer {
       clockDisplay.innerText = '06:00 AM';
       compassWrapper.appendChild(clockDisplay);
 
-      document.body.appendChild(compassWrapper);
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(compassWrapper);
+      else document.body.appendChild(compassWrapper);
     }
   }
 

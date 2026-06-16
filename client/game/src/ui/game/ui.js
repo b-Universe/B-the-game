@@ -9,6 +9,14 @@ import { PowerEditorUIManager } from '../power-editor-ui.js?v=cache-bust-005';
 import { PlayerModifierUIManager } from './player-modifier-ui.js?v=cache-bust-005';
 import { ProgressionSystem } from '../windows/progression.js?v=cache-bust-005';
 import { CombatStatsUIManager } from './combat-stats-ui.js?v=cache-bust-005';
+import { BadgesUIManager } from './badges-ui.js?v=cache-bust-005';
+import { PrivateMessageUIManager } from './pm-ui.js?v=cache-bust-005';
+import { SystemModalsUIManager } from './system-modals-ui.js?v=cache-bust-005';
+import { LoadingUIManager } from './loading-ui.js?v=cache-bust-005';
+import { HomeEditorUIManager } from './home-editor-ui.js?v=cache-bust-005';
+import { HudAltUIManager } from './hud-alt-ui.js?v=cache-bust-005';
+import { PetUIManager } from './pet-ui.js?v=cache-bust-005';
+import { ContextMenuUIManager } from './context-menu-ui.js?v=cache-bust-005';
 
 export class UIManager {
   constructor(engine) {
@@ -23,11 +31,33 @@ export class UIManager {
     this.powerEditor = new PowerEditorUIManager(engine);
     this.playerModifier = new PlayerModifierUIManager(engine, this);
     this.combatStats = new CombatStatsUIManager(engine, this);
+    this.badges = new BadgesUIManager(engine, this);
+    this.pmUI = new PrivateMessageUIManager(engine, this);
 
-    this.setupContextMenu();
-    this.setupLoadingScreen();
+    this.systemModals = new SystemModalsUIManager(engine, this);
+    this.loadingUI = new LoadingUIManager(engine, this);
+    this.homeEditor = new HomeEditorUIManager(engine, this);
+    this.hudAlt = new HudAltUIManager(engine, this);
+    this.petUI = new PetUIManager(engine, this);
+    this.contextMenu = new ContextMenuUIManager(engine, this);
+
+    this.loadingUI.setupLoadingScreen();
     this.makeDraggable('game-chat-container', '#chat-drag-handle');
     this.makeDraggable('system-message-dialog', '.dev-panel-header');
+
+    // Global capture listener for safe logout confirmation
+    document.body.addEventListener('click', (e) => {
+      const target = e.target.closest('#btn-logout');
+      if (target && !target.dataset.confirmed) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showConfirmModal("Logout", "Are you sure you want to safely log out of the game and return to the main menu?", () => {
+          target.dataset.confirmed = 'true';
+          target.click(); // Re-trigger the click now that it's confirmed
+          target.dataset.confirmed = '';
+        });
+      }
+    }, true);
 
     this.panelStack = [];
     this.panelObserver = new MutationObserver((mutations) => {
@@ -55,6 +85,27 @@ export class UIManager {
       if (el.id === 'settings-window' || el.classList.contains('settings-window')) {
         if (!document.getElementById('ui-mode-select')) {
           const contentArea = el.querySelector('.window-content') || el.querySelector('.settings-content') || el;
+
+          const resetPosDiv = document.createElement('div');
+          resetPosDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
+          resetPosDiv.innerHTML = `
+            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Local Cache Data</span>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-reset-window-pos" class="b-btn btn-secondary" style="color: #f39c12; border: 1px solid #f39c12; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">Reset Windows</button>
+              <button id="btn-clear-cache" class="b-btn btn-secondary" style="color: #e74c3c; border: 1px solid #e74c3c; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">Clear Cache</button>
+            </div>
+          `;
+
+          const autoSaveDiv = document.createElement('div');
+          autoSaveDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
+          autoSaveDiv.innerHTML = `
+            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Auto-Save Builder World</span>
+            <select id="auto-save-select" class="btn-secondary" style="color: #3498db; border: 1px solid #3498db; background: rgba(5,7,10,0.8); padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono); outline: none; cursor: pointer;">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          `;
+
           const uiModeDiv = document.createElement('div');
           uiModeDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
           uiModeDiv.innerHTML = `
@@ -64,17 +115,149 @@ export class UIManager {
               <option value="alternative">Alternative</option>
             </select>
           `;
+
+          const gradientDiv = document.createElement('div');
+          gradientDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
+          gradientDiv.innerHTML = `
+            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Window Gradients</span>
+            <div style="display: flex; gap: 8px;">
+              <input type="color" id="window-color-1" value="${this.engine.clientSettings.windowColor1 || '#34495e'}" title="Top Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;">
+              <input type="color" id="window-color-2" value="${this.engine.clientSettings.windowColor2 || '#2c3e50'}" title="Bottom Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;">
+            </div>
+          `;
+
+
           if (contentArea) {
-             contentArea.insertBefore(uiModeDiv, contentArea.firstChild);
-             const selectEl = document.getElementById('ui-mode-select');
-             if (selectEl) {
-               selectEl.value = this.engine.clientSettings.uiMode || 'classic';
-               selectEl.onchange = (e) => {
-                 this.engine.clientSettings.uiMode = e.target.value;
-                 localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-                 this.update();
-               };
-             }
+            contentArea.insertBefore(resetPosDiv, contentArea.firstChild);
+            contentArea.insertBefore(autoSaveDiv, contentArea.firstChild);
+            contentArea.insertBefore(uiModeDiv, contentArea.firstChild);
+            contentArea.appendChild(gradientDiv);
+
+            const wc1 = document.getElementById('window-color-1');
+            const wc2 = document.getElementById('window-color-2');
+            const updateGrad = () => {
+              this.engine.clientSettings.windowColor1 = wc1.value;
+              this.engine.clientSettings.windowColor2 = wc2.value;
+              localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+              this.applyWindowColors();
+            };
+             if (wc1) wc1.addEventListener('input', updateGrad);
+             if (wc2) wc2.addEventListener('input', updateGrad);
+
+            const selectEl = document.getElementById('ui-mode-select');
+            if (selectEl) {
+              selectEl.value = this.engine.clientSettings.uiMode || 'alternative';
+              selectEl.onchange = (e) => {
+                this.engine.clientSettings.uiMode = e.target.value;
+                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+                this.update();
+              };
+            }
+
+            const autoSaveEl = document.getElementById('auto-save-select');
+            if (autoSaveEl) {
+              autoSaveEl.value = this.engine.clientSettings.enableAutoSave !== false ? 'true' : 'false';
+              autoSaveEl.onchange = (e) => {
+                this.engine.clientSettings.enableAutoSave = e.target.value === 'true';
+                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+              };
+            }
+
+            const btnResetPos = document.getElementById('btn-reset-window-pos');
+            if (btnResetPos) {
+              btnResetPos.onclick = () => {
+                this.showConfirmModal("Reset Window Positions", "Are you sure you want to reset all window positions? This will reload the interface to apply defaults.", () => {
+                  const keysToRemove = [];
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.endsWith('_pos') || key.includes('_pos_') || key.endsWith('_position') || key.startsWith('b_window_state_'))) {
+                      keysToRemove.push(key);
+                    }
+                  }
+                  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+                  if (this.engine && this.engine.clientSettings) {
+                    this.engine.clientSettings.snapPowerTray = true;
+                    this.engine.clientSettings.snapActivePowers = true;
+                    localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+                  }
+
+                  window.location.reload();
+                });
+              };
+            }
+
+            const btnClearCache = document.getElementById('btn-clear-cache');
+            if (btnClearCache) {
+              btnClearCache.onclick = () => {
+                this.showConfirmModal("Clear All Game Data", "WARNING: This will completely wipe all local game settings, saved window positions, and cached account logins. You will need to log back in. Are you absolutely sure?", () => {
+                  localStorage.clear();
+                  window.location.reload();
+                });
+              };
+            }
+
+            // Create Audio Settings Tab/Section
+            const audioSection = document.createElement('div');
+            audioSection.id = 'audio-settings-section';
+            audioSection.innerHTML = `
+              <h3 style="color: #3498db; font-family: var(--font-header); border-bottom: 1px solid #333; padding-bottom: 5px; margin: 20px 0 10px 0;">Audio</h3>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;">
+                  <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Master Volume</span>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                      <input type="range" id="master-volume-slider" min="0" max="100" value="30" class="b-input" style="width: 120px;">
+                      <span id="master-volume-text" style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem; width: 40px; text-align: right;">30%</span>
+                  </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;">
+                  <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Mute Background Music</span>
+                  <input type="checkbox" id="audio-mute-bgm" class="b-input" style="width: 24px; height: 24px; cursor: pointer;">
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;">
+                  <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Mute Arcade Sounds</span>
+                  <input type="checkbox" id="audio-mute-arcade" class="b-input" style="width: 24px; height: 24px; cursor: pointer;">
+              </div>
+            `;
+            contentArea.insertBefore(audioSection, gradientDiv);
+
+            const masterVolSlider = document.getElementById('master-volume-slider');
+            const masterVolText = document.getElementById('master-volume-text');
+            const muteBgmEl = document.getElementById('audio-mute-bgm');
+            const muteArcadeEl = document.getElementById('audio-mute-arcade');
+
+            const savedMasterVol = localStorage.getItem('b_login_volume');
+            if (savedMasterVol !== null) {
+                const vol = Math.round(parseFloat(savedMasterVol) * 100);
+                masterVolSlider.value = vol;
+                masterVolText.innerText = `${vol}%`;
+            }
+
+            masterVolSlider.addEventListener('input', (e) => {
+                const val = e.target.value;
+                masterVolText.innerText = `${val}%`;
+                const normalized = val / 100;
+                localStorage.setItem('b_login_volume', normalized);
+                if (this.engine.bgmAudio) {
+                    this.engine.bgmAudio.volume = normalized * (this.engine.zonesConfig?.[this.engine.currentZone]?.baseStyle?.musicVolume ?? 1.0);
+                }
+            });
+
+            muteBgmEl.checked = !!this.engine.clientSettings.muteBGM;
+            muteBgmEl.onchange = (e) => {
+                this.engine.clientSettings.muteBGM = e.target.checked;
+                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+                this.engine.updateBGM();
+            };
+
+            // Assuming 'muteArcade' is the key. If not, this can be adjusted.
+            muteArcadeEl.checked = !!this.engine.clientSettings.muteArcade;
+            muteArcadeEl.onchange = (e) => {
+                this.engine.clientSettings.muteArcade = e.target.checked;
+                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+                if (this.engine.arcadeSystem) {
+                    this.engine.arcadeSystem.setMuted(e.target.checked);
+                }
+            };
           }
         }
       }
@@ -87,8 +270,8 @@ export class UIManager {
       mutations.forEach(mutation => {
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === 1) {
-             if (node.matches && node.matches(trackSelectors)) this.trackPanel(node);
-             if (node.querySelectorAll) node.querySelectorAll(trackSelectors).forEach(el => this.trackPanel(el));
+            if (node.matches && node.matches(trackSelectors)) this.trackPanel(node);
+            if (node.querySelectorAll) node.querySelectorAll(trackSelectors).forEach(el => this.trackPanel(el));
           }
         });
       });
@@ -101,236 +284,9 @@ export class UIManager {
     if (btnCloseSys) btnCloseSys.onclick = closeSysMsg;
     if (btnOkSys) btnOkSys.onclick = closeSysMsg;
 
-    const applySavedPos = (id, storageKey) => {
-      const saved = localStorage.getItem(storageKey);
-      const el = document.getElementById(id);
-      if (saved && el) {
-        try {
-          const pos = JSON.parse(saved);
-          if (pos.left !== undefined) el.style.left = pos.left;
-          if (pos.top !== undefined) el.style.top = pos.top;
-          if (pos.right !== undefined) el.style.right = pos.right;
-          if (pos.bottom !== undefined) el.style.bottom = pos.bottom;
-          el.style.transform = 'none';
-        } catch(e) {}
-      }
-    };
-
-    applySavedPos('game-chat-container', 'b_chat_pos');
-    applySavedPos('powerbar-container', 'b_powerbar_pos');
-
-    // Setup Alt UI
-    let altUiContainer = document.getElementById('alt-ui-container');
-    if (!altUiContainer) {
-      altUiContainer = document.createElement('div');
-      altUiContainer.id = 'alt-ui-container';
-      altUiContainer.style.cssText = 'position: absolute; top: 10px; right: 10px; width: 280px; background: rgba(5, 7, 10, 0.85); border: 2px solid #3498db; border-radius: 6px; padding: 10px; display: none; flex-direction: column; gap: 6px; z-index: 1000; pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
-
-      altUiContainer.innerHTML = `
-        <div id="alt-ui-drag-handle" style="display: flex; justify-content: space-between; align-items: center; cursor: move; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; gap: 10px;">
-          <div id="alt-ui-level" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #9b59b6; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; font-family: 'Arial Black', Impact, sans-serif; background: linear-gradient(135deg, #111, #333); font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.8);">1</div>
-          <div id="alt-ui-name" style="flex-grow: 1; text-align: left; color: #fff; font-weight: bold; font-family: 'Arial Black', Impact, sans-serif; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8); font-size: 1.1rem; letter-spacing: 0.5px;">Player Name</div>
-          <button id="alt-ui-menu-btn" style="background: linear-gradient(to bottom, #34495e, #2c3e50); color: #fff; border: 1px solid #1abc9c; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: 'Arial Black', Impact, sans-serif; font-size: 0.8rem; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: all 0.2s;">Menu</button>
-          <div id="alt-ui-dropdown" style="position: absolute; top: 100%; right: 0; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; gap: 5px; padding: 10px; z-index: 1001; min-width: 200px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); cursor: default; margin-top: 10px;">
-          <p style="text-align: center; margin: 0; color: #1abc9c">Game</p>
-            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-player-search" style="text-align: left; padding: 6px 10px;">Player Search</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-fullscreen-map" style="text-align: left; padding: 6px 10px;">Fullscreen Map</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-inventory" style="text-align: left; padding: 6px 10px;">Inventory</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-editmode" style="text-align: left; padding: 6px 10px;">Builder Mode (/edit)</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-dev-tools" style="text-align: left; padding: 6px 10px; display: none; border-color: #1abc9c; color: #1abc9c;">Developer Tools</button>
-            <p style="text-align: center; margin: 0; color: #1abc9c">Combat</p>
-            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-combat-stats" style="text-align: left; padding: 6px 10px;">Combat Statistics</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-powers" style="text-align: left; padding: 6px 10px;">Powers and Abilities</button>
-            <p style="text-align: center; margin: 0; color: #1abc9c">Account</p>
-            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-settings" style="text-align: left; padding: 6px 10px;">Settings</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-char-select" style="text-align: left; padding: 6px 10px;">Change Character</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-logout" style="text-align: left; padding: 6px 10px; color: #e74c3c; border-color: #e74c3c;">Logout</button>
-          </div>
-        </div>
-        <div style="position: relative; height: 18px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-          <div id="alt-ui-hp-fill" style="height: 100%; width: 100%; background: linear-gradient(to right, #27ae60, #2ecc71); transition: width 0.2s;"></div>
-          <div id="alt-ui-hp-text" style="position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
-        </div>
-        <div style="position: relative; height: 18px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-          <div id="alt-ui-ep-fill" style="height: 100%; width: 100%; background: linear-gradient(to right, #0984e3, #74b9ff); transition: width 0.2s;"></div>
-          <div id="alt-ui-ep-text" style="position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
-        </div>
-        <div style="position: relative; height: 18px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px;" id="alt-ui-bp-container">
-          <div id="alt-ui-bp-fill" style="height: 100%; width: 100%; background: linear-gradient(to right, #0097e6, #00d2ff); transition: width 0.2s;"></div>
-          <div id="alt-ui-bp-text" style="position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">100 / 100</div>
-        </div>
-        <div id="alt-ui-xp-container" style="position: relative; height: 12px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; display: flex;" title="Experience">
-          <div id="alt-ui-xp-fill" style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: linear-gradient(to right, #8e44ad, #9b59b6); transition: width 0.2s; z-index: 1;"></div>
-          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; z-index: 2; pointer-events: none;">
-             ${Array.from({length: 10}).map((_, i) => `<div style="flex: 1; border-right: ${i < 9 ? '1px solid rgba(0,0,0,0.8)' : 'none'}; box-sizing: border-box; background: rgba(255,255,255,0.05);"></div>`).join('')}
-          </div>
-        </div>
-        <div id="alt-ui-buffs" style="margin-top: 8px; min-height: 24px; display: flex; flex-wrap: wrap; gap: 5px;"></div>
-      `;
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) gameScreen.appendChild(altUiContainer);
-      else document.body.appendChild(altUiContainer);
-
-      this.makeDraggable('alt-ui-container', '#alt-ui-drag-handle');
-      applySavedPos('alt-ui-container', 'b_alt_ui_pos');
-
-      const altMenuBtn = document.getElementById('alt-ui-menu-btn');
-      const altDropdown = document.getElementById('alt-ui-dropdown');
-      if (altMenuBtn && altDropdown) {
-        altMenuBtn.onclick = (e) => {
-          e.stopPropagation();
-          altDropdown.style.display = altDropdown.style.display === 'none' ? 'flex' : 'none';
-        };
-
-        document.addEventListener('click', (e) => {
-           if (altDropdown.style.display === 'flex' && !altDropdown.contains(e.target) && e.target !== altMenuBtn) {
-               altDropdown.style.display = 'none';
-           }
-        });
-
-        const closeDropdown = () => { altDropdown.style.display = 'none'; };
-
-        document.getElementById('alt-btn-combat-stats').onclick = () => {
-           this.combatStats.toggle();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-powers').onclick = () => {
-           document.getElementById('btn-powers')?.click();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-inventory').onclick = () => {
-           document.getElementById('btn-inventory')?.click();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-fullscreen-map').onclick = () => {
-           document.getElementById('btn-fullscreen-map')?.click();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-player-search').onclick = () => {
-           document.getElementById('btn-player-list')?.click();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-editmode').onclick = () => {
-           const chatInput = document.getElementById('chat-input');
-           if (chatInput) {
-               chatInput.value = '/editmode';
-               chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-           }
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-dev-tools').onclick = () => {
-           const chatInput = document.getElementById('chat-input');
-           if (chatInput) {
-               chatInput.value = '/dev';
-               chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-           }
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-settings').onclick = () => {
-           document.getElementById('btn-settings')?.click();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-char-select').onclick = () => {
-           document.getElementById('btn-char-select')?.click();
-           closeDropdown();
-        };
-        document.getElementById('alt-btn-logout').onclick = () => {
-           document.getElementById('btn-logout')?.click();
-           closeDropdown();
-        };
-      }
-    }
-
-    let classicXpContainer = document.getElementById('classic-xp-container');
-    if (!classicXpContainer) {
-      classicXpContainer = document.createElement('div');
-      classicXpContainer.id = 'classic-xp-container';
-      classicXpContainer.style.cssText = 'width: 100%; height: 10px; background: #111; border: 1px solid #333; border-radius: 3px; overflow: hidden; position: relative; margin-top: 8px; display: none;';
-      classicXpContainer.innerHTML = `
-        <div id="classic-xp-fill" style="height: 100%; width: 0%; background: #9b59b6; transition: width 0.2s;"></div>
-        <div id="classic-xp-text" style="position: absolute; width: 100%; text-align: center; top: -2px; font-size: 0.65rem; color: #fff; text-shadow: 1px 1px 0 #000; font-family: var(--font-mono);">Level 1 | 0 / 1000 XP</div>
-      `;
-
-      const bottomHud = document.querySelector('.game-bottom-hud');
-      if (bottomHud) {
-         bottomHud.appendChild(classicXpContainer);
-      }
-    }
-
-    const reconnectOverlay = document.getElementById('reconnecting-overlay');
-    if (reconnectOverlay) reconnectOverlay.style.display = 'none';
-
-    let buffContainer = document.getElementById('buff-indicator-container');
-    if (!buffContainer) {
-      buffContainer = document.createElement('div');
-      buffContainer.id = 'buff-indicator-container';
-      buffContainer.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; z-index: 9999; background: rgba(5, 7, 10, 0.85); border: 2px solid #333; border-radius: 8px; padding: 10px; pointer-events: auto; align-items: center; min-height: 48px;';
-
-      const header = document.createElement('div');
-      header.id = 'buff-drag-handle';
-      header.style.cssText = 'width: 15px; height: 100%; min-height: 24px; background: rgba(255,255,255,0.1); border-radius: 4px; cursor: move; align-self: stretch;';
-      buffContainer.appendChild(header);
-
-      let list = document.getElementById('buff-indicator-list');
-      if (list) {
-        list.style.display = 'flex';
-        list.style.gap = '5px';
-        buffContainer.appendChild(list);
-      } else {
-        list = document.createElement('div');
-        list.id = 'buff-indicator-list';
-        list.style.display = 'flex';
-        list.style.gap = '5px';
-        buffContainer.appendChild(list);
-      }
-
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) gameScreen.appendChild(buffContainer);
-      else document.body.appendChild(buffContainer);
-    }
-
-    applySavedPos('buff-indicator-container', 'b_buff_pos');
-    this.makeDraggable('buff-indicator-container', '#buff-drag-handle');
-
-    let zoneContainer = document.getElementById('zone-display-container');
-    if (!zoneContainer) {
-      zoneContainer = document.createElement('div');
-      zoneContainer.id = 'zone-display-container';
-      zoneContainer.style.cssText = 'position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(5, 7, 10, 0.85); border: 2px solid #3498db; border-radius: 6px; padding: 5px 15px; color: #f1c40f; font-family: var(--font-mono); font-size: 0.9rem; font-weight: bold; z-index: 1000; text-transform: uppercase; letter-spacing: 2px; pointer-events: none; text-shadow: 1px 1px 0 #000, 0 0 5px rgba(241, 196, 15, 0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) gameScreen.appendChild(zoneContainer);
-      else document.body.appendChild(zoneContainer);
-    }
-
-    let petContainer = document.getElementById('pet-window');
-    if (!petContainer) {
-      petContainer = document.createElement('div');
-      petContainer.id = 'pet-window';
-      petContainer.style.cssText = 'position: absolute; top: 15px; left: 15px; background: rgba(5, 7, 10, 0.85); border: 2px solid #00d2ff; border-radius: 6px; padding: 10px; display: none; flex-direction: column; z-index: 1000; min-width: 200px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: auto; transition: top 0.2s ease-out; cursor: pointer;';
-      petContainer.onclick = (e) => {
-          const item = e.target.closest('.pet-item');
-          if (item) {
-              const droneId = item.dataset.id;
-              const eng = window.currentGameEngine;
-              if (eng && eng.drones && eng.drones[droneId]) {
-                  eng.selectedTarget = { type: 'drone', id: droneId };
-                  eng.ui.update();
-              }
-          }
-      };
-      petContainer.innerHTML = `
-        <div id="pet-window-header" style="background: rgba(0, 210, 255, 0.2); padding: 5px 10px; border-bottom: 1px solid #00d2ff; display: flex; justify-content: space-between; align-items: center; border-radius: 4px 4px 0 0; margin: -10px -10px 10px -10px;">
-           <span style="color: #fff; font-weight: bold; font-size: 0.85rem; font-family: var(--font-mono); text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Robotics</span>
-        </div>
-        <div id="pet-list-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
-      `;
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) gameScreen.appendChild(petContainer);
-      else document.body.appendChild(petContainer);
-    }
+    this.applySavedPos('game-chat-container', 'b_chat_pos');
+    this.applySavedPos('powerbar-container', 'b_powerbar_pos');
+    this.applySavedPos('home-editor-container', 'b_home_editor_pos');
 
     // Ensure panels stay on screen during window resize
     window.addEventListener('resize', () => {
@@ -339,7 +295,8 @@ export class UIManager {
         'power-editor-panel', 'player-modifier-panel',
         'player-list-panel', 'game-chat-container', 'powerbar-container', 'buff-indicator-container',
         'builder-hotbar', 'object-library-panel',
-        'player-manager-panel', 'player-modifier-modal', 'account-manager-modal'
+        'player-manager-panel', 'player-modifier-modal', 'account-manager-modal',
+        'home-editor-container', 'base-styles-modal'
       ];
 
       draggablePanels.forEach(id => {
@@ -400,8 +357,77 @@ export class UIManager {
       altUiName: document.getElementById('alt-ui-name'),
       classicXpContainer: document.getElementById('classic-xp-container'),
       classicXpFill: document.getElementById('classic-xp-fill'),
-      classicXpText: document.getElementById('classic-xp-text')
+      classicXpText: document.getElementById('classic-xp-text'),
+      homeEditorContainer: document.getElementById('home-editor-container'),
+      btnHomeEditMode: document.getElementById('btn-home-edit-mode'),
+      btnHomeLock: document.getElementById('btn-home-lock')
     };
+
+    this.applyWindowColors();
+
+    let uiDebugBox = document.getElementById('ui-pos-debug');
+    if (!uiDebugBox) {
+      uiDebugBox = document.createElement('div');
+      uiDebugBox.id = 'ui-pos-debug';
+      uiDebugBox.style.cssText = 'position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 1px solid #e056fd; color: #fff; padding: 10px; z-index: 2147483647; font-family: var(--font-mono); font-size: 12px; pointer-events: none; display: none; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); border-radius: 4px;';
+      document.body.appendChild(uiDebugBox);
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      if (!this.engine || !this.engine.devOptions || !this.engine.devOptions.showUiPos) {
+        if (uiDebugBox.style.display !== 'none') uiDebugBox.style.display = 'none';
+        return;
+      }
+      const target = e.target.closest('.b-window, .dev-panel, #home-editor-container, #powerbar-container, #alt-ui-container, #game-chat-container, #buff-indicator-container');
+      if (target) {
+        uiDebugBox.style.display = 'block';
+        const left = Math.round(target.offsetLeft);
+        const top = Math.round(target.offsetTop);
+        const xOffset = left - window.innerWidth;
+
+        uiDebugBox.innerHTML = `
+          <strong style="color: #e056fd; font-size: 14px; text-transform: uppercase;">${target.id || 'Unnamed GUI'}</strong><br>
+          <div style="text-align: left; margin-top: 5px;">
+          <span style="color: #ccc;">Current Pixel Pos:</span> top: ${top}px | left: ${left}px<br>
+          <span style="color: #f1c40f; margin-top: 5px; display: inline-block;">GUI_DEFAULT_POSITIONS Formats:</span><br>
+          <span style="color: #2ecc71;">{ xOffset: ${xOffset}, y: ${top} }</span><br>
+          <span style="color: #3498db;">{ top: '${top}px', left: '${left}px', right: 'auto' }</span>
+          </div>
+        `;
+      } else {
+        uiDebugBox.style.display = 'none';
+      }
+    });
+  }
+
+  applySavedPos(id, storageKey) {
+    const saved = localStorage.getItem(storageKey);
+    const el = document.getElementById(id);
+    if (saved && el) {
+      try {
+        const pos = JSON.parse(saved);
+        if (pos.left !== undefined) el.style.left = pos.left;
+        if (pos.top !== undefined) el.style.top = pos.top;
+        if (pos.right !== undefined) el.style.right = pos.right;
+        if (pos.bottom !== undefined) el.style.bottom = pos.bottom;
+        el.style.transform = 'none';
+      } catch (e) { }
+    }
+  }
+
+  applyWindowColors() {
+    const c1 = this.engine.clientSettings.windowColor1 || '#34495e';
+    const c2 = this.engine.clientSettings.windowColor2 || '#2c3e50';
+    let styleTag = document.getElementById('custom-window-colors');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'custom-window-colors';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+      .b-window-header { background: linear-gradient(to bottom, ${c1}, ${c2}) !important; }
+      #alt-ui-menu-btn { background: linear-gradient(to bottom, ${c1}, ${c2}) !important; }
+    `;
   }
 
   formatGameText(text) {
@@ -427,16 +453,15 @@ export class UIManager {
     });
   }
 
-  showSystemMessage(text) {
-    const dialog = document.getElementById('system-message-dialog');
-    const msgText = document.getElementById('sys-msg-text');
-    if (dialog && msgText) {
-      msgText.innerHTML = this.formatGameText(text);
-      dialog.style.display = 'flex';
-      const idx = this.panelStack.indexOf(dialog);
-      if (idx !== -1) { this.panelStack.splice(idx, 1); this.panelStack.push(dialog); }
-    }
-  }
+  showSystemMessage(text) { this.systemModals.showSystemMessage(text); }
+  showConfirmModal(title, msg, onC, cnt) { this.systemModals.showConfirmModal(title, msg, onC, cnt); }
+  showPatchNotes(notes, forceShow) { this.systemModals.showPatchNotes(notes, forceShow); }
+  showAnnouncement(msg) { this.systemModals.showAnnouncement(msg); }
+  showHelpModal() { this.systemModals.showHelpModal(); }
+
+  setupLoadingScreen() { this.loadingUI.setupLoadingScreen(); }
+  hideLoadingScreen() { this.loadingUI.hideLoadingScreen(); }
+  showReconnecting(is) { this.loadingUI.showReconnecting(is); }
 
   updateUIScale() {
     const scale = this.engine.clientSettings.uiScale !== undefined ? this.engine.clientSettings.uiScale : 1.0;
@@ -464,282 +489,6 @@ export class UIManager {
     }
   }
 
-  showPatchNotes(notes, forceShow = false) {
-    if (!notes || notes.length === 0) return;
-
-    const latestVersion = notes[0].version;
-    const lastSeen = localStorage.getItem('b_last_seen_patch');
-
-    if (lastSeen === latestVersion && !forceShow) return;
-
-    const modal = document.getElementById('patch-notes-modal');
-    const content = document.getElementById('in-game-patch-notes-list');
-    const closeBtn = document.getElementById('btn-close-patch-notes');
-
-    if (!modal || !content) return;
-
-    content.innerHTML = '';
-    notes.forEach(note => {
-      const div = document.createElement('div');
-      let html = `<strong style="color: ${note.color || '#3498db'}; font-size: 1.1em; letter-spacing: 1px;">${note.version}</strong>`;
-
-      if (note.changes && note.changes.length > 0) {
-        html += `<ul style="margin: 8px 0 15px 0; padding-left: 0; list-style-type: none; display: flex; flex-direction: column; gap: 6px;">`;
-        const typeColors = {
-          'Engine': '#3498db',
-          'Gameplay': '#2ecc71',
-          'Design': '#f1c40f',
-          'Fix': '#e74c3c',
-          'Content': '#9b59b6'
-        };
-        note.changes.forEach(c => {
-          const badgeColor = typeColors[c.type] || '#aaa';
-          const formattedText = this.formatGameText ? this.formatGameText(c.text) : c.text;
-          html += `
-            <li style="display: flex; gap: 10px; align-items: baseline;">
-              <span style="color: ${badgeColor}; font-weight: bold; font-family: var(--font-mono); font-size: 0.85rem; text-transform: uppercase; width: 75px; flex-shrink: 0; text-align: right;">[${c.type}]</span>
-              <span style="color: #ccc; font-size: 0.95rem; line-height: 1.4;">${formattedText}</span>
-            </li>
-          `;
-        });
-        html += `</ul>`;
-      } else if (note.text) {
-        const formattedText = this.formatGameText ? this.formatGameText(note.text) : note.text;
-        html += `<div style="color: #ccc; margin: 5px 0 15px 0; padding-left: 10px; font-size: 0.95rem;">${formattedText}</div>`;
-      }
-
-      div.innerHTML = html;
-      content.appendChild(div);
-    });
-
-    modal.style.display = 'flex';
-
-    if (closeBtn) {
-      closeBtn.onclick = () => {
-        modal.style.display = 'none';
-        localStorage.setItem('b_last_seen_patch', latestVersion);
-      };
-    }
-  }
-
-  showAnnouncement(message) {
-    const modal = document.getElementById('announcement-modal');
-    const content = document.getElementById('announcement-text');
-    const closeBtn = document.getElementById('btn-close-announcement');
-
-    if (!modal || !content) return;
-
-    const formattedMessage = this.formatGameText ? this.formatGameText(message.replace(/\n/g, '<br>')) : message.replace(/\n/g, '<br>');
-    content.innerHTML = formattedMessage;
-    modal.style.display = 'flex';
-
-    if (closeBtn) {
-      closeBtn.onclick = () => modal.style.display = 'none';
-    }
-  }
-
-  showHelpModal() {
-    const modal = document.getElementById('help-modal');
-    const list = document.getElementById('help-command-list');
-    const closeBtn = document.getElementById('btn-close-help');
-
-    if (!modal || !list) return;
-
-    const pName = this.engine.playerData.name ? this.engine.playerData.name.toLowerCase() : '';
-    const perms = this.engine.permissions || {};
-
-    const checkPerm = (perm) => {
-      if (!perm) return true; // No permission required
-      const allowed = perms[perm];
-      if (perm === 'playermanager' && perms['dev'] && (perms['dev'].includes('*') || perms['dev'].includes(pName))) return true;
-      if (!allowed) return false;
-      if (allowed.includes('*')) return true;
-      return allowed.includes(pName);
-    };
-
-    const commands = [
-      // General / Player Commands
-      { cmd: '/stuck', syntax: '/stuck', desc: 'Nudges your character back to a safe location if you are trapped in walls or blocked terrain.', perm: null, color: '#3498db' },
-      { cmd: '/pm, /w, /whisper', syntax: '/pm &lt;name&gt; &lt;message&gt;', desc: 'Sends a private direct message to a specific player.', perm: null, color: '#3498db' },
-      { cmd: '/patchnotes, /news', syntax: '/patchnotes', desc: 'Pulls up the latest patch notes and news.', perm: null, color: '#3498db' },
-      { cmd: '/teleport_zone, /tpz', syntax: '/tpz &lt;zoneName&gt;', desc: 'Instantly warp your character to another dimension/zone.', perm: null, color: '#3498db' },
-
-      // Builder & Developer Tools
-      { cmd: '/editmode', syntax: '/editmode', desc: 'Toggles the builder interface and block placing tools.', perm: 'editmode', color: '#f1c40f' },
-      { cmd: '/dev', syntax: '/dev', desc: 'Toggles the developer tool panel for inspecting hitboxes, LoS, and coordinates.', perm: 'dev', color: '#f1c40f' },
-      { cmd: '/applymap', syntax: '/applymap &lt;zoneName&gt; [x] [y] [z]', desc: 'Saves current zone and loads the target zone.', perm: 'dev', color: '#f1c40f' },
-      { cmd: '/time', syntax: '/time &lt;0-24&gt;', desc: 'Overrides the time of day locally. E.g., "/time 12" sets it to High Noon.', perm: 'dev', color: '#f1c40f' },
-      { cmd: '/givemoney', syntax: '/givemoney &lt;amount&gt;', desc: 'Grants yourself currency. Account will permanently be removed from Hi-Scores.', perm: 'dev', color: '#f1c40f' },
-      { cmd: '/integrity', syntax: '/integrity &lt;value&gt;', desc: 'Sets your Integrity from -100 (Synthetic) to 100 (Mutated).', perm: 'dev', color: '#f1c40f' },
-
-      // Moderation & Admin
-      { cmd: '/players', syntax: '/players', desc: 'Opens the Player Manager to view and moderate online players.', perm: 'playermanager', color: '#9b59b6' },
-      { cmd: '/npc create', syntax: '/npc create &lt;Name&gt; &lt;Health&gt;', desc: 'Spawns an NPC at your current mouse pointer location.', perm: 'npc', color: '#9b59b6' },
-      { cmd: '/tp, /teleport', syntax: '/tp &lt;x&gt; &lt;y&gt; [z]', desc: 'Teleports you to the specified coordinates.', perm: 'tp', color: '#e74c3c' },
-      { cmd: '/tpo, /teleport-other', syntax: '/tpo &lt;player&gt; &lt;x&gt; &lt;y&gt; [z]', desc: 'Teleports another player to the specified coordinates.', perm: 'tp', color: '#e74c3c' },
-      { cmd: '/speed', syntax: '/speed &lt;value&gt;', desc: 'Sets your base movement speed.', perm: 'speed', color: '#e74c3c' },
-      { cmd: '/announce', syntax: '/announce &lt;message&gt;', desc: 'Broadcasts a high-priority server-wide modal announcement.', perm: 'dev', color: '#e74c3c' },
-      { cmd: '/grant, /revoke', syntax: '/grant &lt;player&gt; &lt;perm&gt;', desc: 'Dynamically grant or revoke a global permission node.', perm: 'dev', color: '#e74c3c' },
-      { cmd: '/reload, /forceupdate', syntax: '/reload', desc: 'Forces all clients and the server to reload assets and code.', perm: 'reload', color: '#e74c3c' }
-    ];
-
-    list.innerHTML = '';
-
-    commands.forEach(c => {
-      if (checkPerm(c.perm)) {
-        const formattedDesc = this.formatGameText ? this.formatGameText(c.desc) : c.desc;
-        const el = document.createElement('div');
-        el.style.cssText = `background: rgba(0,0,0,0.6); border: 1px solid ${c.color}; border-left: 4px solid ${c.color}; padding: 12px; border-radius: 4px; display: flex; flex-direction: column; gap: 5px;`;
-        el.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: baseline;">
-            <strong style="color: ${c.color}; font-family: var(--font-header); font-size: 1.2rem; letter-spacing: 1px;">${c.cmd}</strong>
-            <span style="background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; color: #ccc; user-select: all;">${c.syntax}</span>
-          </div>
-          <div style="font-family: var(--font-mono); font-size: 0.95rem; color: #e1e1e1; line-height: 1.4; margin-top: 4px;">${formattedDesc}</div>
-        `;
-        list.appendChild(el);
-      }
-    });
-
-    modal.style.display = 'flex';
-    if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
-  }
-
-  setupLoadingScreen() {
-    this.loadingStartTime = performance.now();
-    this.loadingScreen = document.getElementById('loading-screen');
-    if (!this.loadingScreen) {
-      this.loadingScreen = document.createElement('div');
-      this.loadingScreen.id = 'loading-screen';
-      this.loadingScreen.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: var(--font-mono); pointer-events: auto;';
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) gameScreen.appendChild(this.loadingScreen);
-      else document.body.appendChild(this.loadingScreen);
-    } else {
-      this.loadingScreen.style.display = 'flex';
-    }
-
-    const randomTip = GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
-
-    this.loadingScreen.innerHTML = `
-      <h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1>
-      <p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Building Geometry...</p>
-      <div style="background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; padding: 15px; border-radius: 6px; width: 600px; max-width: 90vw; text-align: center; min-height: 48px; display: flex; flex-direction: column; justify-content: center;">
-        <div><span style="color: #f39c12; font-weight: bold; margin-right: 5px;">TIP:</span> <span id="loading-tip-text" style="color: #fff; transition: opacity 0.5s; line-height: 1.4;">${this.formatGameText(randomTip)}</span></div>
-      </div>
-      <button id="btn-potato-mode" style="position: absolute; bottom: 20px; right: 20px; background: rgba(5, 7, 10, 0.8); border: 1px solid var(--text-dim); color: var(--text-dim); padding: 8px 15px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 0.85rem; transition: all 0.3s; opacity: 0; pointer-events: none;">Taking too long to load? Try Potato Mode!</button>
-    `;
-
-    const potatoBtn = document.getElementById('btn-potato-mode');
-    if (potatoBtn) {
-      potatoBtn.onmouseenter = () => {
-        potatoBtn.style.borderColor = '#f1c40f';
-        potatoBtn.style.color = '#f1c40f';
-      };
-      potatoBtn.onmouseleave = () => {
-        potatoBtn.style.borderColor = 'var(--text-dim)';
-        potatoBtn.style.color = 'var(--text-dim)';
-      };
-      potatoBtn.onclick = () => {
-        const saved = localStorage.getItem('b_client_settings');
-        const settings = saved ? JSON.parse(saved) : {};
-        Object.assign(settings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0 });
-        localStorage.setItem('b_client_settings', JSON.stringify(settings));
-        window.location.reload();
-      };
-
-      if (this.potatoTimeout) clearTimeout(this.potatoTimeout);
-      this.potatoTimeout = setTimeout(() => {
-        if (this.loadingScreen && this.loadingScreen.style.display !== 'none') {
-          potatoBtn.style.opacity = '1';
-          potatoBtn.style.pointerEvents = 'auto';
-        }
-      }, 10000);
-    }
-
-      // Cycle through tips every 6 seconds
-      if (this.tipInterval) clearInterval(this.tipInterval);
-      this.tipInterval = setInterval(() => {
-        const tipEl = document.getElementById('loading-tip-text');
-        if (tipEl) {
-          tipEl.style.opacity = '0'; // Trigger CSS transition
-          setTimeout(() => {
-            const newTip = GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
-            tipEl.innerHTML = this.formatGameText(this.parseTip(newTip));
-            tipEl.style.opacity = '1';
-          }, 500); // Wait for the fade-out before swapping text
-        } else {
-          clearInterval(this.tipInterval);
-        }
-      }, 6000);
-  }
-
-  hideLoadingScreen() {
-    if (this.loadingScreen && this.loadingScreen.style.display !== 'none') {
-      const elapsed = performance.now() - this.loadingStartTime;
-      const remaining = Math.max(0, 3000 - elapsed);
-
-      if (window.app && window.app.menuAudio && window.app.menuAudio.isPlaying) {
-        window.app.menuAudio.fadeOutAndStop();
-      }
-
-      setTimeout(() => {
-        this.loadingScreen.style.display = 'none';
-            if (this.tipInterval) {
-              clearInterval(this.tipInterval);
-              this.tipInterval = null;
-            }
-      }, remaining);
-    }
-  }
-
-  showReconnecting(isReconnecting) {
-    let overlay = document.getElementById('reconnecting-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'reconnecting-overlay';
-      overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 14, 20, 0.8); z-index: 9999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: var(--font-mono); font-size: 2rem; text-shadow: 0 0 10px #f1c40f; pointer-events: auto; text-align: center; opacity: 0; transition: opacity 0.5s ease-in-out;';
-      overlay.innerHTML = 'SERVER UNDERGOING MAINTENANCE<br><div style="font-size: 1.2rem; color: #ccc; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">Attempting to reconnect... <div style="border: 3px solid rgba(204, 204, 204, 0.3); border-radius: 50%; border-top: 3px solid #f1c40f; width: 18px; height: 18px; animation: reconnect-spin 1s linear infinite;"></div></div><div style="background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; padding: 15px; border-radius: 6px; width: 600px; max-width: 90vw; text-align: center; min-height: 48px; display: flex; flex-direction: column; justify-content: center; margin-top: 30px; font-size: 1.1rem; text-shadow: none; font-family: sans-serif;"><div><span style="color: #f39c12; font-weight: bold; margin-right: 5px;">TIP:</span> <span id="reconnect-tip-text" style="color: #fff; transition: opacity 0.5s; line-height: 1.4;"></span></div></div><style>@keyframes reconnect-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
-      const gameScreen = document.getElementById('game-screen');
-      if (gameScreen) gameScreen.appendChild(overlay);
-      else document.body.appendChild(overlay);
-    }
-
-    if (isReconnecting) {
-      overlay.style.display = 'flex';
-      void overlay.offsetWidth; // Trigger reflow so the transition fires
-      overlay.style.opacity = '1';
-
-      const updateTip = () => {
-        const tipEl = document.getElementById('reconnect-tip-text');
-        if (tipEl) {
-          tipEl.style.opacity = '0';
-          setTimeout(() => {
-            const randomTip = GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
-            tipEl.innerHTML = this.formatGameText ? this.formatGameText(this.parseTip(randomTip)) : randomTip;
-            tipEl.style.opacity = '1';
-          }, 500);
-        }
-      };
-
-      if (!this.reconnectTipInterval) {
-        updateTip();
-        this.reconnectTipInterval = setInterval(updateTip, 6000);
-      }
-    } else {
-      overlay.style.opacity = '0';
-      setTimeout(() => {
-        if (overlay.style.opacity === '0') {
-          overlay.style.display = 'none';
-          if (this.reconnectTipInterval) {
-            clearInterval(this.reconnectTipInterval);
-            this.reconnectTipInterval = null;
-          }
-        }
-      }, 500);
-    }
-  }
-
   makeDraggable(panelId, headerSelector) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -759,17 +508,17 @@ export class UIManager {
       startY = e.clientY;
 
       if (panelId === 'powerbar-container' && window.currentGameEngine && window.currentGameEngine.clientSettings.snapPowerTray) {
-          window.currentGameEngine.clientSettings.snapPowerTray = false;
-          localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
+        window.currentGameEngine.clientSettings.snapPowerTray = false;
+        localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
       }
       if (panelId === 'buff-indicator-container' && window.currentGameEngine && window.currentGameEngine.clientSettings.snapActivePowers) {
-          window.currentGameEngine.clientSettings.snapActivePowers = false;
-          localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
+        window.currentGameEngine.clientSettings.snapActivePowers = false;
+        localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
       }
 
       let scale = 1;
       if (panel.style.zoom) {
-          scale = parseFloat(panel.style.zoom) || 1;
+        scale = parseFloat(panel.style.zoom) || 1;
       }
 
       const rect = panel.getBoundingClientRect();
@@ -849,20 +598,11 @@ export class UIManager {
         const posObj = { left: panel.style.left, top: panel.style.top, right: panel.style.right, bottom: panel.style.bottom };
 
         if (panelId === 'builder-panel') {
-          const eng = window.currentGameEngine;
-          if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-            localStorage.setItem('b_builder_pos', JSON.stringify(posObj));
-          }
+          localStorage.setItem('b_builder_pos', JSON.stringify(posObj));
         } else if (panelId === 'builder-hotbar') {
-          const eng = window.currentGameEngine;
-          if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-            localStorage.setItem('b_hotbar_pos', JSON.stringify(posObj));
-          }
+          localStorage.setItem('b_hotbar_pos', JSON.stringify(posObj));
         } else if (panelId === 'object-library-panel') {
-          const eng = window.currentGameEngine;
-          if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
-            localStorage.setItem('b_objlib_pos', JSON.stringify(posObj));
-          }
+          localStorage.setItem('b_objlib_pos', JSON.stringify(posObj));
         } else if (panelId === 'game-chat-container') {
           localStorage.setItem('b_chat_pos', JSON.stringify(posObj));
         } else if (panelId === 'powerbar-container') {
@@ -871,6 +611,8 @@ export class UIManager {
           localStorage.setItem('b_buff_pos', JSON.stringify(posObj));
         } else if (panelId === 'alt-ui-container') {
           localStorage.setItem('b_alt_ui_pos', JSON.stringify(posObj));
+        } else if (panelId === 'home-editor-container') {
+          localStorage.setItem('b_home_editor_pos', JSON.stringify(posObj));
         }
       };
 
@@ -879,314 +621,90 @@ export class UIManager {
     });
   }
 
-  setupContextMenu() {
-    const btnTrade = document.getElementById('ctx-btn-trade');
-    if (btnTrade) {
-      btnTrade.onclick = () => {
-        if (this.engine.contextTarget && this.engine.contextTarget.type === 'player') {
-          this.engine.network.sendTradeRequest(this.engine.contextTarget.id);
-          this.engine.chat.addMessage('system', 'System', `Trade request sent to ${this.engine.otherPlayers[this.engine.contextTarget.id]?.name || 'Player'}.`);
-        }
-        document.getElementById('player-context-menu').style.display = 'none';
-      };
-    }
-    const btnTalk = document.getElementById('ctx-btn-talk');
-    if (btnTalk) {
-      btnTalk.onclick = () => {
-        if (this.engine.contextTarget && this.engine.contextTarget.type === 'npc') {
-          const npc = this.engine.npcs.find(n => n.uuid === this.engine.contextTarget.id);
-          if (npc) {
-            if (npc.type === 'trainer') {
-              this.trainer.openTrainerUI(npc);
-            }
-          }
-        }
-        document.getElementById('player-context-menu').style.display = 'none';
-      };
-    }
-    const btnArcadePlay = document.getElementById('ctx-btn-arcade-play');
-    if (btnArcadePlay) {
-      btnArcadePlay.onclick = () => {
-        if (this.engine.contextTarget && this.engine.contextTarget.type === 'arcade') {
-          const target = this.engine.contextTarget;
-          if (this.engine.arcadeSystem) {
-             this.engine.arcadeSystem.interact(target.x, target.y, target.z, target.voxel.dir, target.voxel.gameId);
-          }
-        }
-        document.getElementById('player-context-menu').style.display = 'none';
-      };
-    }
-    const btnArcadeEdit = document.getElementById('ctx-btn-arcade-edit');
-    if (btnArcadeEdit) {
-      btnArcadeEdit.onclick = () => {
-        if (this.engine.contextTarget && this.engine.contextTarget.type === 'arcade') {
-          const target = this.engine.contextTarget;
-          if (this.devTools) {
-             const dt = this.devTools;
-             dt.currentEditCabinet = { wx: target.x, wy: target.y, wz: target.z, voxel: target.voxel };
-             document.getElementById('edit-arcade-name').value = target.voxel.customName || '';
-             document.getElementById('edit-arcade-game').value = target.voxel.gameId || 'pixel';
-             document.getElementById('edit-arcade-power').value = target.voxel.powerState || 'on';
-             document.getElementById('edit-arcade-x').value = target.x;
-             document.getElementById('edit-arcade-y').value = target.y;
-             document.getElementById('edit-arcade-z').value = target.z;
-             document.getElementById('edit-arcade-zone').value = this.engine.currentZone || 'untitled';
-             dt.arcadeEditWindow.open();
-             document.getElementById('edit-arcade-highlight').checked = true;
-          }
-        }
-        document.getElementById('player-context-menu').style.display = 'none';
-      };
-    }
-    const btnArcadePower = document.getElementById('ctx-btn-arcade-power');
-    if (btnArcadePower) {
-      btnArcadePower.onclick = () => {
-        if (this.engine.contextTarget && this.engine.contextTarget.type === 'arcade') {
-          const target = this.engine.contextTarget;
-          const newPower = target.voxel.powerState === 'off' ? 'on' : 'off';
-          const updatedVoxel = { ...target.voxel, powerState: newPower };
-          this.engine.mapManager.setVoxelAt(target.x, target.y, target.z, updatedVoxel, true);
-          this.showSystemMessage(`Arcade cabinet powered ${newPower}.`);
-        }
-        document.getElementById('player-context-menu').style.display = 'none';
-      };
-    }
-  }
-
   update() {
     const eng = this.engine;
 
-    const isAltMode = eng.clientSettings.uiMode === 'alternative';
-    const bottomHud = document.querySelector('.game-bottom-hud');
-    if (bottomHud) bottomHud.style.display = isAltMode ? 'none' : 'flex';
+    const isAltMode = (eng.clientSettings.uiMode || 'alternative') === 'alternative';
     const sideHud = document.querySelector('.game-side-hud');
     if (sideHud) sideHud.style.display = isAltMode ? 'none' : 'flex';
+    const bottomHud = document.querySelector('.game-bottom-hud');
+    if (bottomHud) bottomHud.style.display = isAltMode ? 'none' : 'flex';
 
     const pName = eng.playerData && eng.playerData.name ? eng.playerData.name.toLowerCase() : '';
     const perms = eng.permissions || {};
     const hasEdit = ['editmode', 'builder', 'dev', 'admin'].some(role =>
-        perms[role] && (perms[role].includes('*') || perms[role].includes(pName))
+      perms[role] && (perms[role].includes('*') || perms[role].includes(pName))
     );
+    const isDev = ['dev', 'admin'].some(role =>
+      perms[role] && (perms[role].includes('*') || perms[role].includes(pName))
+    );
+    const isApartment = eng.currentZone && eng.currentZone.startsWith('apt_' + pName);
+
+    let isAptGuestBuilder = false;
+    if (eng.currentZone && eng.currentZone.startsWith('apt_') && eng.zonesConfig && eng.zonesConfig[eng.currentZone]) {
+        const zc = eng.zonesConfig[eng.currentZone];
+        if (zc.builders && zc.builders.includes(pName)) {
+            isAptGuestBuilder = true;
+        }
+    }
+
+    const canEditHere = hasEdit && (isDev || isApartment || isAptGuestBuilder);
+
+    const inApartment = isApartment || isAptGuestBuilder;
+    const heUI = this.els.homeEditorContainer;
+    if (heUI) {
+      if (inApartment) {
+        if (heUI.style.display === 'none') heUI.style.display = 'flex';
+        const btnHomeEditMode = document.getElementById('btn-home-edit-mode');
+        if (btnHomeEditMode) {
+          btnHomeEditMode.innerText = eng.editMode ? 'Exit Build Mode' : 'Build Mode';
+          btnHomeEditMode.className = eng.editMode ? 'b-btn btn-primary' : 'b-btn btn-secondary';
+          btnHomeEditMode.style.color = '#fff';
+        }
+        const btnHomeLock = document.getElementById('btn-home-lock');
+        if (btnHomeLock) {
+          if (isApartment) {
+            btnHomeLock.style.display = 'block';
+            const zc = (eng.zonesConfig && eng.zonesConfig[eng.currentZone]) ? eng.zonesConfig[eng.currentZone] : {};
+            btnHomeLock.innerText = zc.isLocked ? 'Lock: Invite Only' : 'Lock: Open to Public';
+            btnHomeLock.style.color = '#ffffff';
+          } else {
+            btnHomeLock.style.display = 'none';
+          }
+        }
+      } else {
+        heUI.style.display = 'none';
+      }
+    }
 
     const hudEditBtn = document.getElementById('btn-hud-edit');
     if (hudEditBtn) {
-        hudEditBtn.disabled = !hasEdit;
-        hudEditBtn.style.opacity = hasEdit ? '1' : '0.5';
-        hudEditBtn.style.cursor = hasEdit ? 'pointer' : 'not-allowed';
+      hudEditBtn.disabled = !canEditHere;
+      hudEditBtn.style.opacity = canEditHere ? '1' : '0.5';
+      hudEditBtn.style.cursor = canEditHere ? 'pointer' : 'not-allowed';
     }
 
     if (isAltMode) {
-       const devBtn = document.getElementById('alt-btn-dev-tools');
-       const editBtn = document.getElementById('alt-btn-editmode');
-       if (devBtn) {
-          const isDev = perms['dev'] && (perms['dev'].includes('*') || perms['dev'].includes(pName));
-          devBtn.style.display = isDev ? 'block' : 'none';
-       }
-       if (editBtn) {
-          editBtn.disabled = !hasEdit;
-          editBtn.style.opacity = hasEdit ? '1' : '0.5';
-          editBtn.style.cursor = hasEdit ? 'pointer' : 'not-allowed';
-       }
+      const devBtn = document.getElementById('alt-btn-dev-tools');
+      const editBtn = document.getElementById('alt-btn-editmode');
+      if (devBtn) {
+        devBtn.style.display = isDev ? 'block' : 'none';
+      }
+      if (editBtn) {
+        editBtn.disabled = !canEditHere;
+        editBtn.style.opacity = canEditHere ? '1' : '0.5';
+        editBtn.style.cursor = canEditHere ? 'pointer' : 'not-allowed';
+      }
     }
-    if (this.els.altUiContainer) this.els.altUiContainer.style.display = isAltMode ? 'flex' : 'none';
-    if (this.els.classicXpContainer) this.els.classicXpContainer.style.display = isAltMode ? 'none' : 'block';
 
     if (this.combatStats && this.combatStats.window.element.style.display !== 'none') {
-        this.combatStats.updateStats();
+      this.combatStats.updateStats();
     }
 
     const topBarMenuBtn = document.getElementById('btn-game-menu');
     if (topBarMenuBtn) topBarMenuBtn.style.display = isAltMode ? 'none' : 'block';
 
-    const buffContainer = document.getElementById('buff-indicator-container');
-    const altBuffSlot = document.getElementById('alt-ui-buffs');
-
-    if (isAltMode) {
-      if (altBuffSlot && this.els.buffList && this.els.buffList.parentNode !== altBuffSlot) {
-        altBuffSlot.appendChild(this.els.buffList);
-      }
-      if (buffContainer) buffContainer.style.display = 'none';
-    } else {
-      if (buffContainer && this.els.buffList && this.els.buffList.parentNode !== buffContainer) {
-        buffContainer.appendChild(this.els.buffList);
-      }
-      if (buffContainer) buffContainer.style.display = 'flex';
-    }
-
-    if (this.els.zoneDisplay && eng.currentZone) {
-      const zoneText = `ZONE: ${eng.currentZone}`;
-      if (this.els.zoneDisplay.innerText !== zoneText) {
-         this.els.zoneDisplay.innerText = zoneText;
-      }
-    }
-
-    const hpPercent = Math.max(0, eng.player.hp / eng.player.maxHp);
-    const epPercent = Math.max(0, eng.player.energy / eng.player.maxEnergy);
-
-    if (this.els.hpFill) this.els.hpFill.style.width = `${hpPercent * 100}%`;
-    if (this.els.hpText) this.els.hpText.innerText = `${Math.floor(eng.player.hp)} / ${eng.player.maxHp}`;
-
-    if (this.els.epFill) this.els.epFill.style.width = `${epPercent * 100}%`;
-    if (this.els.epText) this.els.epText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
-
-    const addLabel = (fillEl, className, text, color) => {
-      if (fillEl && fillEl.parentNode) {
-        const container = fillEl.parentNode;
-        container.style.position = 'relative';
-        if (!container.querySelector('.' + className)) {
-           const label = document.createElement('div');
-           label.className = className;
-           label.innerText = text;
-           label.style.cssText = `position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: ${color}; font-weight: bold; pointer-events: none; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.9); letter-spacing: 1px; z-index: 2;`;
-           container.appendChild(label);
-        }
-      }
-    };
-
-    addLabel(this.els.hpFill, 'hp-label', 'Health', '#2ecc71');
-    addLabel(this.els.epFill, 'ep-label', 'Energy', '#0984e3');
-
-    if (eng.player.synthEnergy === undefined) eng.player.synthEnergy = 1000;
-    if (!eng.player.maxSynthEnergy) eng.player.maxSynthEnergy = 1000;
-    const synthPercent = Math.max(0, eng.player.synthEnergy / eng.player.maxSynthEnergy);
-
-    const level = eng.playerData.level || 1;
-    const xp = eng.playerData.experience || 0;
-    const nextXp = ProgressionSystem.getExpRequiredForNextLevel(level);
-    const xpPercent = Math.max(0, Math.min(100, (xp / nextXp) * 100));
-
-    if (this.els.altUiContainer && isAltMode) {
-      if (this.els.altUiLevel) this.els.altUiLevel.innerText = level;
-      if (this.els.altUiName) this.els.altUiName.innerText = eng.playerData.name || 'Player';
-      if (this.els.altUiHpFill) this.els.altUiHpFill.style.width = `${hpPercent * 100}%`;
-      if (this.els.altUiHpText) this.els.altUiHpText.innerText = `${Math.floor(eng.player.hp)} / ${eng.player.maxHp}`;
-      if (this.els.altUiEpFill) this.els.altUiEpFill.style.width = `${epPercent * 100}%`;
-      if (this.els.altUiEpText) this.els.altUiEpText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
-      if (this.els.altUiBpFill) this.els.altUiBpFill.style.width = `${synthPercent * 100}%`;
-      if (this.els.altUiBpText) this.els.altUiBpText.innerText = `${Math.floor(eng.player.synthEnergy)} / ${eng.player.maxSynthEnergy}`;
-      if (this.els.altUiXpFill) this.els.altUiXpFill.style.width = `${xpPercent}%`;
-      if (this.els.altUiXpContainer) this.els.altUiXpContainer.title = `XP: ${Math.floor(xp)} / ${nextXp}`;
-
-      if (eng.clientSettings.mergeSynthBar && this.els.altUiBpContainer) {
-        this.els.altUiBpContainer.style.display = 'none';
-        if (this.els.altUiEpText) this.els.altUiEpText.innerText = `${Math.floor(eng.player.energy)} E / ${Math.floor(eng.player.synthEnergy)} S`;
-      } else if (this.els.altUiBpContainer) {
-        this.els.altUiBpContainer.style.display = 'block';
-      }
-    } else {
-      if (this.els.classicXpFill) this.els.classicXpFill.style.width = `${xpPercent}%`;
-      if (this.els.classicXpText) this.els.classicXpText.innerText = `Level ${level} | ${xp} / ${nextXp} XP`;
-    }
-
-    if (eng.clientSettings.mergeSynthBar) {
-      if (this.els.synthContainer) this.els.synthContainer.style.display = 'none';
-      if (this.els.epText) this.els.epText.innerText = `${Math.floor(eng.player.energy)} E / ${Math.floor(eng.player.synthEnergy)} S`;
-      if (this.els.epFill) {
-        const epPercent = Math.max(0, eng.player.energy / eng.player.maxEnergy) * 100;
-        const synthPercent = Math.max(0, eng.player.synthEnergy / (eng.player.maxSynthEnergy || 1000)) * 100;
-        this.els.epFill.style.width = '100%';
-        this.els.epFill.style.background = `
-          linear-gradient(to right, #0984e3 ${epPercent}%, transparent ${epPercent}%),
-          linear-gradient(to right, #00d2ff ${synthPercent}%, transparent ${synthPercent}%)
-        `;
-        this.els.epFill.style.backgroundSize = `100% 50%, 100% 50%`;
-        this.els.epFill.style.backgroundRepeat = `no-repeat, no-repeat`;
-        this.els.epFill.style.backgroundPosition = `top left, bottom left`;
-      }
-    } else {
-      if (this.els.synthContainer) {
-        this.els.synthContainer.style.display = 'flex';
-        this.els.synthContainer.style.position = 'relative';
-        if (!this.els.synthContainer.querySelector('.synth-label')) {
-           const label = document.createElement('div');
-           label.className = 'synth-label';
-           label.innerText = 'Battery Charge';
-           label.style.cssText = 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.65rem; color: #aaddff; font-weight: bold; pointer-events: none; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.9); letter-spacing: 1px; z-index: 2;';
-           this.els.synthContainer.appendChild(label);
-        }
-      }
-      if (this.els.synthFill) this.els.synthFill.style.width = `${synthPercent * 100}%`;
-      if (this.els.synthText) this.els.synthText.innerText = `${Math.floor(eng.player.synthEnergy)} / ${eng.player.maxSynthEnergy}`;
-      if (this.els.epFill)
-        this.els.epFill.style.background = '';
-        this.els.epFill.style.backgroundSize = '';
-        this.els.epFill.style.backgroundRepeat = '';
-        this.els.epFill.style.backgroundPosition = '';
-    }
-
-    if (this.els.buffList) {
-      this.els.buffList.style.flexWrap = 'wrap';
-
-      const effects = eng.player.activeEffects || [];
-      // Filter out passives in case they were accidentally clicked and added to activePowers
-      const activeToggles = (eng.player.activePowers || []).filter(pId => {
-          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
-          return !pDef || pDef.type?.toLowerCase() !== 'passive';
-      });
-      // Passives are learned powers, so they reside on playerData.powers, not the physical player entity state
-      const passives = (eng.playerData.powers || []).filter(pId => {
-          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
-          return pDef && pDef.type && pDef.type.toLowerCase() === 'passive';
-      });
-
-      const currentEffIds = [
-        ...effects.map(e => e.id),
-        ...activeToggles.map(p => `toggle_${p}`),
-        ...passives.map(p => `passive_${p}`)
-      ].join(',');
-
-      if (this.els.buffList.dataset.effIds !== currentEffIds) {
-        this.els.buffList.dataset.effIds = currentEffIds;
-        this.els.buffList.innerHTML = '';
-
-        passives.forEach(pId => {
-          const pDef = window.POWER_REGISTRY[pId];
-          const icon = document.createElement('div');
-          icon.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; border: 1px solid #3498db; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); position: relative; overflow: hidden; color: #3498db;';
-          icon.innerText = pDef && pDef.name ? pDef.name.substring(0, 1).toUpperCase() : 'P';
-          icon.title = `${pDef ? pDef.name : pId} (Passive)`;
-          this.els.buffList.appendChild(icon);
-        });
-
-        activeToggles.forEach(pId => {
-          const pDef = window.POWER_REGISTRY && window.POWER_REGISTRY[pId];
-          const name = pDef && pDef.name ? pDef.name : pId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          const icon = document.createElement('div');
-          icon.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; border: 1px solid #2ecc71; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); position: relative; overflow: hidden; color: #2ecc71;';
-          icon.innerText = name.substring(0, 1).toUpperCase();
-          icon.title = `${name} (Active Toggle)`;
-          this.els.buffList.appendChild(icon);
-        });
-
-        effects.forEach((eff, i) => {
-          const icon = document.createElement('div');
-          icon.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; border: 1px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); position: relative; overflow: hidden;';
-
-          let color = '#fff'; let letter = 'B';
-          if (eff.type === 'DoT') { color = '#e67e22'; letter = 'D'; }
-          else if (eff.type === 'Heal') { color = '#2ecc71'; letter = 'H'; }
-          else if (eff.type === 'MaxHP' || eff.type === 'MaxEnergy' || eff.type === 'MaxSynth') { color = '#3498db'; letter = 'M'; }
-          else if (eff.type === 'Status') { color = '#9b59b6'; letter = 'S'; }
-          else if (eff.type === 'Proc') { color = '#f1c40f'; letter = 'P'; }
-
-          icon.style.borderColor = color; icon.style.color = color; icon.innerText = letter;
-          icon.title = `${eff.type} (${eff.magnitude || 0})`;
-
-          const sweep = document.createElement('div');
-          sweep.id = `buff-sweep-${i}`;
-          sweep.style.cssText = `position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.5); pointer-events: none; height: 0%;`;
-          icon.appendChild(sweep);
-          this.els.buffList.appendChild(icon);
-        });
-      }
-      effects.forEach((eff, i) => {
-        const sweep = document.getElementById(`buff-sweep-${i}`);
-        if (sweep) {
-          const pct = Math.max(0, Math.min(100, ((eff.endTime - Date.now()) / (eff.endTime - eff.startTime)) * 100));
-          sweep.style.height = `${100 - pct}%`;
-        }
-      });
-    }
+    this.hudAlt.update();
 
     if (this.els.btnEditTarget) {
       if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
@@ -1249,30 +767,32 @@ export class UIManager {
         if (eng.selectedTarget.type === 'npc') tFaction = targetObj.group || 'Civilian';
         else if (eng.selectedTarget.type === 'player' || eng.selectedTarget.type === 'self') tFaction = targetObj.alignment || 'Neutral';
         else if (eng.selectedTarget.type === 'drone') {
-            const owner = eng.otherPlayers[targetObj.ownerSocketId] || (targetObj.ownerSocketId === eng.socket?.id ? eng.playerData : null);
-            tFaction = owner ? (owner.alignment || 'Neutral') : 'Neutral';
+          const owner = eng.otherPlayers[targetObj.ownerSocketId] || (targetObj.ownerSocketId === eng.socket?.id ? eng.playerData : null);
+          tFaction = owner ? (owner.alignment || 'Neutral') : 'Neutral';
         }
         tFaction = tFaction.charAt(0).toUpperCase() + tFaction.slice(1);
 
         const targetLvl = targetObj.level || eng.playerData.level || 1;
 
-        if (eng.selectedTarget.type === 'npc' && targetObj.type !== 'trainer' && targetObj.type !== 'civilian') {
-            const playerLvl = eng.playerData.level || 1;
-            const diff = targetLvl - playerLvl;
-            if (diff >= 4) tColor = '#ff4757';
-            else if (diff === 3) tColor = '#e67e22';
-            else if (diff === 2) tColor = '#f39c12';
-            else if (diff === 1) tColor = '#f1c40f';
-            else if (diff === 0) tColor = '#ffffff';
-            else if (diff === -1) tColor = '#bdc3c7';
-            else if (diff === -2) tColor = '#7f8c8d';
-            else tColor = '#444444';
+        if (eng.selectedTarget.type === 'npc' && targetObj.type !== 'trainer' && targetObj.type !== 'civilian' && targetObj.type !== 'banker') {
+          const playerLvl = eng.playerData.level || 1;
+          const diff = targetLvl - playerLvl;
+          if (diff >= 4) tColor = '#ff4757';
+          else if (diff === 3) tColor = '#e67e22';
+          else if (diff === 2) tColor = '#f39c12';
+          else if (diff === 1) tColor = '#f1c40f';
+          else if (diff === 0) tColor = '#ffffff';
+          else if (diff === -1) tColor = '#bdc3c7';
+          else if (diff === -2) tColor = '#7f8c8d';
+          else tColor = '#444444';
         } else if (eng.selectedTarget.type === 'npc' && targetObj.type === 'civilian') {
-            tColor = '#bdc3c7';
+          tColor = '#bdc3c7';
         } else if (eng.selectedTarget.type === 'npc' && targetObj.type === 'trainer') {
-            tColor = '#3498db';
+          tColor = '#3498db';
+        } else if (eng.selectedTarget.type === 'npc' && targetObj.type === 'banker') {
+          tColor = '#2ecc71';
         } else {
-            tColor = '#ffffff';
+          tColor = '#ffffff';
         }
 
         this.els.targetName.innerHTML = `
@@ -1294,11 +814,17 @@ export class UIManager {
         this.els.targetEnergyFill.style.width = `${epPercent * 100}%`;
         if (this.els.targetEnergyText) this.els.targetEnergyText.innerText = `${Math.floor(targetObj.energy || maxEp)} / ${maxEp}`;
 
-        if (targetObj.type === 'trainer' && this.els.targetActions) {
-            this.els.targetActions.style.display = 'block';
-            if (this.els.btnTargetTalk) this.els.btnTargetTalk.onclick = () => this.trainer.openTrainerUI(targetObj);
+        if ((targetObj.type === 'trainer' || targetObj.type === 'banker') && this.els.targetActions) {
+          this.els.targetActions.style.display = 'block';
+          if (this.els.btnTargetTalk) {
+             this.els.btnTargetTalk.innerText = targetObj.type === 'banker' ? 'Bank' : 'Talk';
+             this.els.btnTargetTalk.onclick = () => {
+                if (targetObj.type === 'trainer') this.trainer.openTrainerUI(targetObj);
+                else if (targetObj.type === 'banker') { if (this.inventory) this.inventory.toggleBank(); }
+             };
+          }
         } else if (this.els.targetActions) {
-            this.els.targetActions.style.display = 'none';
+          this.els.targetActions.style.display = 'none';
         }
       } else {
         this.els.targetWindow.style.display = 'none';
@@ -1308,37 +834,7 @@ export class UIManager {
       this.els.targetWindow.style.display = 'none';
     }
 
-    const myDrones = eng.drones ? Object.values(eng.drones).filter(d => d.ownerSocketId === eng.socket?.id && d.state !== 'dead') : [];
-    if (myDrones.length > 0) {
-      if (this.els.petWindow) {
-        this.els.petWindow.style.display = 'flex';
-
-        let petListHtml = '';
-        myDrones.sort((a, b) => (a.orbitIndex || 0) - (b.orbitIndex || 0)).forEach(drone => {
-            let dName = 'Satellite Drone';
-            if (drone.isAssaultDrone) dName = 'Assault Drone';
-            else if (drone.isCombatDrone) dName = 'Combat Drone';
-
-            const dLevel = drone.level || eng.playerData.level || 1;
-            const hpPercent = Math.max(0, drone.hp / drone.maxHp);
-            petListHtml += `<div class="pet-item" data-id="${drone.uuid}" style="margin-bottom: 4px; padding: 4px; border: 1px solid transparent; border-radius: 4px; transition: background 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='transparent'">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="color: #00d2ff; font-family: var(--font-header); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 0 #000; pointer-events: none;">${dName} <span style="font-size: 0.75em; color: #aaa;">(Lv.${dLevel})</span></span><span style="color: #fff; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none;">${Math.floor(drone.hp)} / ${drone.maxHp}</span></div>
-                <div style="width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; border: 1px solid #333;"><div style="height: 100%; background: #2ecc71; width: ${hpPercent * 100}%; transition: width 0.2s;"></div></div>
-            </div>`;
-        });
-
-        const listContainer = document.getElementById('pet-list-container');
-        if (listContainer) listContainer.innerHTML = petListHtml;
-
-        let petTop = 15;
-        if (this.els.targetWindow && this.els.targetWindow.style.display !== 'none') {
-            petTop += this.els.targetWindow.offsetHeight + 10;
-        }
-        this.els.petWindow.style.top = `${petTop}px`;
-      }
-    } else if (this.els.petWindow) {
-      this.els.petWindow.style.display = 'none';
-    }
+    this.petUI.update();
 
     if (eng.activeTrainer) {
       const dist = Math.hypot(eng.player.x - eng.activeTrainer.x, eng.player.y - eng.activeTrainer.y);
@@ -1348,24 +844,25 @@ export class UIManager {
       }
     }
 
+    const buffContainer = document.getElementById('buff-indicator-container');
     let currentBottomOffset = 85;
     const pb = document.getElementById('powerbar-container');
     if (eng.clientSettings.snapPowerTray && pb) {
-        pb.style.bottom = `${currentBottomOffset}px`;
-        pb.style.right = '20px';
-        pb.style.left = 'auto';
-        pb.style.top = 'auto';
-        pb.style.transform = 'none';
-        if (pb.style.display !== 'none') currentBottomOffset += pb.offsetHeight + 10;
+      pb.style.bottom = `${currentBottomOffset}px`;
+      pb.style.right = '20px';
+      pb.style.left = 'auto';
+      pb.style.top = 'auto';
+      pb.style.transform = 'none';
+      if (pb.style.display !== 'none') currentBottomOffset += pb.offsetHeight + 10;
     }
 
     if (eng.clientSettings.snapActivePowers && buffContainer) {
-        buffContainer.style.bottom = `${currentBottomOffset}px`;
-        buffContainer.style.right = '20px';
-        buffContainer.style.left = 'auto';
-        buffContainer.style.top = 'auto';
-        buffContainer.style.transform = 'none';
-        if (buffContainer.style.display !== 'none') currentBottomOffset += buffContainer.offsetHeight + 10;
+      buffContainer.style.bottom = `${currentBottomOffset}px`;
+      buffContainer.style.right = '20px';
+      buffContainer.style.left = 'auto';
+      buffContainer.style.top = 'auto';
+      buffContainer.style.transform = 'none';
+      if (buffContainer.style.display !== 'none') currentBottomOffset += buffContainer.offsetHeight + 10;
     }
 
     eng.hudIndicatorBottomOffset = currentBottomOffset;

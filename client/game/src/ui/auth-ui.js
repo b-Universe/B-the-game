@@ -27,10 +27,9 @@ export class AuthUIManager {
     if (this.hardwareChecked) return callback();
     this.hardwareChecked = true;
 
-    if (localStorage.getItem('b_client_settings')) return callback();
     if (localStorage.getItem('b_skip_hardware_warning') === 'true') return callback();
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(any-pointer: coarse)").matches);
+    const isMobile = /Mobi|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(any-pointer: coarse)").matches) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
     const isLowEnd = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 4);
     let isSoftwareRenderer = false;
     try {
@@ -76,11 +75,13 @@ export class AuthUIManager {
       const handleClose = () => {
         if (chkSkip && chkSkip.checked) localStorage.setItem('b_skip_hardware_warning', 'true');
         this.fadeOut(hwModal);
+        const uInput = document.getElementById('username');
+        if (uInput) uInput.focus();
       };
 
       btnPotato.onclick = () => {
         handleClose();
-        const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, disableAFKTimer: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
+        const defaultSettings = { uiMode: 'alternative', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, disableAFKTimer: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
         const potatoSettings = Object.assign({}, defaultSettings, { enableShadows: false, enableDayNightCycle: false, enableWeatherParticles: false, renderDistance: 800, renderScale: 0.5, maxDynamicLights: 0, chunkGenSpeed: 1 });
         localStorage.setItem('b_client_settings', JSON.stringify(potatoSettings));
         callback();
@@ -110,6 +111,50 @@ export class AuthUIManager {
     const sliderPreRenderScale = document.getElementById('slider-pre-render-scale');
     const sliderPreDynamicLights = document.getElementById('slider-pre-dynamic-lights');
     const sliderPreMenuVolume = document.getElementById('slider-pre-menu-volume');
+
+    if (rowPerfMode && rowPerfMode.parentNode && !document.getElementById('pre-btn-clear-cache')) {
+      const resetPosDiv = document.createElement('div');
+      resetPosDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
+      resetPosDiv.innerHTML = `
+        <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Local Cache Data</span>
+        <div style="display: flex; gap: 8px;">
+          <button id="pre-btn-reset-window-pos" class="b-btn btn-secondary" style="color: #f39c12; border: 1px solid #f39c12; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">Reset Windows</button>
+          <button id="pre-btn-clear-cache" class="b-btn btn-secondary" style="color: #e74c3c; border: 1px solid #e74c3c; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">Clear Cache</button>
+        </div>
+      `;
+      rowPerfMode.parentNode.insertBefore(resetPosDiv, rowPerfMode);
+
+      document.getElementById('pre-btn-reset-window-pos').onclick = () => {
+        if (confirm("Are you sure you want to reset all window positions? This will return them to their default locations on your screen.")) {
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.endsWith('_pos') || key.includes('_pos_') || key.endsWith('_position') || key.startsWith('b_window_state_'))) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(k => localStorage.removeItem(k));
+
+          const saved = localStorage.getItem('b_client_settings');
+          if (saved) {
+            try {
+              const settings = JSON.parse(saved);
+              settings.snapPowerTray = true;
+              settings.snapActivePowers = true;
+              localStorage.setItem('b_client_settings', JSON.stringify(settings));
+            } catch(e) {}
+          }
+          alert("All window positions have been reset.");
+        }
+      };
+
+      document.getElementById('pre-btn-clear-cache').onclick = () => {
+        if (confirm("WARNING: This will completely wipe all local game settings, saved window positions, and cached account logins. You will need to log back in. Are you absolutely sure?")) {
+          localStorage.clear();
+          window.location.reload();
+        }
+      };
+    }
 
     const updatePerfButtonUI = (isPerfMode) => {
       if (isPerfMode) {

@@ -42,7 +42,7 @@ export class GameEngine {
       this.playerData.powerTray = this.playerData.powers.filter(p => window.POWER_REGISTRY && window.POWER_REGISTRY[p] && window.POWER_REGISTRY[p].type?.toLowerCase() !== 'passive');
     }
 
-    const defaultSettings = { uiMode: 'classic', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, disableAFKTimer: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
+    const defaultSettings = { uiMode: 'alternative', snapPowerTray: true, snapActivePowers: true, snapIndicators: true, combatStyle: 'hybrid', powerbarOrientation: 'horizontal', mergeSynthBar: false, showPowerRaytrace: true, renderDistance: 2000, renderScale: 1.0, uiScale: 1.0, minimapScale: 1.0, minimapZoom: 8, showCoords: false, showYawPitch: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, showClickMovePath: true, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, disableAFKTimer: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, enableDayNightCycle: true, enableWeatherParticles: true, enableCameraShake: true, maxDynamicLights: 48, chunkGenSpeed: 3, actionBinds: { moveForward: { primary: 'w', alt: 'arrowup' }, moveBackward: { primary: 's', alt: 'arrowdown' }, moveLeft: { primary: 'a', alt: 'arrowleft' }, moveRight: { primary: 'd', alt: 'arrowright' }, jump: { primary: 'space', alt: '' }, sprint: { primary: 'shift', alt: '' }, flyDown: { primary: 'x', alt: '' }, camUp: { primary: 'pageup', alt: '' }, camDown: { primary: 'pagedown', alt: '' }, camLeft: { primary: 'q', alt: '' }, camRight: { primary: 'e', alt: '' }, undo: { primary: 'ctrl+z', alt: '' }, redo: { primary: 'ctrl+y', alt: '' }, picker: { primary: 'alt', alt: '' }, buildDelete: { primary: 'shift', alt: '' }, buildDragSelect: { primary: 'ctrl', alt: '' }, power1: { primary: '1', alt: '' }, power2: { primary: '2', alt: '' }, power3: { primary: '3', alt: '' }, power4: { primary: '4', alt: '' }, power5: { primary: '5', alt: '' }, power6: { primary: '6', alt: '' }, power7: { primary: '7', alt: '' }, power8: { primary: '8', alt: '' }, power9: { primary: '9', alt: '' }, power10: { primary: '0', alt: '' } } };
     const savedSettingsStr = localStorage.getItem('b_client_settings');
 
     // If this is the player's first time loading the client, perform a hardware bottleneck check
@@ -88,6 +88,7 @@ export class GameEngine {
 
     this.waypoints = [];
     this.mapPings = [];
+    this.mapBadges = [];
     this.mapPingPool = [];
     this.mapPings.push = (...args) => {
       args.forEach(data => {
@@ -198,6 +199,37 @@ export class GameEngine {
       return this.debris.length;
     };
     this.drones = {};
+
+    this.spawnEventParticles = (data) => {
+      const pCount = data.particleCount !== undefined ? data.particleCount : 1;
+      const scatter = data.particleScatter || 0;
+
+      for(let i = 0; i < pCount; i++) {
+          const rX = (Math.random() - 0.5) * scatter;
+          const rY = (Math.random() - 0.5) * scatter;
+          const rZ = (Math.random() - 0.5) * scatter;
+
+          let vx = (Math.random() - 0.5) * 50;
+          let vy = (Math.random() - 0.5) * 50;
+          let vz = (Math.random() - 0.5) * 50;
+          let noGrav = true;
+          let size = 2.5;
+
+          if (data.particle === 'sparks') {
+              vx *= 3; vy *= 3; vz *= 3; size = 3; noGrav = false;
+          } else if (data.particle === 'explosion') {
+              vx *= 5; vy *= 5; vz *= 5; size = 5; noGrav = false;
+          } else if (data.particle === 'smoke') {
+              vz = 10 + Math.random() * 20; size = 4;
+          }
+
+          this.spawnParticle({
+            x: data.x + rX, y: data.y + rY, z: (data.z || 0) + rZ,
+            vx: vx, vy: vy, vz: vz, life: 0.3 + Math.random() * 0.4, maxLife: 0.7,
+            color: data.particleColor || data.color || '#ffffff', size: size, noGravity: noGrav, tex: data.particle === 'smoke' ? 'smoke' : 'white'
+          });
+      }
+    };
 
     this.input = new InputManager(this);
     this.keys = this.input.keys;
@@ -329,12 +361,15 @@ export class GameEngine {
     this.builder = new BuilderManager(this);
     this.worldSerializer = new WorldSerializer(this);
     this.arcadeSystem = new ArcadeSystem(this);
-    this.currentZone = this.playerData.zone || 'untitled';
+    this.currentZone = this.playerData.zone || 'atlas-city';
     this.arcadeScores = {};
+
+    this.bgmAudio = null;
+    this.currentBGMTrack = null;
 
     this.worldDirty = false;
     this.autoSaveTimer = setInterval(() => {
-      if (this.worldDirty && this.worldSerializer) {
+      if (this.worldDirty && this.worldSerializer && this.clientSettings.enableAutoSave !== false) {
         this.worldSerializer.save(this.currentZone);
         this.worldDirty = false;
       }
@@ -383,6 +418,98 @@ export class GameEngine {
         }
       }, 5000);
     }
+  }
+
+  updateBGM() {
+    if (this.clientSettings.muteBGM) {
+      if (this.bgmAudio) {
+        this.bgmAudio.pause();
+        this.bgmAudio = null;
+      }
+      if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
+      this.currentPlaylistStr = "MUTED";
+      return;
+    }
+
+    const zc = this.zonesConfig && this.zonesConfig[this.currentZone] ? this.zonesConfig[this.currentZone] : {};
+    const style = zc.baseStyle || {};
+    let playlist = style.playlist || [];
+
+    if (playlist.length === 0 && style.musicTrack && style.musicTrack !== 'none') {
+      const tracks = style.musicTrack.split(',').map(t => t.trim()).filter(Boolean);
+      playlist = tracks.map(t => ({ file: t, delay: parseFloat(style.musicDelay) || 0 }));
+    }
+
+    const mode = style.musicMode || 'ordered';
+    const newPlaylistStr = JSON.stringify(playlist) + mode;
+    if (this.currentPlaylistStr !== newPlaylistStr) {
+       this.currentPlaylistStr = newPlaylistStr;
+       this.playPlaylist(playlist, mode);
+    }
+  }
+
+  playPlaylist(playlist, mode) {
+      if (this.clientSettings.muteBGM) return;
+
+      if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
+
+      if (this.bgmAudio) {
+         const oldAudio = this.bgmAudio;
+         this.bgmAudio = null;
+         let vol = oldAudio.volume;
+         const fade = setInterval(() => {
+             vol -= 0.05;
+             if (vol <= 0) {
+                oldAudio.pause();
+                clearInterval(fade);
+             } else {
+                oldAudio.volume = vol;
+             }
+         }, 100);
+      }
+
+      if (!playlist || playlist.length === 0) return;
+      this.bgmTracks = playlist;
+      this.bgmMode = mode;
+      this.bgmIndex = -1;
+      this.playNextTrack();
+  }
+
+  playNextTrack() {
+      if (!this.bgmTracks || this.bgmTracks.length === 0) return;
+      if (this.bgmMode === 'random') this.bgmIndex = Math.floor(Math.random() * this.bgmTracks.length);
+      else this.bgmIndex = (this.bgmIndex + 1) % this.bgmTracks.length;
+
+      const trackInfo = this.bgmTracks[this.bgmIndex];
+      const track = trackInfo.file;
+      const delayMs = (parseFloat(trackInfo.delay) || 0) * 1000;
+      const audio = new Audio(`assets/audio/music/${track}`);
+      const targetVol = parseFloat(localStorage.getItem('b_login_volume') || '0.3');
+
+      audio.volume = 0;
+      audio.play().catch(e => console.warn('BGM play prevented', e));
+
+      let vol = 0;
+      const fade = setInterval(() => { vol += 0.05; if (vol >= targetVol) { audio.volume = targetVol; clearInterval(fade); } else { audio.volume = vol; } }, 100);
+      this.bgmAudio = audio;
+
+      audio.addEventListener('ended', () => {
+          if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
+          this.bgmNextTimeout = setTimeout(() => { this.playNextTrack(); }, Math.max(0, delayMs));
+      });
+
+      if (delayMs < 0) {
+         audio.addEventListener('timeupdate', () => {
+             if (isNaN(audio.duration)) return;
+             const timeLeft = audio.duration - audio.currentTime;
+             if (timeLeft <= Math.abs(delayMs) / 1000 && !audio._crossfadeTriggered) {
+                 audio._crossfadeTriggered = true;
+                 this.playNextTrack();
+                 let outVol = audio.volume;
+                 const fadeOut = setInterval(() => { outVol -= 0.05; if (outVol <= 0) { audio.pause(); clearInterval(fadeOut); } else { audio.volume = outVol; } }, 100);
+             }
+         });
+      }
   }
 
   showFloatingText(text, color) {
@@ -620,6 +747,9 @@ export class GameEngine {
     if (this.chatDropdownListener) document.removeEventListener('click', this.chatDropdownListener);
 
     if (this.renderer && this.renderer.webgl) {
+          if (this.renderer.debugCtx && this.renderer.debugCanvas) {
+            this.renderer.debugCtx.clearRect(0, 0, this.renderer.debugCanvas.width, this.renderer.debugCanvas.height);
+          }
       this.renderer.webgl.dispose();
       if (this.canvas && this.canvas.parentNode) {
         const newCanvas = this.canvas.cloneNode(true);
@@ -778,16 +908,23 @@ export class GameEngine {
 
     let nearestTrainer = null;
     let minTrainerDist = 150;
+    let nearestBanker = null;
+    let minBankerDist = 150;
     this.npcs.forEach(npc => {
-      if (npc.state !== 'dead' && npc.type === 'trainer') {
+      if (npc.state !== 'dead') {
         const dist = Math.hypot(this.player.x - npc.x, this.player.y - npc.y);
-        if (dist < minTrainerDist) {
+        if (npc.type === 'trainer' && dist < minTrainerDist) {
           minTrainerDist = dist;
           nearestTrainer = npc;
+        }
+        if (npc.type === 'banker' && dist < minBankerDist) {
+          minBankerDist = dist;
+          nearestBanker = npc;
         }
       }
     });
     this.nearestTrainer = nearestTrainer;
+    this.nearestBanker = nearestBanker;
 
     if (this.renderer && this.renderer.particleManager) {
       this.renderer.particleManager.updatePhysics(dt);

@@ -8,6 +8,26 @@ export class PowerbarUIManager {
 
     this.ui.makeDraggable('powers-panel', '.dev-panel-header');
 
+    if (!document.getElementById('powerbar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'powerbar-styles';
+        style.innerHTML = `
+            @keyframes casting-pulse {
+                0% { box-shadow: inset 0 0 10px rgba(241, 196, 15, 0.2), 0 0 5px rgba(241, 196, 15, 0.5); border-color: #f1c40f; }
+                50% { box-shadow: inset 0 0 20px rgba(241, 196, 15, 0.6), 0 0 15px rgba(241, 196, 15, 1); border-color: #fff; }
+                100% { box-shadow: inset 0 0 10px rgba(241, 196, 15, 0.2), 0 0 5px rgba(241, 196, 15, 0.5); border-color: #f1c40f; }
+            }
+            .casting-pulse { animation: casting-pulse 1s infinite; }
+
+            @keyframes ready-flash {
+                0% { box-shadow: inset 0 0 30px rgba(52, 152, 219, 1), 0 0 20px rgba(52, 152, 219, 1); border-color: #fff; transform: scale(1.1); }
+                100% { box-shadow: inset 0 0 10px rgba(0,0,0,0.8); border-color: var(--accent-neon, #3498db); transform: scale(1); }
+            }
+            .ready-flash { animation: ready-flash 0.5s ease-out; }
+        `;
+        document.head.appendChild(style);
+    }
+
     this.setupPowerbar();
     this.setupPowersUI();
   }
@@ -229,19 +249,38 @@ export class PowerbarUIManager {
       const slotData = this.powerSlots[i];
       const powerId = tray[i];
       if (powerId && POWER_REGISTRY[powerId]) {
-        const cooldownMs = POWER_REGISTRY[powerId].cooldown || 0;
+        const cooldownMs = (POWER_REGISTRY[powerId].stats?.rechargeRate || 0) * 1000;
         const lastTime = lastAttackTimes[powerId] || 0;
         const elapsed = now - lastTime;
+        const isCasting = this.engine.player && this.engine.player.castingPower === powerId && this.engine.player.actionTimer > 0;
 
-        if (elapsed < cooldownMs) {
-          // Calculate the percentage remaining for the overlay height
+        if (isCasting) {
+          const powerDef = POWER_REGISTRY[powerId];
+          const activationMs = (powerDef.stats?.activationTime || 0.5) * 1000;
+          const castElapsed = activationMs - this.engine.player.actionTimer;
+          const percent = Math.max(0, Math.min(100, (castElapsed / activationMs) * 100));
+          slotData.overlayEl.style.height = `${100 - percent}%`;
+          slotData.overlayEl.style.background = 'rgba(241, 196, 15, 0.6)';
+          slotData.element.classList.add('casting-pulse');
+        } else if (elapsed < cooldownMs) {
           const percent = 100 - ((elapsed / cooldownMs) * 100);
           slotData.overlayEl.style.height = `${percent}%`;
+          slotData.overlayEl.style.background = 'rgba(0, 0, 0, 0.75)';
+          slotData.element.classList.remove('casting-pulse');
+          slotData.wasOnCooldown = true;
         } else {
           slotData.overlayEl.style.height = '0%';
+          slotData.element.classList.remove('casting-pulse');
+          if (slotData.wasOnCooldown) {
+            slotData.wasOnCooldown = false;
+            slotData.element.classList.remove('ready-flash');
+            void slotData.element.offsetWidth; // trigger reflow
+            slotData.element.classList.add('ready-flash');
+          }
         }
       } else if (slotData.overlayEl) {
         slotData.overlayEl.style.height = '0%';
+        slotData.element.classList.remove('casting-pulse');
       }
     }
   }

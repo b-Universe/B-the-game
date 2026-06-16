@@ -185,6 +185,14 @@ export class DebugRenderer {
     this.renderer.arcadeHighlightBox.renderOrder = 999;
     this.renderer.arcadeHighlightBox.visible = false;
     this.renderer.scene.add(this.renderer.arcadeHighlightBox);
+
+    const badgeBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const badgeBoxMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, wireframe: true, depthTest: false, transparent: true, opacity: 0.5 });
+    this.renderer.badgeBoxMesh = new THREE.InstancedMesh(badgeBoxGeo, badgeBoxMat, 100);
+    this.renderer.badgeBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.badgeBoxMesh.frustumCulled = false;
+    this.renderer.badgeBoxMesh.visible = false;
+    this.renderer.debugMeshes.add(this.renderer.badgeBoxMesh);
   }
 
   setupDebugOverlay() {
@@ -193,7 +201,9 @@ export class DebugRenderer {
       overlay = document.createElement('div');
       overlay.id = '3d-debug-overlay';
       overlay.style.cssText = 'position: absolute; pointer-events: none; background: rgba(0,0,0,0.8); border: 1px solid #f1c40f; color: #fff; font-family: var(--font-mono); font-size: 12px; padding: 10px; border-radius: 4px; z-index: 1000; display: none; white-space: nowrap; box-shadow: 0 0 10px rgba(0,0,0,0.8);';
-      document.body.appendChild(overlay);
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(overlay);
+      else document.body.appendChild(overlay);
     }
     this.renderer.debugOverlay = overlay;
 
@@ -202,7 +212,9 @@ export class DebugRenderer {
       dCanvas = document.createElement('canvas');
       dCanvas.id = 'debug-canvas';
       dCanvas.style.cssText = 'position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10;';
-      document.body.appendChild(dCanvas);
+      const gameScreen = document.getElementById('game-screen');
+      if (gameScreen) gameScreen.appendChild(dCanvas);
+      else document.body.appendChild(dCanvas);
     }
     this.renderer.debugCanvas = dCanvas;
     this.renderer.debugCtx = dCanvas.getContext('2d');
@@ -223,6 +235,7 @@ export class DebugRenderer {
       this.renderer.chunkBox.visible = false;
       if (this.renderer.neighborhoodBoxMesh) this.renderer.neighborhoodBoxMesh.visible = false;
       if (this.renderer.arcadeHighlightBox) this.renderer.arcadeHighlightBox.visible = false;
+      if (this.renderer.badgeBoxMesh) this.renderer.badgeBoxMesh.visible = false;
       return;
     }
 
@@ -313,6 +326,22 @@ export class DebugRenderer {
       this.renderer.neighborhoodBoxMesh.instanceMatrix.needsUpdate = true;
       this.renderer.neighborhoodBoxMesh.visible = hitCount > 0;
     } else if (this.renderer.neighborhoodBoxMesh) { this.renderer.neighborhoodBoxMesh.visible = false; }
+
+    if (eng.devOptions.showMapBadges && eng.mapBadges) {
+      let hitCount = 0;
+      const dummy = this.dummyObj;
+      eng.mapBadges.forEach(b => {
+        if (hitCount < 100) {
+          dummy.position.set(b.x, b.y, b.z || 0);
+          dummy.scale.set(b.width || 64, b.depth || 64, b.height || 64);
+          dummy.updateMatrix();
+          this.renderer.badgeBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+        }
+      });
+      this.renderer.badgeBoxMesh.count = hitCount;
+      this.renderer.badgeBoxMesh.instanceMatrix.needsUpdate = true;
+      this.renderer.badgeBoxMesh.visible = hitCount > 0;
+    } else if (this.renderer.badgeBoxMesh) { this.renderer.badgeBoxMesh.visible = false; }
 
     if (eng.devOptions.showAggro) {
       let hitCount = 0;
@@ -627,6 +656,9 @@ export class DebugRenderer {
     // NPC Hover Text
     if (eng.nearestTrainer && !eng.activeTrainer) {
       batcher.drawText('Press [T] to Talk', eng.nearestTrainer.x, eng.nearestTrainer.y, (eng.nearestTrainer.z || 0) + 130 + (Math.sin(performance.now() / 200) * 5), 14, '#3498db');
+    }
+    if (eng.nearestBanker && (!eng.ui.inventory || eng.ui.inventory.bankWindow.element.style.display === 'none')) {
+      batcher.drawText('Press [T] to Open Bank', eng.nearestBanker.x, eng.nearestBanker.y, (eng.nearestBanker.z || 0) + 130 + (Math.sin(performance.now() / 200) * 5), 14, '#2ecc71');
     }
   }
 

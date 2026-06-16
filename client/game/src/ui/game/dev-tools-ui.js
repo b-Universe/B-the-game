@@ -1,3 +1,4 @@
+import { BaseWindow } from '../base-window.js?v=cache-bust-005';
 import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
 import { NPCManagerWindow, NPCEditWindow, EntityGroupManagerWindow, SpawnerManagerWindow, SpawnerEditWindow, MobPackManagerWindow, NPCTemplateManagerWindow, EntityTypeManagerWindow, PowerSelectorWindow } from '../windows/npc-windows.js?v=cache-bust-005';
 import { PlayerManagerWindow } from '../windows/player-windows.js?v=cache-bust-005';
@@ -19,6 +20,38 @@ const SHAPE_BTN_STYLE = `padding: 5px 10px; font-weight: bold; font-family: var(
 const DIR_BTN_STYLE = `padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: ${UI_COLORS.orange}; color: ${UI_COLORS.orange}; display: none; min-width: 40px;`;
 const REL_BTN_STYLE = `padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: ${UI_COLORS.purple}; color: ${UI_COLORS.purple}; display: none; min-width: 40px;`;
 const FLUID_BTN_STYLE = `padding: 5px 10px; font-weight: bold; font-family: var(--font-mono); border-color: ${UI_COLORS.primary}; color: ${UI_COLORS.primary}; display: none; width: 100%;`;
+
+class MapBadgeManagerWindow extends BaseWindow {
+  constructor() {
+    super('map-badge-manager-window', 'Map Badge Manager', { width: 500, height: 400, x: 200, y: 200 });
+    this.setContent(`
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <button id="btn-create-map-badge" class="b-btn btn-primary">Create New Area</button>
+        <button id="btn-refresh-map-badges" class="b-btn btn-secondary">Refresh</button>
+      </div>
+      <div id="map-badge-list" style="display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex: 1; padding-right: 5px;"></div>
+    `);
+  }
+}
+
+class MapBadgeEditWindow extends BaseWindow {
+  constructor() {
+    super('map-badge-edit-window', 'Edit Map Badge', { width: 400, height: 450, x: 250, y: 250 });
+    this.setContent(`
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="hidden" id="edit-mb-uuid">
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1;"><label>Name:</label> <input type="text" id="edit-mb-name" class="b-input"></div>
+          <div style="flex: 1;"><label>Type:</label> <select id="edit-mb-type" class="b-select" style="margin-top: 5px;"><option value="exploration">Exploration</option><option value="dayjob">Day Job</option><option value="lore">Lore (History)</option></select></div>
+        </div>
+        <label>Badge ID (e.g. exp_1 or dj_1):</label> <input type="text" id="edit-mb-badgeid" class="b-input">
+        <div style="display: flex; gap: 10px;"><div style="flex: 1;"><label>X:</label> <input type="number" id="edit-mb-x" class="b-input"></div><div style="flex: 1;"><label>Y:</label> <input type="number" id="edit-mb-y" class="b-input"></div><div style="flex: 1;"><label>Z:</label> <input type="number" id="edit-mb-z" class="b-input"></div></div>
+        <div style="display: flex; gap: 10px;"><div style="flex: 1;"><label>Width:</label> <input type="number" id="edit-mb-w" class="b-input" value="64"></div><div style="flex: 1;"><label>Depth:</label> <input type="number" id="edit-mb-d" class="b-input" value="64"></div><div style="flex: 1;"><label>Height:</label> <input type="number" id="edit-mb-h" class="b-input" value="64"></div></div>
+        <button id="btn-edit-mb-tp-me" class="b-btn btn-secondary" style="margin-top: 5px;">Set to My Position</button><button id="btn-save-mb-edit" class="b-btn btn-primary" style="margin-top: 10px;">Save & Close</button>
+      </div>
+    `);
+  }
+}
 
 export class DevToolsUIManager {
   constructor(engine, mainUIManager) {
@@ -42,9 +75,16 @@ export class DevToolsUIManager {
     this.neighborhoodManagerWindow = new NeighborhoodManagerWindow();
     this.arcadeManagerWindow = new ArcadeManagerWindow();
     this.arcadeEditWindow = new ArcadeEditWindow();
+    this.mapBadgeManagerWindow = new MapBadgeManagerWindow();
+    this.mapBadgeEditWindow = new MapBadgeEditWindow();
 
     this.devToolsWindow = new DevToolsWindow();
     this.builderToolsWindow = new BuilderToolsWindow();
+    this.builderToolsWindow.onClose = () => {
+      if (this.engine.editMode) {
+        this.engine.chat.commandHandler.processCommand('/editmode');
+      }
+    };
     this.losEditWindow = new LosEditWindow();
     this.objectLibraryWindow = new ObjectLibraryWindow();
     this.texturePaletteWindow = new TexturePaletteWindow();
@@ -62,6 +102,7 @@ export class DevToolsUIManager {
     this.worldUI.setupNeighborhoodManager();
     this.spawnerUI.setupMobPacks();
     this.npcUI.setupEntityGroupManager();
+    this.setupMapBadgeManager();
     this.npcUI.setupNpcTemplates();
     this.npcUI.setupEntityTypes();
 
@@ -170,6 +211,19 @@ export class DevToolsUIManager {
     render();
   }
 
+  populateZoneConfig() {
+    const idInput = document.getElementById('zm-edit-id');
+    if (!idInput || !idInput.value) return;
+    const zId = idInput.value;
+    const conf = (this.engine.zonesConfig && this.engine.zonesConfig[zId]) || {};
+
+    document.getElementById('zm-edit-title').innerText = `Editing: ${zId}`;
+    document.getElementById('zm-edit-name').value = conf.name || '';
+    document.getElementById('zm-edit-badge').value = conf.badgeId || '';
+    document.getElementById('zm-edit-pvp').value = conf.pvpMode || 'none';
+    document.getElementById('zm-edit-weather').value = conf.weatherLock || 'auto';
+  }
+
   // --- Facades for External / Network Calls ---
   renderNpcManager() { this.npcUI.renderNpcManager(); }
   renderNpcTemplates() { this.npcUI.renderNpcTemplates(); }
@@ -218,13 +272,134 @@ export class DevToolsUIManager {
       } else {
         this.npcManagerWindow.close();
       }
+    }, 'npc');
+    createBtn('btn-hud-dev', '/dev', 'Toggle Dev Tools', () => this.engine.chat.commandHandler.processCommand('/dev'), 'dev');
+    createBtn('btn-hud-edit', '/edit', 'Toggle Edit Mode', () => this.engine.chat.commandHandler.processCommand('/editmode'), 'editmode');
+  }
+
+  renderMapBadgeManager() {
+    const list = document.getElementById('map-badge-list');
+    if (!list) return;
+    list.innerHTML = '';
+    (this.engine.mapBadges || []).forEach(b => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 8px; border-radius: 4px; font-size: 0.8rem;';
+      row.innerHTML = `
+        <div style="flex: 1.5; font-weight: bold; color: #f1c40f;">${b.name}</div><div style="flex: 1; color: #aaa;">ID: ${b.badgeId}</div><div style="flex: 1.5; color: #aaa;">XYZ: ${Math.round(b.x)}, ${Math.round(b.y)}, ${Math.round(b.z || 0)}</div>
+        <button class="btn-edit-mb b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;">Edit</button><button class="btn-del-mb b-btn b-btn-danger" style="padding: 2px 8px; font-size: 0.7rem;">X</button>
+      `;
+      row.querySelector('.btn-edit-mb').onclick = () => {
+        document.getElementById('edit-mb-uuid').value = b.uuid; document.getElementById('edit-mb-name').value = b.name; document.getElementById('edit-mb-badgeid').value = b.badgeId;
+        document.getElementById('edit-mb-type').value = b.type || 'exploration';
+        document.getElementById('edit-mb-x').value = b.x; document.getElementById('edit-mb-y').value = b.y; document.getElementById('edit-mb-z').value = b.z || 0;
+        document.getElementById('edit-mb-w').value = b.width || 64; document.getElementById('edit-mb-d').value = b.depth || 64; document.getElementById('edit-mb-h').value = b.height || 64;
+        this.mapBadgeEditWindow.open();
+      };
+      row.querySelector('.btn-del-mb').onclick = () => {
+        if(confirm('Delete Map Badge Area?')) {
+          if (this.engine.network && this.engine.network.sendDeleteMapBadge) {
+            this.engine.network.sendDeleteMapBadge(b.uuid);
+          } else {
+            this.engine.network.socket.emit('delete_map_badge', b.uuid);
+          }
+        }
+      };
+      list.appendChild(row);
     });
-    createBtn('btn-hud-dev', '/dev', 'Toggle Dev Tools', () => this.engine.chat.commandHandler.processCommand('/dev'));
-    createBtn('btn-hud-edit', '/edit', 'Toggle Edit Mode', () => this.engine.chat.commandHandler.processCommand('/editmode'));
+  }
+
+  setupMapBadgeManager() {
+    const btnCreate = document.getElementById('btn-create-map-badge');
+    if (btnCreate) {
+      btnCreate.onclick = () => {
+        const payload = {
+          name: 'New Area', badgeId: 'exp_?', type: 'exploration',
+          x: this.engine.player.x, y: this.engine.player.y, z: this.engine.player.z || 0,
+          width: 128, depth: 128, height: 128
+        };
+        if (this.engine.network && this.engine.network.sendCreateMapBadge) {
+          this.engine.network.sendCreateMapBadge(payload);
+        } else {
+          this.engine.network.socket.emit('create_map_badge', payload);
+        }
+      };
+    }
+
+    const emitMbUpdate = () => {
+      const uuid = document.getElementById('edit-mb-uuid').value; if (!uuid) return;
+      const updates = {
+          name: document.getElementById('edit-mb-name').value, badgeId: document.getElementById('edit-mb-badgeid').value,
+          type: document.getElementById('edit-mb-type').value,
+          x: parseFloat(document.getElementById('edit-mb-x').value), y: parseFloat(document.getElementById('edit-mb-y').value), z: parseFloat(document.getElementById('edit-mb-z').value),
+          width: parseFloat(document.getElementById('edit-mb-w').value), depth: parseFloat(document.getElementById('edit-mb-d').value), height: parseFloat(document.getElementById('edit-mb-h').value)
+      };
+      if (this.engine.network && this.engine.network.sendEditMapBadge) {
+        this.engine.network.sendEditMapBadge({ uuid, updates });
+      } else {
+        this.engine.network.socket.emit('edit_map_badge', { uuid, updates });
+      }
+    };
+
+    ['edit-mb-name', 'edit-mb-badgeid', 'edit-mb-x', 'edit-mb-y', 'edit-mb-z', 'edit-mb-w', 'edit-mb-d', 'edit-mb-h'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.addEventListener('input', emitMbUpdate);
+    });
+    const typeEl = document.getElementById('edit-mb-type'); if (typeEl) typeEl.addEventListener('change', emitMbUpdate);
+
+    const btnTpMe = document.getElementById('btn-edit-mb-tp-me');
+    if (btnTpMe) btnTpMe.onclick = () => {
+        document.getElementById('edit-mb-x').value = Math.round(this.engine.player.x); document.getElementById('edit-mb-y').value = Math.round(this.engine.player.y); document.getElementById('edit-mb-z').value = Math.round(this.engine.player.z || 0); emitMbUpdate();
+    };
+    const btnSave = document.getElementById('btn-save-mb-edit');
+    if (btnSave) btnSave.onclick = () => this.mapBadgeEditWindow.close();
+    const btnRefresh = document.getElementById('btn-refresh-map-badges');
+    if (btnRefresh) btnRefresh.onclick = () => {
+      if (this.engine.network && this.engine.network.sendRequestMapBadges) {
+        this.engine.network.sendRequestMapBadges();
+      } else {
+        this.engine.network.socket.emit('request_map_badges');
+      }
+    };
   }
 
   setupDevTools() {
     const eng = this.engine;
+
+    let btnMapBadgesToggle = document.getElementById('btn-dev-map-badges');
+    if (!btnMapBadgesToggle) {
+       const tabPanels = this.devToolsWindow.element.querySelectorAll('.dev-tab-panel');
+       const generalTab = document.getElementById('dev-tab-general') || tabPanels[0];
+       if (generalTab) {
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'display: flex; gap: 5px; margin-top: 5px;';
+          wrapper.innerHTML = `
+            <button id="btn-dev-map-badges" class="b-btn btn-secondary" style="flex: 1;">Show Badge Areas</button>
+          `;
+          generalTab.appendChild(wrapper);
+       }
+    } else {
+       btnMapBadgesToggle.innerText = 'Show Badge Areas';
+    }
+
+    let btnBadgeManager = document.getElementById('btn-dev-map-badge-manager');
+    if (!btnBadgeManager) {
+        const btnZoneManager = document.getElementById('btn-dev-zone-manager');
+        if (btnZoneManager && btnZoneManager.parentNode) {
+            const btn = document.createElement('button');
+            btn.id = 'btn-dev-map-badge-manager';
+            btn.className = 'b-btn btn-secondary';
+            btn.style.cssText = `width: 100%; margin-top: 5px; border-color: ${UI_COLORS.warning}; color: ${UI_COLORS.warning};`;
+            btn.innerText = 'Badge Manager';
+            btnZoneManager.parentNode.insertBefore(btn, btnZoneManager.nextSibling);
+        }
+    }
+
+    const finalBtnManager = document.getElementById('btn-dev-map-badge-manager');
+    if (finalBtnManager) {
+        finalBtnManager.innerText = 'Badge Manager';
+        finalBtnManager.onclick = () => {
+            if (this.mapBadgeManagerWindow.element.style.display === 'none') { this.mapBadgeManagerWindow.open(); this.renderMapBadgeManager(); } else { this.mapBadgeManagerWindow.close(); }
+        };
+    }
 
     const tabBtns = this.devToolsWindow.element.querySelectorAll('.dev-tab-btn');
     const tabPanels = this.devToolsWindow.element.querySelectorAll('.dev-tab-panel');
@@ -272,6 +447,8 @@ export class DevToolsUIManager {
     setupDevBtn('btn-dev-spawners', 'showSpawners', UI_COLORS.success);
     setupDevBtn('btn-dev-arcade-hover', 'showArcadeHover', UI_COLORS.primary);
     setupDevBtn('btn-dev-neighborhoods', 'showNeighborhoods', UI_COLORS.pink);
+    setupDevBtn('btn-dev-map-badges', 'showMapBadges', UI_COLORS.warning);
+    setupDevBtn('btn-dev-ui-pos', 'showUiPos', UI_COLORS.pink);
 
     const editBtn = document.getElementById('btn-dev-los-edit');
     if (editBtn) {
@@ -536,10 +713,33 @@ export class DevToolsUIManager {
         if (this.zoneManagerWindow.element.style.display === 'none') {
           this.zoneManagerWindow.open();
           this.renderZoneManager();
+          this.engine.network.socket.emit('request_zones_config');
         } else {
           this.zoneManagerWindow.close();
         }
       };
+
+      const btnSaveZone = document.getElementById('btn-zm-save');
+      if (btnSaveZone) {
+        btnSaveZone.onclick = () => {
+          const zId = document.getElementById('zm-edit-id').value;
+          if (!zId) return;
+          const config = { name: document.getElementById('zm-edit-name').value, badgeId: document.getElementById('zm-edit-badge').value, pvpMode: document.getElementById('zm-edit-pvp').value, weatherLock: document.getElementById('zm-edit-weather').value };
+          this.engine.network.socket.emit('save_zone_config', { zoneId: zId, config });
+          this.engine.ui.showSystemMessage(`Saved configuration for zone: ${zId}`);
+        };
+      }
+
+      const zmList = document.getElementById('zone-manager-list');
+      if (zmList) {
+        zmList.addEventListener('click', (e) => {
+          const btn = e.target.closest('button');
+          if (btn && btn.innerText) {
+            const zName = btn.innerText.replace('Join', '').replace('Delete', '').trim();
+            if (zName) { document.getElementById('zm-edit-id').value = zName; this.populateZoneConfig(); }
+          }
+        });
+      }
     }
 
     const btnNeighborhoodManager = document.getElementById('btn-dev-neighborhood-manager');
@@ -805,6 +1005,12 @@ export class DevToolsUIManager {
       const color = p.online ? (isSelf ? UI_COLORS.success : UI_COLORS.primary) : '#7f8c8d';
       const statusIcon = p.online ? '🟢' : '⚫';
 
+      let displayZone = p.zone || 'untitled';
+      if (displayZone.startsWith('apt_')) {
+        const aptName = displayZone.substring(4);
+        displayZone = aptName.charAt(0).toUpperCase() + aptName.slice(1) + "'s Apartment";
+      }
+
       const row = document.createElement('div');
       row.style.cssText = PLAYER_ROW_STYLE;
 
@@ -814,7 +1020,7 @@ export class DevToolsUIManager {
               ${p.name} <span style="color: #aaa; font-size: 0.75rem;">(Lv.${p.level || 1})</span>
           </div>
           <div style="flex: 1.5; display: flex; flex-direction: column; justify-content: center; gap: 2px;">
-              <span style="color: ${UI_COLORS.warning}; font-size: 0.75rem;">Zone: ${p.zone || 'untitled'}</span>
+              <span style="color: ${UI_COLORS.warning}; font-size: 0.75rem;">Zone: ${displayZone}</span>
               <span style="color: #aaa; font-size: 0.7rem;">X:${Math.round(p.x)} Y:${Math.round(p.y)} Z:${Math.round(p.z || 0)}</span>
           </div>
           <div style="flex: 0.8;">${p.alignment || 'N/A'}</div>

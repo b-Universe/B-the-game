@@ -393,6 +393,14 @@ export class PowerEditorUIManager {
            <label style="font-size: 0.75rem; color: var(--accent);">Delay (s)</label>
            <input type="number" class="b-input sprite-event-delay" data-index="${index}" min="0" step="0.1" value="${event.delay || 0}">
         </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+           <label style="font-size: 0.75rem; color: var(--accent);">Part. Count</label>
+           <input type="number" class="b-input sprite-event-count" data-index="${index}" min="1" max="100" value="${event.particleCount !== undefined ? event.particleCount : 1}">
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+           <label style="font-size: 0.75rem; color: var(--accent);">Scatter Rad.</label>
+           <input type="number" class="b-input sprite-event-scatter" data-index="${index}" min="0" max="200" value="${event.particleScatter !== undefined ? event.particleScatter : 0}">
+        </div>
         <button class="b-btn b-btn-danger btn-remove-sprite-event" data-index="${index}" style="padding: 0 10px; height: 35px; margin-top: auto;">X</button>
       `;
       listEl.appendChild(row);
@@ -425,6 +433,16 @@ export class PowerEditorUIManager {
     listEl.querySelectorAll('.sprite-event-delay').forEach(el => {
       el.addEventListener('input', (e) => {
         dataArray[e.target.dataset.index].delay = parseFloat(e.target.value) || 0;
+      });
+    });
+    listEl.querySelectorAll('.sprite-event-count').forEach(el => {
+      el.addEventListener('input', (e) => {
+        dataArray[e.target.dataset.index].particleCount = parseInt(e.target.value) || 1;
+      });
+    });
+    listEl.querySelectorAll('.sprite-event-scatter').forEach(el => {
+      el.addEventListener('input', (e) => {
+        dataArray[e.target.dataset.index].particleScatter = parseInt(e.target.value) || 0;
       });
     });
     listEl.querySelectorAll('.btn-move-up-sprite').forEach(el => {
@@ -536,6 +554,17 @@ export class PowerEditorUIManager {
     const critChanceInput = document.getElementById('pe-stat-crit-chance');
     const critMultInput = document.getElementById('pe-stat-crit-mult');
 
+    // Dynamically inject the Dash Forward toggle into the UI if it doesn't exist
+    if (rangeInput && !document.getElementById('pe-stat-dash-forward')) {
+        const container = rangeInput.closest('.pe-input-row').parentNode;
+        const div = document.createElement('div');
+        div.className = 'pe-input-row';
+        div.style.flex = '1';
+        div.style.margin = '0';
+        div.innerHTML = `<label style="font-size: 0.75rem;">Dash Fwd</label><input type="checkbox" id="pe-stat-dash-forward" class="b-input" style="width: auto; height: 24px; cursor: pointer;">`;
+        container.appendChild(div);
+    }
+
     if (tierInput) tierInput.value = stats.tier !== undefined ? stats.tier : 1;
     if (rechInput) rechInput.value = stats.rechargeRate !== undefined ? stats.rechargeRate : 1.0;
     if (activInput) activInput.value = stats.activationTime !== undefined ? stats.activationTime : 0.5;
@@ -551,6 +580,9 @@ export class PowerEditorUIManager {
     if (accuracyInput) accuracyInput.value = stats.accuracy !== undefined ? stats.accuracy : 85;
     if (critChanceInput) critChanceInput.value = stats.critChance !== undefined ? stats.critChance : 5;
     if (critMultInput) critMultInput.value = stats.critMult !== undefined ? stats.critMult : 1.5;
+
+    const dashForwardInput = document.getElementById('pe-stat-dash-forward');
+    if (dashForwardInput) dashForwardInput.checked = stats.dashForward || false;
 
     this.currentEffects = power.effects ? JSON.parse(JSON.stringify(power.effects)) : [];
     this.renderEffectsList();
@@ -651,6 +683,7 @@ export class PowerEditorUIManager {
     const critMVal = parseFloat(document.getElementById('pe-stat-crit-mult').value);
     const projSVal = parseFloat(document.getElementById('pe-proj-speed').value);
     const projAVal = parseFloat(document.getElementById('pe-proj-arc').value);
+    const dashForwardVal = document.getElementById('pe-stat-dash-forward') ? document.getElementById('pe-stat-dash-forward').checked : false;
 
     const payload = {
       id: document.getElementById('pe-id').value,
@@ -673,7 +706,8 @@ export class PowerEditorUIManager {
         aoeRadius: (type !== 'Targeted AoE' && type !== 'PBAoE') ? 0 : (isNaN(aoeVal) ? 0 : aoeVal),
         coneRadius: (type !== 'Click' && type !== 'Targeted') ? 0 : (isNaN(coneVal) ? 45 : coneVal),
         critChance: isNaN(critCVal) ? 5 : critCVal,
-        critMult: isNaN(critMVal) ? 1.5 : critMVal
+        critMult: isNaN(critMVal) ? 1.5 : critMVal,
+        dashForward: dashForwardVal
       },
       effects: this.currentEffects,
       visuals: {

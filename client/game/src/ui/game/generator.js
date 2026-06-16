@@ -50,6 +50,62 @@ export class TerrainGenerator {
 
   generateChunk(cx, cy, chunkSize, voxels = new Map()) {
     const currentZone = (this.engine.currentZone || 'untitled').toLowerCase();
+
+    if (currentZone.startsWith('apt_')) {
+      const zc = this.engine.zonesConfig && this.engine.zonesConfig[currentZone] ? this.engine.zonesConfig[currentZone] : {};
+      const baseStyle = zc.baseStyle || {};
+      const chunkStyles = zc.chunkStyles || {};
+      const ownedChunks = zc.ownedChunks || ['1_1'];
+
+      const isOwnedBlock = (wx, wy) => {
+         const chX = Math.floor(wx / 32);
+         const chY = Math.floor(wy / 32);
+         return ownedChunks.includes(`${chX}_${chY}`);
+      };
+
+      for (let x = 0; x < chunkSize; x++) {
+        for (let y = 0; y < chunkSize; y++) {
+          const worldX = (cx * chunkSize) + x;
+          const worldY = (cy * chunkSize) + y;
+
+          if (isOwnedBlock(worldX, worldY)) {
+            const isBorder = !isOwnedBlock(worldX - 1, worldY) ||
+                             !isOwnedBlock(worldX + 1, worldY) ||
+                             !isOwnedBlock(worldX, worldY - 1) ||
+                             !isOwnedBlock(worldX, worldY + 1);
+            const maxZ = isBorder ? 3 : 0;
+
+            const aptChunkX = Math.floor(worldX / 32);
+            const aptChunkY = Math.floor(worldY / 32);
+            const cStyle = chunkStyles[`${aptChunkX}_${aptChunkY}`] || {};
+            const floorTex = cStyle.floorTex || baseStyle.floorTex || 'concrete';
+            const wallTex = cStyle.wallTex || baseStyle.wallTex || 'stone-bricks1';
+
+            for (let vz = -24; vz <= maxZ; vz++) {
+              const voxelKey = `${worldX}_${worldY}_${vz}`;
+              if (!voxels.has(voxelKey)) {
+                let tex = floorTex;
+                let hex = '#ffffff';
+
+                if (isBorder && vz > 0) {
+                  tex = wallTex;
+                  hex = '#aaaaaa';
+                } else {
+                  const shade = Math.floor(200 - Math.abs(vz) * 6);
+                  hex = '#' + ((1 << 24) + (shade << 16) + (shade << 8) + shade).toString(16).slice(1);
+                }
+                voxels.set(voxelKey, {
+                  tex: tex,
+                  color: hex,
+                  shape: 'cube'
+                });
+              }
+            }
+          }
+        }
+      }
+      return voxels;
+    }
     if (currentZone === 'atlas-city') {
       for (let x = 0; x < chunkSize; x++) {
         for (let y = 0; y < chunkSize; y++) {
