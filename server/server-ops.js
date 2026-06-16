@@ -5,7 +5,7 @@ const state = require('./state.js');
 
 function createServerOps(io, deps) {
   const {
-    CHUNKS_DIR, ZONES_REGISTRY_FILE, DATA_DIR, CHAR_DATA_DIR, PLAYER_DATA_DIR, NPCS_INDEX, SPAWNERS_INDEX, PERMISSIONS_INDEX, ENTITY_GROUPS_FILE,
+    CHUNKS_DIR, ZONES_REGISTRY_FILE, DATA_DIR, CHAR_DATA_DIR, PLAYER_DATA_DIR, NPCS_INDEX, SPAWNERS_INDEX, MAP_BADGES_INDEX, ZONES_CONFIG_FILE, PERMISSIONS_INDEX, ENTITY_GROUPS_FILE,
     loadPowerRegistry, loadServerPowersets
   } = deps;
   const { mapChunks, npcsCatalog, spawnersCatalog, permissionsCatalog, activePlayers } = state;
@@ -70,6 +70,8 @@ function createServerOps(io, deps) {
     loadChunksFromDisk();
     try { const d = fs.readFileSync(NPCS_INDEX, 'utf8').trim(); if (d) { const p = JSON.parse(d); npcsCatalog.length = 0; p.forEach(n => npcsCatalog.push(n)); } } catch (e) {}
     try { const d = fs.readFileSync(SPAWNERS_INDEX, 'utf8').trim(); if (d) { const p = JSON.parse(d); spawnersCatalog.length = 0; p.forEach(s => spawnersCatalog.push(s)); } } catch (e) {}
+    try { const d = fs.readFileSync(MAP_BADGES_INDEX, 'utf8').trim(); if (d) { const p = JSON.parse(d); state.mapBadgesCatalog.length = 0; p.forEach(b => state.mapBadgesCatalog.push(b)); } } catch (e) {}
+    try { const d = fs.readFileSync(ZONES_CONFIG_FILE, 'utf8').trim(); if (d) { const p = JSON.parse(d); for (const k in state.zonesConfig) delete state.zonesConfig[k]; Object.assign(state.zonesConfig, p); } } catch (e) {}
     try { const d = fs.readFileSync(PERMISSIONS_INDEX, 'utf8').trim(); if (d) { const p = JSON.parse(d); for (const k in permissionsCatalog) delete permissionsCatalog[k]; Object.assign(permissionsCatalog, p); } } catch (e) {}
     try { const d = fs.readFileSync(ENTITY_GROUPS_FILE, 'utf8').trim(); if (d) { for (const k in state.entityGroups) delete state.entityGroups[k]; Object.assign(state.entityGroups, JSON.parse(d)); } } catch (e) {}
     loadPowerRegistry();
@@ -81,7 +83,57 @@ function createServerOps(io, deps) {
     logSystem('Initiating emergency save for all active players...', 'SYSTEM');
     for (const socketId in activePlayers) {
       const player = activePlayers[socketId];
-      try { const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`); if (fs.existsSync(charFile)) { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); if (player.x !== undefined && player.y !== undefined) { charObj.position = { x: player.x, y: player.y, z: player.z }; } if (!player.zone) throw new Error(`CRITICAL: Player ${player.name} missing zone during save!`); charObj.zone = player.zone; if (player.hp !== undefined && charObj.stats) { charObj.stats.hp = player.hp; } if (player.synthEnergy !== undefined && charObj.stats) charObj.stats.synthEnergy = player.synthEnergy; if (player.level !== undefined) charObj.level = player.level; if (player.experience !== undefined) charObj.experience = player.experience; if (player.unspentPowerPicks !== undefined) charObj.unspentPowerPicks = player.unspentPowerPicks; if (player.unspentPowersetPicks !== undefined) charObj.unspentPowersetPicks = player.unspentPowersetPicks; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); logSystem(`Saved character: ${player.name}`, 'INFO'); } } catch (err) { logSystem(err.message, 'ERROR'); }
+      try {
+        const charFile = path.join(CHAR_DATA_DIR, `${player.name.toLowerCase()}.json`);
+        if (fs.existsSync(charFile)) {
+          const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8'));
+          if (player.x !== undefined && player.y !== undefined && !isNaN(player.x) && !isNaN(player.y)) { charObj.position = { x: player.x, y: player.y, z: player.z }; }
+          if (!player.zone) throw new Error(`CRITICAL: Player ${player.name} missing zone during save!`);
+          charObj.zone = player.zone;
+          if (charObj.stats) {
+            if (player.hp !== undefined && player.hp !== null && !isNaN(player.hp)) charObj.stats.hp = player.hp;
+            if (player.energy !== undefined && player.energy !== null && !isNaN(player.energy)) charObj.stats.energy = player.energy;
+            if (player.synthEnergy !== undefined && player.synthEnergy !== null && !isNaN(player.synthEnergy)) charObj.stats.synthEnergy = player.synthEnergy;
+            if (player.stats && player.stats.pvpKills) charObj.stats.pvpKills = player.stats.pvpKills;
+            if (player.stats && player.stats.pveKills) charObj.stats.pveKills = player.stats.pveKills;
+          }
+          if (player.level !== undefined && !isNaN(player.level)) charObj.level = player.level;
+          if (player.experience !== undefined && !isNaN(player.experience)) charObj.experience = player.experience;
+          if (player.unspentPowerPicks !== undefined) charObj.unspentPowerPicks = player.unspentPowerPicks;
+          if (player.unspentPowersetPicks !== undefined) charObj.unspentPowersetPicks = player.unspentPowersetPicks;
+          if (player.badges) charObj.badges = player.badges;
+          charObj.lastOnline = Date.now();
+          if (player.dayJobProgress) charObj.dayJobProgress = player.dayJobProgress;
+          if (player.unseenBadges) charObj.unseenBadges = player.unseenBadges;
+          if (player.lastDiscordInvite) charObj.lastDiscordInvite = player.lastDiscordInvite;
+          if (player.preAptZone) charObj.preAptZone = player.preAptZone;
+          if (player.preAptX !== undefined) charObj.preAptX = player.preAptX;
+          if (player.preAptY !== undefined) charObj.preAptY = player.preAptY;
+          if (player.preAptZ !== undefined) charObj.preAptZ = player.preAptZ;
+          if (charObj.currency !== undefined) delete charObj.currency;
+          fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2));
+
+          if (player.accountUuid) {
+             const accFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`);
+             if (fs.existsSync(accFile)) {
+                 try {
+                     const accData = JSON.parse(fs.readFileSync(accFile, 'utf8'));
+                     let tLevel = 0;
+                     if (accData.characters) {
+                         accData.characters.forEach(c => {
+                             const cName = typeof c === 'object' ? c.name : c;
+                             const cF = path.join(CHAR_DATA_DIR, `${cName.toLowerCase()}.json`);
+                             if (fs.existsSync(cF)) { try { const co = JSON.parse(fs.readFileSync(cF, 'utf8')); tLevel += (co.level || 1); } catch(e){} }
+                         });
+                     }
+                     accData.totalLevel = tLevel;
+                     fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
+                 } catch(e) {}
+             }
+          }
+          logSystem(`Saved character: ${player.name}`, 'INFO');
+        }
+      } catch (err) { logSystem(err.message, 'ERROR'); }
     }
     let zoneData = { zones: ['atlas-city'] };
     if (fs.existsSync(ZONES_REGISTRY_FILE)) { try { zoneData = JSON.parse(fs.readFileSync(ZONES_REGISTRY_FILE, 'utf8')); } catch(e){} }
