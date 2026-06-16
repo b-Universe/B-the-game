@@ -29,7 +29,7 @@ export class HudAltUIManager {
             <button class="btn-secondary alt-menu-btn" id="alt-btn-player-search" style="text-align: left; padding: 6px 10px;">Player Search</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-fullscreen-map" style="text-align: left; padding: 6px 10px;">Fullscreen Map</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-inventory" style="text-align: left; padding: 6px 10px;">Inventory</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-bank" style="text-align: left; padding: 6px 10px; color: #2ecc71; border-color: #2ecc71;">Account Vault</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-bank" style="text-align: left; padding: 6px 10px;">Account Vault</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-badges" style="text-align: left; padding: 6px 10px;">Badges & Honors</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-editmode" style="text-align: left; padding: 6px 10px;">Builder Mode (/edit)</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-dev-tools" style="text-align: left; padding: 6px 10px; display: none; border-color: #1abc9c; color: #1abc9c;">Developer Tools</button>

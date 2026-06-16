@@ -22,8 +22,8 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
       }
     } else {
       if (now - accData.lastInterestUpdate >= msPerDay) {
-         accData.lastInterestUpdate = now;
-         changed = true;
+        accData.lastInterestUpdate = now;
+        changed = true;
       }
     }
     return changed;
@@ -40,7 +40,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         if (!p.unseenBadges.includes(zConf.badgeId)) p.unseenBadges.push(zConf.badgeId);
         const safeName = p.name.replace(/[^a-zA-Z0-9 _-]/g, '').trim().toLowerCase();
         const cFile = path.join(CHAR_DATA_DIR, `${safeName}.json`);
-        if (fs.existsSync(cFile)) { try { const cObj = JSON.parse(fs.readFileSync(cFile, 'utf8')); cObj.badges = p.badges; cObj.unseenBadges = p.unseenBadges; fs.writeFileSync(cFile, JSON.stringify(cObj, null, 2)); } catch(e){} }
+        if (fs.existsSync(cFile)) { try { const cObj = JSON.parse(fs.readFileSync(cFile, 'utf8')); cObj.badges = p.badges; cObj.unseenBadges = p.unseenBadges; fs.writeFileSync(cFile, JSON.stringify(cObj, null, 2)); } catch (e) { } }
         io.to(sId).emit('badge_obtained', { id: zConf.badgeId, name: zConf.name || z });
       }
     }
@@ -86,60 +86,60 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
       if (fs.existsSync(charFile)) {
         const rawData = fs.readFileSync(charFile, 'utf8');
         let freshCharData = { name: player.name, stats: { hp: 1000, maxHp: 1000, energy: 1000, maxEnergy: 1000, synthEnergy: 1000 }, powers: [], powersets: [], unspentPowerPicks: 0, unspentPowersetPicks: 0, badges: [], unseenBadges: [], dayJobProgress: {} };
-        if (rawData && rawData.trim() !== '') { try { freshCharData = JSON.parse(rawData); } catch(e) { logSystem(`[Auto-Repair] Corrupted join_game data for ${player.name}, resetting to safe defaults.`, 'WARN'); } }
+        if (rawData && rawData.trim() !== '') { try { freshCharData = JSON.parse(rawData); } catch (e) { logSystem(`[Auto-Repair] Corrupted join_game data for ${player.name}, resetting to safe defaults.`, 'WARN'); } }
 
-          player.hp = freshCharData.stats?.hp !== undefined ? freshCharData.stats.hp : 1000; player.maxHp = freshCharData.stats?.maxHp || 1000; player.energy = freshCharData.stats?.energy !== undefined ? freshCharData.stats.energy : 1000; player.maxEnergy = freshCharData.stats?.maxEnergy || 1000; player.powers = freshCharData.powers || [];
-          player.experience = freshCharData.experience || 0;
-          player.unspentPowerPicks = freshCharData.unspentPowerPicks || 0;
-          player.unspentPowersetPicks = freshCharData.unspentPowersetPicks || 0;
-          player.badges = freshCharData.badges || [];
-          player.unseenBadges = freshCharData.unseenBadges || [];
-          player.dayJobProgress = freshCharData.dayJobProgress || {};
-          player.lastDiscordInvite = freshCharData.lastDiscordInvite || 0;
-          player.preAptZone = freshCharData.preAptZone;
-          player.preAptX = freshCharData.preAptX;
-          player.preAptY = freshCharData.preAptY;
-          player.preAptZ = freshCharData.preAptZ;
-          if (!player.stats) player.stats = {};
-          player.stats.pvpKills = freshCharData.stats?.pvpKills || 0; player.stats.pveKills = freshCharData.stats?.pveKills || 0;
+        player.hp = freshCharData.stats?.hp !== undefined ? freshCharData.stats.hp : 1000; player.maxHp = freshCharData.stats?.maxHp || 1000; player.energy = freshCharData.stats?.energy !== undefined ? freshCharData.stats.energy : 1000; player.maxEnergy = freshCharData.stats?.maxEnergy || 1000; player.powers = freshCharData.powers || [];
+        player.experience = freshCharData.experience || 0;
+        player.unspentPowerPicks = freshCharData.unspentPowerPicks || 0;
+        player.unspentPowersetPicks = freshCharData.unspentPowersetPicks || 0;
+        player.badges = freshCharData.badges || [];
+        player.unseenBadges = freshCharData.unseenBadges || [];
+        player.dayJobProgress = freshCharData.dayJobProgress || {};
+        player.lastDiscordInvite = freshCharData.lastDiscordInvite || 0;
+        player.preAptZone = freshCharData.preAptZone;
+        player.preAptX = freshCharData.preAptX;
+        player.preAptY = freshCharData.preAptY;
+        player.preAptZ = freshCharData.preAptZ;
+        if (!player.stats) player.stats = {};
+        player.stats.pvpKills = freshCharData.stats?.pvpKills || 0; player.stats.pveKills = freshCharData.stats?.pveKills || 0;
 
-          const now = Date.now();
-          const lastOnline = freshCharData.lastOnline || now;
-          const offlineTimeMs = now - lastOnline;
-          let earnedCurrency = 0;
-          let earnedBadge = null;
-          if (offlineTimeMs > 60000) {
-            for (const badge of mapBadgesCatalog) {
-              if (badge.type === 'dayjob' && (badge.zone || 'untitled') === player.zone) {
-                const w2 = (badge.width || 32) / 2; const d2 = (badge.depth || 32) / 2; const h2 = (badge.height || 32) / 2;
-                if (Math.abs(player.x - badge.x) <= w2 && Math.abs(player.y - badge.y) <= d2 && Math.abs((player.z || 0) - (badge.z || 0)) <= h2) {
-                  player.dayJobProgress[badge.badgeId] = (player.dayJobProgress[badge.badgeId] || 0) + offlineTimeMs;
-                  const offlineHours = offlineTimeMs / (1000 * 60 * 60);
-                  earnedCurrency += Math.floor(offlineHours * 100);
-                  if (player.dayJobProgress[badge.badgeId] >= (1000 * 60 * 60 * 21) && !player.badges.includes(badge.badgeId)) {
-                    player.badges.push(badge.badgeId);
-                    player.unseenBadges.push(badge.badgeId);
-                    earnedBadge = badge;
-                  }
+        const now = Date.now();
+        const lastOnline = freshCharData.lastOnline || now;
+        const offlineTimeMs = now - lastOnline;
+        let earnedCurrency = 0;
+        let earnedBadge = null;
+        if (offlineTimeMs > 60000) {
+          for (const badge of mapBadgesCatalog) {
+            if (badge.type === 'dayjob' && (badge.zone || 'untitled') === player.zone) {
+              const w2 = (badge.width || 32) / 2; const d2 = (badge.depth || 32) / 2; const h2 = (badge.height || 32) / 2;
+              if (Math.abs(player.x - badge.x) <= w2 && Math.abs(player.y - badge.y) <= d2 && Math.abs((player.z || 0) - (badge.z || 0)) <= h2) {
+                player.dayJobProgress[badge.badgeId] = (player.dayJobProgress[badge.badgeId] || 0) + offlineTimeMs;
+                const offlineHours = offlineTimeMs / (1000 * 60 * 60);
+                earnedCurrency += Math.floor(offlineHours * 100);
+                if (player.dayJobProgress[badge.badgeId] >= (1000 * 60 * 60 * 21) && !player.badges.includes(badge.badgeId)) {
+                  player.badges.push(badge.badgeId);
+                  player.unseenBadges.push(badge.badgeId);
+                  earnedBadge = badge;
                 }
               }
             }
           }
-      if (earnedCurrency > 0) {
-         accountData.currency = (accountData.currency || 0) + earnedCurrency;
-         player.currency = accountData.currency;
-         if (player.accountUuid && fs.existsSync(path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`))) fs.writeFileSync(path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`), JSON.stringify(accountData, null, 2));
-      }
-          freshCharData.badges = player.badges;
-          freshCharData.unseenBadges = player.unseenBadges;
-          freshCharData.dayJobProgress = player.dayJobProgress;
-      if (freshCharData.currency !== undefined) delete freshCharData.currency;
-          fs.writeFileSync(charFile, JSON.stringify(freshCharData, null, 2));
-      freshCharData.currency = player.currency;
-          socket.emit('player_data_updated', freshCharData);
-          if (earnedCurrency > 0) { setTimeout(() => { socket.emit('system_dialog', `You earned ${earnedCurrency} currency from your Day Job while offline!`); socket.emit('currency_updated', { currency: freshCharData.currency }); }, 3000); }
-          if (earnedBadge) { setTimeout(() => { socket.emit('badge_obtained', { id: earnedBadge.badgeId, name: earnedBadge.name }); }, 4000); }
-          checkZoneBadge(player, player.zone, socket.id);
+        }
+        if (earnedCurrency > 0) {
+          accountData.currency = (accountData.currency || 0) + earnedCurrency;
+          player.currency = accountData.currency;
+          if (player.accountUuid && fs.existsSync(path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`))) fs.writeFileSync(path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`), JSON.stringify(accountData, null, 2));
+        }
+        freshCharData.badges = player.badges;
+        freshCharData.unseenBadges = player.unseenBadges;
+        freshCharData.dayJobProgress = player.dayJobProgress;
+        if (freshCharData.currency !== undefined) delete freshCharData.currency;
+        fs.writeFileSync(charFile, JSON.stringify(freshCharData, null, 2));
+        freshCharData.currency = player.currency;
+        socket.emit('player_data_updated', freshCharData);
+        if (earnedCurrency > 0) { setTimeout(() => { socket.emit('system_dialog', `You earned ${earnedCurrency} currency from your Day Job while offline!`); socket.emit('currency_updated', { currency: freshCharData.currency }); }, 3000); }
+        if (earnedBadge) { setTimeout(() => { socket.emit('badge_obtained', { id: earnedBadge.badgeId, name: earnedBadge.name }); }, 4000); }
+        checkZoneBadge(player, player.zone, socket.id);
       }
     } catch (e) { console.error(`Error loading fresh char data for ${player.name}:`, e.message); }
 
@@ -168,6 +168,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     socket.emit('current_spawners', spawnersCatalog.filter(s => s.zone === player.zone));
     socket.emit('current_map_badges', mapBadgesCatalog.filter(b => (b.zone || 'untitled') === player.zone));
     socket.emit('server_permissions', permissionsCatalog);
+    socket.emit('zones_config_data', state.zonesConfig || {});
     socket.emit('current_neighborhoods', state.neighborhoods);
     socket.emit('current_mob_packs', state.mobPacks);
     socket.emit('current_npc_templates', state.npcTemplates);
@@ -203,7 +204,22 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
       const isRespawning = player.state === 'death' && data.state === 'idle';
       if (!isRespawning && player.x !== undefined && player.y !== undefined) {
         const maxMapSize = 511 * 32;
-        if (data.x < 0 || data.x > maxMapSize || data.y < 0 || data.y > maxMapSize) { logSystem(`OUT OF BOUNDS HACK DETECTED: ${player.name}`, "WARN"); socket.emit('force_teleport', { x: Math.max(0, Math.min(player.x, maxMapSize)), y: Math.max(0, Math.min(player.y, maxMapSize)), z: player.z }); return; }
+        if (data.x < 0 || data.x > maxMapSize || data.y < 0 || data.y > maxMapSize) { 
+          logSystem(`OUT OF BOUNDS HACK DETECTED: ${player.name}`, "WARN"); 
+          socket.emit('force_teleport', { x: Math.max(0, Math.min(player.x, maxMapSize)), y: Math.max(0, Math.min(player.y, maxMapSize)), z: player.z }); 
+          return; 
+        }
+        if (player.zone && player.zone.startsWith('apt_')) {
+          const zc = state.zonesConfig && state.zonesConfig[player.zone] ? state.zonesConfig[player.zone] : {};
+          const ownedChunks = zc.ownedChunks || ['1_1'];
+          const pChunkX = Math.floor((data.x / 32) / 32);
+          const pChunkY = Math.floor((data.y / 32) / 32);
+          if (!ownedChunks.includes(`${pChunkX}_${pChunkY}`)) {
+            // Function as an invisible wall, preventing movement out of bounds
+            socket.emit('force_teleport', { x: player.x, y: player.y, z: player.z });
+            return;
+          }
+        }
       }
       if (data.state === 'dash' && player.state !== 'dash') { if (player.energy >= 50) player.energy -= 50; }
       if (data.state === 'jump' && player.state !== 'jump') { if (player.energy >= 25) player.energy -= 25; }
@@ -227,10 +243,10 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     });
     let isAptGuestBuilder = false;
     if (player.zone && player.zone.startsWith('apt_') && state.zonesConfig && state.zonesConfig[player.zone]) {
-        const zc = state.zonesConfig[player.zone];
-        if (zc.builders && zc.builders.includes(pName)) {
-            isAptGuestBuilder = true;
-        }
+      const zc = state.zonesConfig[player.zone];
+      if (zc.builders && zc.builders.includes(pName)) {
+        isAptGuestBuilder = true;
+      }
     }
     if (!hasPerm && !isAptGuestBuilder) { logSystem(`UNAUTHORIZED BULK MAP UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
     if (!Array.isArray(updates)) return;
@@ -254,7 +270,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
   socket.on('arcade_state_sync', (data) => { const matchId = playerMatches[socket.id]; if (matchId && arcadeMatches[matchId]) { const match = arcadeMatches[matchId]; const opponent = match.p1 === socket.id ? match.p2 : match.p1; io.to(opponent).emit('arcade_state_sync', data); } });
   socket.on('arcade_match_leave', () => { const matchId = playerMatches[socket.id]; if (matchId && arcadeMatches[matchId]) { const match = arcadeMatches[matchId]; const opponent = match.p1 === socket.id ? match.p2 : match.p1; io.to(opponent).emit('arcade_match_ended'); delete playerMatches[match.p1]; delete playerMatches[match.p2]; delete arcadeMatches[matchId]; } });
 
-  socket.on('request_full_map', () => { const player = activePlayers[socket.id]; if (!player || !player.zone) return; const zone = player.zone; const combinedData = {}; if (mapChunks[zone]) { for (let chunkId in mapChunks[zone]) { Object.assign(combinedData, mapChunks[zone][chunkId]); } } socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: zone }); });
+  socket.on('request_full_map', () => { const player = activePlayers[socket.id]; if (!player || !player.zone) return; const zone = player.zone; socket.emit('zones_config_data', state.zonesConfig || {}); const combinedData = {}; if (mapChunks[zone]) { for (let chunkId in mapChunks[zone]) { Object.assign(combinedData, mapChunks[zone][chunkId]); } } socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: zone }); });
   socket.on('save_chunk', ({ key, data }) => { if (typeof key !== 'string') return; const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, ''); const player = activePlayers[socket.id]; if (!player || !player.zone) return; const zone = player.zone; const zoneDir = path.join(CHUNKS_DIR, zone); if (!fs.existsSync(zoneDir)) fs.mkdirSync(zoneDir, { recursive: true }); const chunkFile = path.join(zoneDir, `${safeKey}.json`); try { const chunkObj = {}; data.forEach(entry => { chunkObj[entry[0]] = entry[1]; }); if (!mapChunks[zone]) mapChunks[zone] = {}; mapChunks[zone][safeKey] = chunkObj; fs.writeFileSync(chunkFile, JSON.stringify(chunkObj, null, 2)); } catch (e) { console.error(`Error saving chunk ${safeKey}:`, e.message); } });
 
   socket.on('request_bank_data', () => {
@@ -262,7 +278,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     if (!player || !player.accountUuid) return;
     const accFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`);
     if (fs.existsSync(accFile)) {
-      try { const accData = JSON.parse(fs.readFileSync(accFile, 'utf8')); if (applyBankInterest(accData)) fs.writeFileSync(accFile, JSON.stringify(accData, null, 2)); socket.emit('bank_data_updated', { items: accData.bankItems || [], currency: accData.bankCurrency || 0 }); } catch(e) {}
+      try { const accData = JSON.parse(fs.readFileSync(accFile, 'utf8')); if (applyBankInterest(accData)) fs.writeFileSync(accFile, JSON.stringify(accData, null, 2)); socket.emit('bank_data_updated', { items: accData.bankItems || [], currency: accData.bankCurrency || 0 }); } catch (e) { }
     }
   });
 
@@ -280,7 +296,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
           accData.currency -= amount; accData.bankCurrency = (accData.bankCurrency || 0) + amount; player.currency = accData.currency;
           fs.writeFileSync(accFile, JSON.stringify(accData, null, 2)); socket.emit('currency_updated', { currency: accData.currency }); socket.emit('bank_data_updated', { items: accData.bankItems || [], currency: accData.bankCurrency });
         }
-      } catch(e) {}
+      } catch (e) { }
     }
   });
 
@@ -298,7 +314,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
           accData.bankCurrency -= amount; accData.currency = (accData.currency || 0) + amount; player.currency = accData.currency;
           fs.writeFileSync(accFile, JSON.stringify(accData, null, 2)); socket.emit('currency_updated', { currency: accData.currency }); socket.emit('bank_data_updated', { items: accData.bankItems || [], currency: accData.bankCurrency });
         }
-      } catch(e) {}
+      } catch (e) { }
     }
   });
 
@@ -312,12 +328,12 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         applyBankInterest(accData);
         charObj.inventory = charObj.inventory || []; accData.bankItems = accData.bankItems || [];
         if (charObj.inventory[fromInvIdx]) {
-           const tempBank = accData.bankItems[toBankIdx];
-           accData.bankItems[toBankIdx] = charObj.inventory[fromInvIdx]; charObj.inventory[fromInvIdx] = tempBank || null;
-           fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
-           socket.emit('inventory_updated', { inventory: charObj.inventory }); socket.emit('bank_data_updated', { items: accData.bankItems, currency: accData.bankCurrency || 0 });
+          const tempBank = accData.bankItems[toBankIdx];
+          accData.bankItems[toBankIdx] = charObj.inventory[fromInvIdx]; charObj.inventory[fromInvIdx] = tempBank || null;
+          fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
+          socket.emit('inventory_updated', { inventory: charObj.inventory }); socket.emit('bank_data_updated', { items: accData.bankItems, currency: accData.bankCurrency || 0 });
         }
-      } catch(e) {}
+      } catch (e) { }
     }
   });
 
@@ -331,12 +347,12 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         applyBankInterest(accData);
         charObj.inventory = charObj.inventory || []; accData.bankItems = accData.bankItems || [];
         if (accData.bankItems[fromBankIdx]) {
-           const tempInv = charObj.inventory[toInvIdx];
-           charObj.inventory[toInvIdx] = accData.bankItems[fromBankIdx]; accData.bankItems[fromBankIdx] = tempInv || null;
-           fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
-           socket.emit('inventory_updated', { inventory: charObj.inventory }); socket.emit('bank_data_updated', { items: accData.bankItems, currency: accData.bankCurrency || 0 });
+          const tempInv = charObj.inventory[toInvIdx];
+          charObj.inventory[toInvIdx] = accData.bankItems[fromBankIdx]; accData.bankItems[fromBankIdx] = tempInv || null;
+          fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
+          socket.emit('inventory_updated', { inventory: charObj.inventory }); socket.emit('bank_data_updated', { items: accData.bankItems, currency: accData.bankCurrency || 0 });
         }
-      } catch(e) {}
+      } catch (e) { }
     }
   });
 
@@ -349,7 +365,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         applyBankInterest(accData);
         const temp = accData.bankItems[data.toIdx]; accData.bankItems[data.toIdx] = accData.bankItems[data.fromIdx]; accData.bankItems[data.fromIdx] = temp || null;
         fs.writeFileSync(accFile, JSON.stringify(accData, null, 2)); socket.emit('bank_data_updated', { items: accData.bankItems, currency: accData.bankCurrency || 0 });
-      } catch(e) {}
+      } catch (e) { }
     }
   });
 
@@ -362,10 +378,10 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     });
     let isAptGuestBuilder = false;
     if (player.zone && player.zone.startsWith('apt_') && state.zonesConfig && state.zonesConfig[player.zone]) {
-        const zc = state.zonesConfig[player.zone];
-        if (zc.builders && zc.builders.includes(pName)) {
-            isAptGuestBuilder = true;
-        }
+      const zc = state.zonesConfig[player.zone];
+      if (zc.builders && zc.builders.includes(pName)) {
+        isAptGuestBuilder = true;
+      }
     }
     if (!hasPerm && !isAptGuestBuilder) { logSystem(`UNAUTHORIZED BLOCK UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
     if (!player.zone) return; const zone = player.zone; const { worldX, worldY, worldZ, voxelData } = payload;
@@ -388,10 +404,10 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     });
     let isAptGuestBuilder = false;
     if (player.zone && player.zone.startsWith('apt_') && state.zonesConfig && state.zonesConfig[player.zone]) {
-        const zc = state.zonesConfig[player.zone];
-        if (zc.builders && zc.builders.includes(pName)) {
-            isAptGuestBuilder = true;
-        }
+      const zc = state.zonesConfig[player.zone];
+      if (zc.builders && zc.builders.includes(pName)) {
+        isAptGuestBuilder = true;
+      }
     }
     if (!hasPerm && !isAptGuestBuilder) { logSystem(`UNAUTHORIZED BLOCK UPDATE ATTEMPT: ${pName}`, "WARN"); return; }
     if (!player.zone || !Array.isArray(payloads) || payloads.length === 0) return;
@@ -421,7 +437,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
       try {
         const rawData = fs.readFileSync(charFile, 'utf8');
         let charObj = { name: data.charData.name, stats: { hp: 1000, energy: 1000, synthEnergy: 1000 } };
-        if (rawData && rawData.trim() !== '') { try { charObj = JSON.parse(rawData); } catch(e) { logSystem(`[Auto-Repair] Corrupted sync_character data for ${data.charData.name}.`, 'WARN'); } }
+        if (rawData && rawData.trim() !== '') { try { charObj = JSON.parse(rawData); } catch (e) { logSystem(`[Auto-Repair] Corrupted sync_character data for ${data.charData.name}.`, 'WARN'); } }
         if (data.position && !isNaN(data.position.x) && !isNaN(data.position.y)) charObj.position = data.position;
         if (data.charData.activePowers !== undefined) charObj.activePowers = data.charData.activePowers;
         if (data.charData.powerTray !== undefined) charObj.powerTray = data.charData.powerTray;
@@ -447,7 +463,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
           if (!player.unseenBadges.includes(badge.badgeId)) player.unseenBadges.push(badge.badgeId);
           io.to(socket.id).emit('badge_obtained', { id: badge.badgeId, name: badge.name }); logSystem(`BADGE: ${player.name} read lore plaque and earned ${badge.name}`);
           const safeName = player.name.replace(/[^a-zA-Z0-9 _-]/g, '').trim().toLowerCase(); const charFile = path.join(CHAR_DATA_DIR, `${safeName}.json`);
-          if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.badges = player.badges; charObj.unseenBadges = player.unseenBadges; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); } catch(e) {} }
+          if (fs.existsSync(charFile)) { try { const charObj = JSON.parse(fs.readFileSync(charFile, 'utf8')); charObj.badges = player.badges; charObj.unseenBadges = player.unseenBadges; fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2)); } catch (e) { } }
         } else { socket.emit('system_dialog', `You have already read this plaque.`); }
       } else { socket.emit('system_dialog', `You are too far away to read this.`); }
     }
@@ -479,6 +495,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     socket.emit('current_players', playersInZone); socket.emit('current_npcs', npcsCatalog.filter(n => n.zone === targetZone)); socket.emit('current_spawners', spawnersCatalog.filter(s => s.zone === targetZone)); const dronesInZone = {}; for (const id in activeDrones) { if (activeDrones[id].zone === targetZone) dronesInZone[id] = activeDrones[id]; } socket.emit('current_drones', dronesInZone);
     socket.emit('current_map_badges', mapBadgesCatalog.filter(b => (b.zone || 'untitled') === targetZone));
     socket.emit('current_neighborhoods', state.neighborhoods); socket.emit('current_mob_packs', state.mobPacks); socket.emit('current_npc_templates', state.npcTemplates); socket.emit('current_entity_types', state.entityTypes);
+    socket.emit('zones_config_data', state.zonesConfig || {});
     const combinedData = {}; if (mapChunks[targetZone]) { for (let chunkId in mapChunks[targetZone]) { Object.assign(combinedData, mapChunks[targetZone][chunkId]); } } socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: targetZone });
     checkZoneBadge(player, targetZone, socket.id);
   });
@@ -518,12 +535,12 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         const integrity = charData.integrity || 0; if (psDef.minIntegrity !== undefined && integrity < psDef.minIntegrity) { logSystem(`LEARN REJECTED: ${player.name} does not meet min integrity for ${psId}`, "WARN"); socket.emit('system_dialog', `You do not meet the minimum Integrity requirements for ${psDef.Name || psId}.`); return; } if (psDef.maxIntegrity !== undefined && integrity > psDef.maxIntegrity) { logSystem(`LEARN REJECTED: ${player.name} does not meet max integrity for ${psId}`, "WARN"); socket.emit('system_dialog', `You exceed the maximum Integrity limits for ${psDef.Name || psId}.`); return; }
         let hasPick = false; if (Array.isArray(charData.unspentPowersetPicks) && charData.unspentPowersetPicks.length > 0) { const psCat = (psDef.category || '').toLowerCase(); const pickIdx = charData.unspentPowersetPicks.findIndex(p => { if (p === 'any') return true; const allowedTypes = p.split('/'); return allowedTypes.some(t => psCat.includes(t) || t.includes(psCat) || psId.toLowerCase().includes(t)); }); if (pickIdx !== -1) { hasPick = true; charData.unspentPowersetPicks.splice(pickIdx, 1); } } else if (typeof charData.unspentPowersetPicks === 'number' && charData.unspentPowersetPicks > 0) { hasPick = true; charData.unspentPowersetPicks--; } // TODO: This should be handled by the ProgressionSystem
         if (hasPick) {
-           if (!charData.powersets) charData.powersets = [];
-           if (!charData.powersets.includes(psId)) charData.powersets.push(psId);
-           if (charData.currency !== undefined) delete charData.currency;
-           fs.writeFileSync(charFile, JSON.stringify(charData, null, 2));
-           charData.currency = player.currency;
-           io.to(socket.id).emit('player_data_updated', charData); logSystem(`POWERSET LEARNED: ${player.name} unlocked ${data.powerset}`);
+          if (!charData.powersets) charData.powersets = [];
+          if (!charData.powersets.includes(psId)) charData.powersets.push(psId);
+          if (charData.currency !== undefined) delete charData.currency;
+          fs.writeFileSync(charFile, JSON.stringify(charData, null, 2));
+          charData.currency = player.currency;
+          io.to(socket.id).emit('player_data_updated', charData); logSystem(`POWERSET LEARNED: ${player.name} unlocked ${data.powerset}`);
         } else { logSystem(`LEARN REJECTED: ${player.name} has no valid powerset picks for ${psId}`, "WARN"); }
       } catch (e) { }
     }
@@ -551,52 +568,52 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         if (fs.existsSync(charFile)) {
           const rawData = fs.readFileSync(charFile, 'utf8');
           let charObj = { name: player.name, stats: { hp: 1000, energy: 1000, synthEnergy: 1000 } };
-          if (rawData && rawData.trim() !== '') { try { charObj = JSON.parse(rawData); } catch(e) { logSystem(`[Auto-Repair] Corrupted disconnect data for ${player.name}.`, 'WARN'); } }
-            if (player.x !== undefined && player.y !== undefined && !isNaN(player.x) && !isNaN(player.y)) { charObj.position = { x: player.x, y: player.y, z: player.z }; }
-            if (!player.zone) throw new Error("Missing Zone during disconnect save!");
-            charObj.zone = player.zone;
-            if (charObj.stats) {
-              if (player.hp !== undefined && player.hp !== null && !isNaN(player.hp)) charObj.stats.hp = player.hp;
-              if (player.energy !== undefined && player.energy !== null && !isNaN(player.energy)) charObj.stats.energy = player.energy;
-              if (player.synthEnergy !== undefined && player.synthEnergy !== null && !isNaN(player.synthEnergy)) charObj.stats.synthEnergy = player.synthEnergy;
-              if (player.stats && player.stats.pvpKills) charObj.stats.pvpKills = player.stats.pvpKills;
-              if (player.stats && player.stats.pveKills) charObj.stats.pveKills = player.stats.pveKills;
-            }
-            if (player.level !== undefined && !isNaN(player.level)) charObj.level = player.level;
-            if (player.experience !== undefined && !isNaN(player.experience)) charObj.experience = player.experience;
-            if (player.unspentPowerPicks !== undefined) charObj.unspentPowerPicks = player.unspentPowerPicks;
-            if (player.unspentPowersetPicks !== undefined) charObj.unspentPowersetPicks = player.unspentPowersetPicks;
-            if (player.badges) charObj.badges = player.badges;
-            charObj.lastOnline = Date.now();
-            if (player.dayJobProgress) charObj.dayJobProgress = player.dayJobProgress;
-            if (player.unseenBadges) charObj.unseenBadges = player.unseenBadges;
-            if (player.lastDiscordInvite) charObj.lastDiscordInvite = player.lastDiscordInvite;
-            if (player.preAptZone) charObj.preAptZone = player.preAptZone;
-            if (player.preAptX !== undefined) charObj.preAptX = player.preAptX;
-            if (player.preAptY !== undefined) charObj.preAptY = player.preAptY;
-            if (player.preAptZ !== undefined) charObj.preAptZ = player.preAptZ;
-            fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2));
+          if (rawData && rawData.trim() !== '') { try { charObj = JSON.parse(rawData); } catch (e) { logSystem(`[Auto-Repair] Corrupted disconnect data for ${player.name}.`, 'WARN'); } }
+          if (player.x !== undefined && player.y !== undefined && !isNaN(player.x) && !isNaN(player.y)) { charObj.position = { x: player.x, y: player.y, z: player.z }; }
+          if (!player.zone) throw new Error("Missing Zone during disconnect save!");
+          charObj.zone = player.zone;
+          if (charObj.stats) {
+            if (player.hp !== undefined && player.hp !== null && !isNaN(player.hp)) charObj.stats.hp = player.hp;
+            if (player.energy !== undefined && player.energy !== null && !isNaN(player.energy)) charObj.stats.energy = player.energy;
+            if (player.synthEnergy !== undefined && player.synthEnergy !== null && !isNaN(player.synthEnergy)) charObj.stats.synthEnergy = player.synthEnergy;
+            if (player.stats && player.stats.pvpKills) charObj.stats.pvpKills = player.stats.pvpKills;
+            if (player.stats && player.stats.pveKills) charObj.stats.pveKills = player.stats.pveKills;
+          }
+          if (player.level !== undefined && !isNaN(player.level)) charObj.level = player.level;
+          if (player.experience !== undefined && !isNaN(player.experience)) charObj.experience = player.experience;
+          if (player.unspentPowerPicks !== undefined) charObj.unspentPowerPicks = player.unspentPowerPicks;
+          if (player.unspentPowersetPicks !== undefined) charObj.unspentPowersetPicks = player.unspentPowersetPicks;
+          if (player.badges) charObj.badges = player.badges;
+          charObj.lastOnline = Date.now();
+          if (player.dayJobProgress) charObj.dayJobProgress = player.dayJobProgress;
+          if (player.unseenBadges) charObj.unseenBadges = player.unseenBadges;
+          if (player.lastDiscordInvite) charObj.lastDiscordInvite = player.lastDiscordInvite;
+          if (player.preAptZone) charObj.preAptZone = player.preAptZone;
+          if (player.preAptX !== undefined) charObj.preAptX = player.preAptX;
+          if (player.preAptY !== undefined) charObj.preAptY = player.preAptY;
+          if (player.preAptZ !== undefined) charObj.preAptZ = player.preAptZ;
+          fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2));
 
-            if (player.accountUuid) {
-               const accFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`);
-               if (fs.existsSync(accFile)) {
-                   try {
-                       const accData = JSON.parse(fs.readFileSync(accFile, 'utf8'));
-                       let tLevel = 0;
-                       if (accData.characters) {
-                           accData.characters.forEach(c => {
-                               const cName = typeof c === 'object' ? c.name : c;
-                               const cF = path.join(CHAR_DATA_DIR, `${cName.toLowerCase()}.json`);
-                               if (fs.existsSync(cF)) {
-                                  try { const co = JSON.parse(fs.readFileSync(cF, 'utf8')); tLevel += (co.level || 1); } catch(e){}
-                               }
-                           });
-                       }
-                       accData.totalLevel = tLevel;
-                       fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
-                   } catch(e) {}
-               }
+          if (player.accountUuid) {
+            const accFile = path.join(PLAYER_DATA_DIR, `${player.accountUuid}.json`);
+            if (fs.existsSync(accFile)) {
+              try {
+                const accData = JSON.parse(fs.readFileSync(accFile, 'utf8'));
+                let tLevel = 0;
+                if (accData.characters) {
+                  accData.characters.forEach(c => {
+                    const cName = typeof c === 'object' ? c.name : c;
+                    const cF = path.join(CHAR_DATA_DIR, `${cName.toLowerCase()}.json`);
+                    if (fs.existsSync(cF)) {
+                      try { const co = JSON.parse(fs.readFileSync(cF, 'utf8')); tLevel += (co.level || 1); } catch (e) { }
+                    }
+                  });
+                }
+                accData.totalLevel = tLevel;
+                fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
+              } catch (e) { }
             }
+          }
         }
       } catch (err) { }
 

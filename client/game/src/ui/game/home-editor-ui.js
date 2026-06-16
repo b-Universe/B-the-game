@@ -54,8 +54,8 @@ export class HomeEditorUIManager {
 
       this.refreshModal = () => {
         if (document.getElementById('base-styles-modal')?.style.display !== 'none') {
-            if (this.renderVisualizer) this.renderVisualizer();
-            if (this.loadDropdowns) this.loadDropdowns();
+          if (this.renderVisualizer) this.renderVisualizer();
+          if (this.loadDropdowns) this.loadDropdowns();
         }
       };
 
@@ -70,16 +70,16 @@ export class HomeEditorUIManager {
           const modal = document.getElementById('base-styles-modal');
           if (modal) {
             fetch('/api/audio/music').then(r => r.json()).then(tracks => {
-                const select = document.getElementById('playlist-track-select');
-                if (select) {
-                  const currentVal = select.value;
-                  select.innerHTML = tracks.map(t => {
-                    const name = t.replace(/\.[^/.]+$/, "").split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                    return `<option value="${t}">${name}</option>`;
-                  }).join('');
-                  if (tracks.includes(currentVal)) select.value = currentVal;
-                }
-              }).catch(e => console.warn("Failed to fetch tracks:", e));
+              const select = document.getElementById('playlist-track-select');
+              if (select) {
+                const currentVal = select.value;
+                select.innerHTML = tracks.map(t => {
+                  const name = t.replace(/\.[^/.]+$/, "").split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                  return `<option value="${t}">${name}</option>`;
+                }).join('');
+                if (tracks.includes(currentVal)) select.value = currentVal;
+              }
+            }).catch(e => console.warn("Failed to fetch tracks:", e));
 
             this.selectedAptChunk = '1_1';
 
@@ -92,47 +92,47 @@ export class HomeEditorUIManager {
 
               const visContainer = document.getElementById('apt-chunk-visualizer');
               if (visContainer) {
-                  visContainer.innerHTML = '';
+                visContainer.innerHTML = '';
 
-                  for (let y = pChunkY - 2; y <= pChunkY + 2; y++) {
-                      for (let x = pChunkX - 2; x <= pChunkX + 2; x++) {
-                          if (x < 0 || y < 0 || x >= 95 || y >= 95) {
-                              const spacer = document.createElement('div');
-                              spacer.style.cssText = `width: 32px; height: 32px; background: transparent;`;
-                              visContainer.appendChild(spacer);
-                              continue;
-                          }
+                for (let y = pChunkY - 2; y <= pChunkY + 2; y++) {
+                  for (let x = pChunkX - 2; x <= pChunkX + 2; x++) {
+                    if (x < 0 || y < 0 || x >= 95 || y >= 95) {
+                      const spacer = document.createElement('div');
+                      spacer.style.cssText = `width: 32px; height: 32px; background: transparent;`;
+                      visContainer.appendChild(spacer);
+                      continue;
+                    }
 
-                          const chunkKey = `${x}_${y}`;
-                          const isOwned = ownedChunks.includes(chunkKey);
-                          const btn = document.createElement('button');
-                          btn.style.cssText = `width: 32px; height: 32px; border: 2px solid #333; cursor: pointer; transition: all 0.2s; border-radius: 2px; position: relative;`;
+                    const chunkKey = `${x}_${y}`;
+                    const isOwned = ownedChunks.includes(chunkKey);
+                    const btn = document.createElement('button');
+                    btn.style.cssText = `width: 32px; height: 32px; border: 2px solid #333; cursor: pointer; transition: all 0.2s; border-radius: 2px; position: relative;`;
 
-                          if (this.selectedAptChunk === chunkKey) btn.style.borderColor = '#f1c40f';
+                    if (this.selectedAptChunk === chunkKey) btn.style.borderColor = '#f1c40f';
 
-                          if (isOwned) {
-                              btn.style.background = (this.selectedAptChunk === chunkKey || this.selectedAptChunk === 'all') ? 'rgba(52, 152, 219, 0.8)' : 'rgba(52, 152, 219, 0.3)';
-                          } else {
-                              btn.style.background = 'rgba(255, 255, 255, 0.05)';
-                              if (this.selectedAptChunk === chunkKey) btn.style.background = 'rgba(255, 255, 255, 0.2)';
-                          }
+                    if (isOwned) {
+                      btn.style.background = (this.selectedAptChunk === chunkKey || this.selectedAptChunk === 'all') ? 'rgba(52, 152, 219, 0.8)' : 'rgba(52, 152, 219, 0.3)';
+                    } else {
+                      btn.style.background = 'rgba(255, 255, 255, 0.05)';
+                      if (this.selectedAptChunk === chunkKey) btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                    }
 
-                          if (x === pChunkX && y === pChunkY) {
-                              const dot = document.createElement('div');
-                              dot.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; border: 1px solid #000; pointer-events: none;';
-                              btn.appendChild(dot);
-                          }
+                    if (x === pChunkX && y === pChunkY) {
+                      const dot = document.createElement('div');
+                      dot.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; border: 1px solid #000; pointer-events: none;';
+                      btn.appendChild(dot);
+                    }
 
-                          btn.onclick = () => { this.selectedAptChunk = chunkKey; this.renderVisualizer(); this.loadDropdowns(); };
-                          visContainer.appendChild(btn);
-                      }
+                    btn.onclick = () => { this.selectedAptChunk = chunkKey; this.renderVisualizer(); this.loadDropdowns(); };
+                    visContainer.appendChild(btn);
                   }
+                }
               }
 
               const btnAll = document.getElementById('btn-apt-select-all');
               if (btnAll) {
-                  btnAll.className = this.selectedAptChunk === 'all' ? 'b-btn btn-primary' : 'b-btn btn-secondary';
-                  btnAll.onclick = () => { this.selectedAptChunk = 'all'; this.renderVisualizer(); this.loadDropdowns(); };
+                btnAll.className = this.selectedAptChunk === 'all' ? 'b-btn btn-primary' : 'b-btn btn-secondary';
+                btnAll.onclick = () => { this.selectedAptChunk = 'all'; this.renderVisualizer(); this.loadDropdowns(); };
               }
             };
 
@@ -146,65 +146,65 @@ export class HomeEditorUIManager {
               const unexpandContainer = document.getElementById('apt-unexpand-container');
 
               if (isSelectedOwned) {
-                  settingsContainer.style.display = 'flex';
-                  expandContainer.style.display = 'none';
+                settingsContainer.style.display = 'flex';
+                expandContainer.style.display = 'none';
 
-                  if (unexpandContainer) {
-                      if (this.selectedAptChunk !== 'all' && this.selectedAptChunk !== '1_1') {
-                          unexpandContainer.style.display = 'flex';
-                          const btnUnexpand = document.getElementById('btn-apt-unexpand');
-                          btnUnexpand.onclick = () => {
-                              this.ui.showConfirmModal("Un-Expand Apartment", `Are you sure you want to un-expand this chunk? You will be refunded $5,000, but all blocks inside it will be permanently deleted!`, () => {
-                                  if (this.engine.network) this.engine.network.socket.emit('apartment_unexpand', { chunk: this.selectedAptChunk });
-                              });
-                          };
-                      } else {
-                          unexpandContainer.style.display = 'none';
-                      }
-                  }
-
-              const baseStyle = zc.baseStyle || {};
-              const chunkStyles = zc.chunkStyles || {};
-              let cStyle = baseStyle;
-              if (this.selectedAptChunk !== 'all') cStyle = chunkStyles[this.selectedAptChunk] || {};
-              document.getElementById('base-style-floor').value = cStyle.floorTex || baseStyle.floorTex || 'concrete';
-              document.getElementById('base-style-wall').value = cStyle.wallTex || baseStyle.wallTex || 'stone-bricks1';
-              const playlistContainer = document.getElementById('playlist-container');
-              if (playlistContainer) {
-                playlistContainer.innerHTML = '';
-                const tracks = (baseStyle.musicTrack || '').split(',').filter(t => t.trim() !== '');
-                tracks.forEach(t => { if (this.addPlaylistTrackToUI) this.addPlaylistTrackToUI(t); });
-              }
-              document.getElementById('base-style-music-mode').value = baseStyle.musicMode || 'ordered';
-              document.getElementById('base-style-music-delay').value = baseStyle.musicDelay || 0;
-              const volEl = document.getElementById('base-style-music-volume');
-              if (volEl) volEl.value = baseStyle.musicVolume !== undefined ? baseStyle.musicVolume : 0.5;
-              const volTextEl = document.getElementById('base-style-music-volume-text');
-              if (volTextEl && volEl) volTextEl.innerText = `${Math.round(volEl.value * 100)}%`;
-              } else {
-                  settingsContainer.style.display = 'none';
-                  expandContainer.style.display = 'flex';
-                  if (unexpandContainer) unexpandContainer.style.display = 'none';
-
-                  const btnExpand = document.getElementById('btn-apt-expand');
-                  const cost = 5000;
-                  if (ownedChunks.length >= 9025) {
-                      btnExpand.innerText = 'Max Size Reached';
-                      btnExpand.disabled = true;
+                if (unexpandContainer) {
+                  if (this.selectedAptChunk !== 'all' && this.selectedAptChunk !== '1_1') {
+                    unexpandContainer.style.display = 'flex';
+                    const btnUnexpand = document.getElementById('btn-apt-unexpand');
+                    btnUnexpand.onclick = () => {
+                      this.ui.showConfirmModal("Un-Expand Apartment", `Are you sure you want to un-expand this chunk? You will be refunded $5,000, but all blocks inside it will be permanently deleted!`, () => {
+                        if (this.engine.network) this.engine.network.socket.emit('apartment_unexpand', { chunk: this.selectedAptChunk });
+                      });
+                    };
                   } else {
-                      btnExpand.innerText = `Expand Apartment ($5,000)`;
-                      btnExpand.disabled = false;
-                      btnExpand.onclick = () => {
-                        const playerCurrency = this.engine.playerData.currency || 0;
-                        if (playerCurrency < cost) {
-                          this.ui.showSystemMessage(`You cannot afford this. You need $${cost.toLocaleString()}, but only have $${playerCurrency.toLocaleString()}.`);
-                        } else {
-                          this.ui.showConfirmModal("Expand Apartment", `Purchase this chunk for $5,000?`, () => {
-                            if (this.engine.network) this.engine.network.socket.emit('apartment_expand', { chunk: this.selectedAptChunk });
-                          });
-                        }
-                      };
+                    unexpandContainer.style.display = 'none';
                   }
+                }
+
+                const baseStyle = zc.baseStyle || {};
+                const chunkStyles = zc.chunkStyles || {};
+                let cStyle = baseStyle;
+                if (this.selectedAptChunk !== 'all') cStyle = chunkStyles[this.selectedAptChunk] || {};
+                document.getElementById('base-style-floor').value = cStyle.floorTex || baseStyle.floorTex || 'concrete';
+                document.getElementById('base-style-wall').value = cStyle.wallTex || baseStyle.wallTex || 'stone-bricks1';
+                const playlistContainer = document.getElementById('playlist-container');
+                if (playlistContainer) {
+                  playlistContainer.innerHTML = '';
+                  const tracks = (baseStyle.musicTrack || '').split(',').filter(t => t.trim() !== '');
+                  tracks.forEach(t => { if (this.addPlaylistTrackToUI) this.addPlaylistTrackToUI(t); });
+                }
+                document.getElementById('base-style-music-mode').value = baseStyle.musicMode || 'ordered';
+                document.getElementById('base-style-music-delay').value = baseStyle.musicDelay || 0;
+                const volEl = document.getElementById('base-style-music-volume');
+                if (volEl) volEl.value = baseStyle.musicVolume !== undefined ? baseStyle.musicVolume : 0.5;
+                const volTextEl = document.getElementById('base-style-music-volume-text');
+                if (volTextEl && volEl) volTextEl.innerText = `${Math.round(volEl.value * 100)}%`;
+              } else {
+                settingsContainer.style.display = 'none';
+                expandContainer.style.display = 'flex';
+                if (unexpandContainer) unexpandContainer.style.display = 'none';
+
+                const btnExpand = document.getElementById('btn-apt-expand');
+                const cost = 5000;
+                if (ownedChunks.length >= 9025) {
+                  btnExpand.innerText = 'Max Size Reached';
+                  btnExpand.disabled = true;
+                } else {
+                  btnExpand.innerText = `Expand Apartment ($5,000)`;
+                  btnExpand.disabled = false;
+                  btnExpand.onclick = () => {
+                    const playerCurrency = this.engine.playerData.currency || 0;
+                    if (playerCurrency < cost) {
+                      this.ui.showSystemMessage(`You cannot afford this. You need $${cost.toLocaleString()}, but only have $${playerCurrency.toLocaleString()}.`);
+                    } else {
+                      this.ui.showConfirmModal("Expand Apartment", `Purchase this chunk for $5,000?`, () => {
+                        if (this.engine.network) this.engine.network.socket.emit('apartment_expand', { chunk: this.selectedAptChunk });
+                      });
+                    }
+                  };
+                }
               }
             };
 
@@ -322,29 +322,30 @@ export class HomeEditorUIManager {
 
         let chunksUpdated = false;
         for (const [chunkKey, chunkMap] of this.engine.mapManager.chunks.entries()) {
-            if (this.selectedAptChunk !== 'all' && chunkKey !== this.selectedAptChunk) continue;
-            let chunkChanged = false;
-            const [vx, vy] = chunkKey.split('_').map(Number);
-            const blockChX = Math.floor(vx / 2); // Map 16x16 sub-chunk to 32x32 apt chunk
-            const blockChY = Math.floor(vy / 2);
-            const aptChunkKey = `${blockChX}_${blockChY}`;
+          let chunkChanged = false;
+          const [vx, vy] = chunkKey.split('_').map(Number);
+          const blockChX = Math.floor(vx / 2); // Map 16x16 sub-chunk to 32x32 apt chunk
+          const blockChY = Math.floor(vy / 2);
+          const aptChunkKey = `${blockChX}_${blockChY}`;
 
-            const oldCStyle = oldChunkStyles[aptChunkKey] || oldBaseStyle;
-            const cOldFloor = oldCStyle.floorTex || oldBaseStyle.floorTex || 'concrete';
-            const cOldWall = oldCStyle.wallTex || oldBaseStyle.wallTex || 'stone-bricks1';
-            const newFloor = this.selectedAptChunk === 'all' ? f : (zc.chunkStyles[aptChunkKey]?.floorTex || zc.baseStyle.floorTex || f);
-            const newWall = this.selectedAptChunk === 'all' ? w : (zc.chunkStyles[aptChunkKey]?.wallTex || zc.baseStyle.wallTex || w);
+          if (this.selectedAptChunk !== 'all' && aptChunkKey !== this.selectedAptChunk) continue;
 
-            for (const [key, voxel] of chunkMap.entries()) {
-                if (voxel.tex === cOldFloor) { voxel.tex = newFloor; chunkChanged = true; }
-                else if (voxel.tex === cOldWall) { voxel.tex = newWall; chunkChanged = true; }
-            }
-            if (chunkChanged) { chunksUpdated = true; if (this.engine.renderer) this.engine.renderer.updateChunkColumn(vx, vy, chunkMap, true); }
+          const oldCStyle = oldChunkStyles[aptChunkKey] || oldBaseStyle;
+          const cOldFloor = oldCStyle.floorTex || oldBaseStyle.floorTex || 'concrete';
+          const cOldWall = oldCStyle.wallTex || oldBaseStyle.wallTex || 'stone-bricks1';
+          const newFloor = this.selectedAptChunk === 'all' ? f : (zc.chunkStyles[aptChunkKey]?.floorTex || zc.baseStyle.floorTex || f);
+          const newWall = this.selectedAptChunk === 'all' ? w : (zc.chunkStyles[aptChunkKey]?.wallTex || zc.baseStyle.wallTex || w);
+
+          for (const [key, voxel] of chunkMap.entries()) {
+            if (voxel.tex === cOldFloor) { voxel.tex = newFloor; chunkChanged = true; }
+            else if (voxel.tex === cOldWall) { voxel.tex = newWall; chunkChanged = true; }
+          }
+          if (chunkChanged) { chunksUpdated = true; if (this.engine.renderer) this.engine.renderer.updateChunkColumn(vx, vy, chunkMap, true); }
         }
 
         if (chunksUpdated && this.engine.renderer) {
-            this.engine.mapManager.mapCacheDirty = true;
-            this.engine.renderer.needsVoxelUpdate = true;
+          this.engine.mapManager.mapCacheDirty = true;
+          this.engine.renderer.needsVoxelUpdate = true;
         }
 
         if (typeof this.engine.updateBGM === 'function') this.engine.updateBGM();
@@ -383,13 +384,13 @@ export class HomeEditorUIManager {
         const btn = e.target;
         if (previewAudio && !previewAudio.paused) { previewAudio.pause(); previewAudio = null; btn.innerText = '▶'; btn.style.color = ''; }
         else {
-            previewAudio = new Audio(`assets/audio/music/${select.value}`);
-            const targetVol = parseFloat(localStorage.getItem('b_login_volume') || '0.3');
-            previewAudio.volume = targetVol;
-            previewAudio.play().catch(err => console.warn('Preview prevented', err));
-            btn.innerText = '■';
-            btn.style.color = '#e74c3c';
-            previewAudio.onended = () => { btn.innerText = '▶'; btn.style.color = ''; };
+          previewAudio = new Audio(`assets/audio/music/${select.value}`);
+          const targetVol = parseFloat(localStorage.getItem('b_login_volume') || '0.3');
+          previewAudio.volume = targetVol;
+          previewAudio.play().catch(err => console.warn('Preview prevented', err));
+          btn.innerText = '■';
+          btn.style.color = '#e74c3c';
+          previewAudio.onended = () => { btn.innerText = '▶'; btn.style.color = ''; };
         }
       };
     }
@@ -400,8 +401,8 @@ export class HomeEditorUIManager {
     const vList = document.getElementById('apt-perms-visitors');
     if (!bList || !vList) return;
 
-    const myAptZone = `apt_${this.engine.playerData.name.toLowerCase()}`;
-    const zc = (this.engine.zonesConfig && this.engine.zonesConfig[myAptZone]) ? this.engine.zonesConfig[myAptZone] : {};
+    const currentAptZone = this.engine.currentZone;
+    const zc = (this.engine.zonesConfig && this.engine.zonesConfig[currentAptZone]) ? this.engine.zonesConfig[currentAptZone] : {};
     const builders = zc.builders || [];
     const visitors = zc.visitors || [];
 

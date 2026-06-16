@@ -67,7 +67,7 @@ export class CommandHandler {
       eng.ui.showSystemMessage(`Speed set to ${eng.player.speed}`);
     } else if (cmd === '/bank') {
       if (eng.ui && eng.ui.inventory) {
-         eng.ui.inventory.toggleBank();
+        eng.ui.inventory.toggleBank();
       }
     } else if (cmd === '/stuck') {
       let found = false;
@@ -110,10 +110,10 @@ export class CommandHandler {
 
       let isAptGuestBuilder = false;
       if (eng.currentZone && eng.currentZone.startsWith('apt_') && eng.zonesConfig && eng.zonesConfig[eng.currentZone]) {
-          const zc = eng.zonesConfig[eng.currentZone];
-          if (zc.builders && zc.builders.includes(pName)) {
-              isAptGuestBuilder = true;
-          }
+        const zc = eng.zonesConfig[eng.currentZone];
+        if (zc.builders && zc.builders.includes(pName)) {
+          isAptGuestBuilder = true;
+        }
       }
 
       if (!hasEditPerm) return eng.ui.showSystemMessage('You do not have permission to use /editmode.');
@@ -169,14 +169,14 @@ export class CommandHandler {
     } else if (cmd === '/reload' || cmd === '/forceupdate') {
       // Handled by the 'force_refresh' network event
     } else if (cmd === '/dev') {
-      if (!checkPerm('dev')) return eng.ui.showSystemMessage('You do not have permission to use /dev.');
+      if (!checkPerm('dev') && !checkPerm('admin')) return eng.ui.showSystemMessage('You do not have permission to use /dev.');
       const dtWindow = eng.ui?.devTools?.devToolsWindow;
       if (dtWindow) {
-         if (dtWindow.element.style.display === 'none') dtWindow.open();
-         else dtWindow.close();
+        if (dtWindow.element.style.display === 'none') dtWindow.open();
+        else dtWindow.close();
       } else {
-         const devPanel = document.getElementById('dev-panel');
-         if (devPanel) devPanel.style.display = devPanel.style.display === 'none' ? 'flex' : 'none';
+        const devPanel = document.getElementById('dev-panel');
+        if (devPanel) devPanel.style.display = devPanel.style.display === 'none' ? 'flex' : 'none';
       }
     } else if (cmd === '/npc') {
       if (!checkPerm('npc')) return eng.ui.showSystemMessage('You do not have permission to use /npc commands.');
@@ -286,11 +286,11 @@ export class CommandHandler {
       eng.ui.setupLoadingScreen();
       eng.network.socket.emit('join_zone', { zone: targetZone });
       if (targetZone.startsWith('apt_')) {
-          eng.player.x = 48 * 32;
-          eng.player.y = 48 * 32;
-          eng.player.z = 64;
-          eng.camera.x = eng.player.x;
-          eng.camera.y = eng.player.y;
+        eng.player.x = 48 * 32;
+        eng.player.y = 48 * 32;
+        eng.player.z = 64;
+        eng.camera.x = eng.player.x;
+        eng.camera.y = eng.player.y;
       }
       eng.ui.showSystemMessage(`Joining zone: ${targetZone}...`);
     } else if (cmd === '/home' || cmd === '/apartment') {

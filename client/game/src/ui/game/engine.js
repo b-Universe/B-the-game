@@ -204,30 +204,30 @@ export class GameEngine {
       const pCount = data.particleCount !== undefined ? data.particleCount : 1;
       const scatter = data.particleScatter || 0;
 
-      for(let i = 0; i < pCount; i++) {
-          const rX = (Math.random() - 0.5) * scatter;
-          const rY = (Math.random() - 0.5) * scatter;
-          const rZ = (Math.random() - 0.5) * scatter;
+      for (let i = 0; i < pCount; i++) {
+        const rX = (Math.random() - 0.5) * scatter;
+        const rY = (Math.random() - 0.5) * scatter;
+        const rZ = (Math.random() - 0.5) * scatter;
 
-          let vx = (Math.random() - 0.5) * 50;
-          let vy = (Math.random() - 0.5) * 50;
-          let vz = (Math.random() - 0.5) * 50;
-          let noGrav = true;
-          let size = 2.5;
+        let vx = (Math.random() - 0.5) * 50;
+        let vy = (Math.random() - 0.5) * 50;
+        let vz = (Math.random() - 0.5) * 50;
+        let noGrav = true;
+        let size = 2.5;
 
-          if (data.particle === 'sparks') {
-              vx *= 3; vy *= 3; vz *= 3; size = 3; noGrav = false;
-          } else if (data.particle === 'explosion') {
-              vx *= 5; vy *= 5; vz *= 5; size = 5; noGrav = false;
-          } else if (data.particle === 'smoke') {
-              vz = 10 + Math.random() * 20; size = 4;
-          }
+        if (data.particle === 'sparks') {
+          vx *= 3; vy *= 3; vz *= 3; size = 3; noGrav = false;
+        } else if (data.particle === 'explosion') {
+          vx *= 5; vy *= 5; vz *= 5; size = 5; noGrav = false;
+        } else if (data.particle === 'smoke') {
+          vz = 10 + Math.random() * 20; size = 4;
+        }
 
-          this.spawnParticle({
-            x: data.x + rX, y: data.y + rY, z: (data.z || 0) + rZ,
-            vx: vx, vy: vy, vz: vz, life: 0.3 + Math.random() * 0.4, maxLife: 0.7,
-            color: data.particleColor || data.color || '#ffffff', size: size, noGravity: noGrav, tex: data.particle === 'smoke' ? 'smoke' : 'white'
-          });
+        this.spawnParticle({
+          x: data.x + rX, y: data.y + rY, z: (data.z || 0) + rZ,
+          vx: vx, vy: vy, vz: vz, life: 0.3 + Math.random() * 0.4, maxLife: 0.7,
+          color: data.particleColor || data.color || '#ffffff', size: size, noGravity: noGrav, tex: data.particle === 'smoke' ? 'smoke' : 'white'
+        });
       }
     };
 
@@ -405,9 +405,26 @@ export class GameEngine {
       if (this.renderer && !this.renderer.initialLoadComplete) {
         const hint = document.createElement('div');
         hint.id = 'load-hint-msg';
-        hint.style.cssText = 'position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); color: #f1c40f; font-family: var(--font-mono); font-size: 1.1rem; z-index: 9999999; text-shadow: 0 0 10px #000; text-align: center; background: rgba(0,0,0,0.8); padding: 15px 25px; border-radius: 8px; border: 1px solid #f1c40f; pointer-events: none; box-shadow: 0 0 15px rgba(241, 196, 15, 0.2);';
-        hint.innerHTML = 'Map taking a while to generate?<br>Try pressing <b>ESC</b> and lowering your <b>Render Distance</b>.';
+        hint.innerHTML = 'Map taking a while to generate? Try pressing ESC and lowering your Render Distance.';
+        hint.style.position = 'absolute';
+        hint.style.bottom = '20px';
+        hint.style.left = '50%';
+        hint.style.transform = 'translateX(-50%)';
+        hint.style.color = '#fff';
+        hint.style.fontFamily = 'var(--font-mono)';
+        hint.style.fontSize = '0.9rem';
+        hint.style.zIndex = '3000000';
+        hint.style.pointerEvents = 'none';
+        hint.style.textShadow = '0 0 5px #000';
         document.body.appendChild(hint);
+
+        const checkInterval = setInterval(() => {
+          if (this.renderer && this.renderer.initialLoadComplete) {
+            const existing = document.getElementById('load-hint-msg');
+            if (existing) existing.remove();
+            clearInterval(checkInterval);
+          }
+        }, 1000);
       }
     }, 8000);
 
@@ -443,73 +460,73 @@ export class GameEngine {
     const mode = style.musicMode || 'ordered';
     const newPlaylistStr = JSON.stringify(playlist) + mode;
     if (this.currentPlaylistStr !== newPlaylistStr) {
-       this.currentPlaylistStr = newPlaylistStr;
-       this.playPlaylist(playlist, mode);
+      this.currentPlaylistStr = newPlaylistStr;
+      this.playPlaylist(playlist, mode);
     }
   }
 
   playPlaylist(playlist, mode) {
-      if (this.clientSettings.muteBGM) return;
+    if (this.clientSettings.muteBGM) return;
 
-      if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
+    if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
 
-      if (this.bgmAudio) {
-         const oldAudio = this.bgmAudio;
-         this.bgmAudio = null;
-         let vol = oldAudio.volume;
-         const fade = setInterval(() => {
-             vol -= 0.05;
-             if (vol <= 0) {
-                oldAudio.pause();
-                clearInterval(fade);
-             } else {
-                oldAudio.volume = vol;
-             }
-         }, 100);
-      }
+    if (this.bgmAudio) {
+      const oldAudio = this.bgmAudio;
+      this.bgmAudio = null;
+      let vol = oldAudio.volume;
+      const fade = setInterval(() => {
+        vol -= 0.05;
+        if (vol <= 0) {
+          oldAudio.pause();
+          clearInterval(fade);
+        } else {
+          oldAudio.volume = vol;
+        }
+      }, 100);
+    }
 
-      if (!playlist || playlist.length === 0) return;
-      this.bgmTracks = playlist;
-      this.bgmMode = mode;
-      this.bgmIndex = -1;
-      this.playNextTrack();
+    if (!playlist || playlist.length === 0) return;
+    this.bgmTracks = playlist;
+    this.bgmMode = mode;
+    this.bgmIndex = -1;
+    this.playNextTrack();
   }
 
   playNextTrack() {
-      if (!this.bgmTracks || this.bgmTracks.length === 0) return;
-      if (this.bgmMode === 'random') this.bgmIndex = Math.floor(Math.random() * this.bgmTracks.length);
-      else this.bgmIndex = (this.bgmIndex + 1) % this.bgmTracks.length;
+    if (!this.bgmTracks || this.bgmTracks.length === 0) return;
+    if (this.bgmMode === 'random') this.bgmIndex = Math.floor(Math.random() * this.bgmTracks.length);
+    else this.bgmIndex = (this.bgmIndex + 1) % this.bgmTracks.length;
 
-      const trackInfo = this.bgmTracks[this.bgmIndex];
-      const track = trackInfo.file;
-      const delayMs = (parseFloat(trackInfo.delay) || 0) * 1000;
-      const audio = new Audio(`assets/audio/music/${track}`);
-      const targetVol = parseFloat(localStorage.getItem('b_login_volume') || '0.3');
+    const trackInfo = this.bgmTracks[this.bgmIndex];
+    const track = trackInfo.file;
+    const delayMs = (parseFloat(trackInfo.delay) || 0) * 1000;
+    const audio = new Audio(`assets/audio/music/${track}`);
+    const targetVol = parseFloat(localStorage.getItem('b_login_volume') || '0.3');
 
-      audio.volume = 0;
-      audio.play().catch(e => console.warn('BGM play prevented', e));
+    audio.volume = 0;
+    audio.play().catch(e => console.warn('BGM play prevented', e));
 
-      let vol = 0;
-      const fade = setInterval(() => { vol += 0.05; if (vol >= targetVol) { audio.volume = targetVol; clearInterval(fade); } else { audio.volume = vol; } }, 100);
-      this.bgmAudio = audio;
+    let vol = 0;
+    const fade = setInterval(() => { vol += 0.05; if (vol >= targetVol) { audio.volume = targetVol; clearInterval(fade); } else { audio.volume = vol; } }, 100);
+    this.bgmAudio = audio;
 
-      audio.addEventListener('ended', () => {
-          if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
-          this.bgmNextTimeout = setTimeout(() => { this.playNextTrack(); }, Math.max(0, delayMs));
+    audio.addEventListener('ended', () => {
+      if (this.bgmNextTimeout) clearTimeout(this.bgmNextTimeout);
+      this.bgmNextTimeout = setTimeout(() => { this.playNextTrack(); }, Math.max(0, delayMs));
+    });
+
+    if (delayMs < 0) {
+      audio.addEventListener('timeupdate', () => {
+        if (isNaN(audio.duration)) return;
+        const timeLeft = audio.duration - audio.currentTime;
+        if (timeLeft <= Math.abs(delayMs) / 1000 && !audio._crossfadeTriggered) {
+          audio._crossfadeTriggered = true;
+          this.playNextTrack();
+          let outVol = audio.volume;
+          const fadeOut = setInterval(() => { outVol -= 0.05; if (outVol <= 0) { audio.pause(); clearInterval(fadeOut); } else { audio.volume = outVol; } }, 100);
+        }
       });
-
-      if (delayMs < 0) {
-         audio.addEventListener('timeupdate', () => {
-             if (isNaN(audio.duration)) return;
-             const timeLeft = audio.duration - audio.currentTime;
-             if (timeLeft <= Math.abs(delayMs) / 1000 && !audio._crossfadeTriggered) {
-                 audio._crossfadeTriggered = true;
-                 this.playNextTrack();
-                 let outVol = audio.volume;
-                 const fadeOut = setInterval(() => { outVol -= 0.05; if (outVol <= 0) { audio.pause(); clearInterval(fadeOut); } else { audio.volume = outVol; } }, 100);
-             }
-         });
-      }
+    }
   }
 
   showFloatingText(text, color) {
@@ -582,7 +599,7 @@ export class GameEngine {
       const cachedReg = localStorage.getItem('b_cache_registry_powers');
       if (cachedReg) {
         regJson = JSON.parse(cachedReg);
-        fetch('/api/registry/powers').then(r => r.json()).then(d => localStorage.setItem('b_cache_registry_powers', JSON.stringify(d))).catch(()=>{});
+        fetch('/api/registry/powers').then(r => r.json()).then(d => localStorage.setItem('b_cache_registry_powers', JSON.stringify(d))).catch(() => { });
       } else {
         const regRes = await fetch('/api/registry/powers');
         if (regRes.ok) {
@@ -603,7 +620,7 @@ export class GameEngine {
       const cachedEff = localStorage.getItem('b_cache_registry_effects');
       if (cachedEff) {
         effJson = JSON.parse(cachedEff);
-        fetch('/api/registry/effects').then(r => r.json()).then(d => localStorage.setItem('b_cache_registry_effects', JSON.stringify(d))).catch(()=>{});
+        fetch('/api/registry/effects').then(r => r.json()).then(d => localStorage.setItem('b_cache_registry_effects', JSON.stringify(d))).catch(() => { });
       } else {
         const effRes = await fetch('/api/registry/effects');
         if (effRes.ok) {
@@ -623,7 +640,7 @@ export class GameEngine {
       const cachedPs = localStorage.getItem('b_cache_powersets');
       if (cachedPs) {
         json = JSON.parse(cachedPs);
-        fetch('/api/powersets').then(r => r.json()).then(d => localStorage.setItem('b_cache_powersets', JSON.stringify(d))).catch(()=>{});
+        fetch('/api/powersets').then(r => r.json()).then(d => localStorage.setItem('b_cache_powersets', JSON.stringify(d))).catch(() => { });
       } else {
         const res = await fetch('/api/powersets');
         if (res.ok) {
@@ -747,9 +764,9 @@ export class GameEngine {
     if (this.chatDropdownListener) document.removeEventListener('click', this.chatDropdownListener);
 
     if (this.renderer && this.renderer.webgl) {
-          if (this.renderer.debugCtx && this.renderer.debugCanvas) {
-            this.renderer.debugCtx.clearRect(0, 0, this.renderer.debugCanvas.width, this.renderer.debugCanvas.height);
-          }
+      if (this.renderer.debugCtx && this.renderer.debugCanvas) {
+        this.renderer.debugCtx.clearRect(0, 0, this.renderer.debugCanvas.width, this.renderer.debugCanvas.height);
+      }
       this.renderer.webgl.dispose();
       if (this.canvas && this.canvas.parentNode) {
         const newCanvas = this.canvas.cloneNode(true);

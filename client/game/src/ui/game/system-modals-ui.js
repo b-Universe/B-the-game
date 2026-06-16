@@ -54,7 +54,8 @@ export class SystemModalsUIManager {
       msgText.innerHTML = this.ui.formatGameText(text);
       dialog.style.display = 'flex';
       const idx = this.ui.panelStack.indexOf(dialog);
-      if (idx !== -1) { this.ui.panelStack.splice(idx, 1); this.ui.panelStack.push(dialog); }
+      if (idx !== -1) { this.ui.panelStack.splice(idx, 1); }
+      this.ui.panelStack.push(dialog);
     }
   }
 

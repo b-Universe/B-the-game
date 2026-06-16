@@ -141,8 +141,8 @@ export class UIManager {
               localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
               this.applyWindowColors();
             };
-             if (wc1) wc1.addEventListener('input', updateGrad);
-             if (wc2) wc2.addEventListener('input', updateGrad);
+            if (wc1) wc1.addEventListener('input', updateGrad);
+            if (wc2) wc2.addEventListener('input', updateGrad);
 
             const selectEl = document.getElementById('ui-mode-select');
             if (selectEl) {
@@ -227,36 +227,36 @@ export class UIManager {
 
             const savedMasterVol = localStorage.getItem('b_login_volume');
             if (savedMasterVol !== null) {
-                const vol = Math.round(parseFloat(savedMasterVol) * 100);
-                masterVolSlider.value = vol;
-                masterVolText.innerText = `${vol}%`;
+              const vol = Math.round(parseFloat(savedMasterVol) * 100);
+              masterVolSlider.value = vol;
+              masterVolText.innerText = `${vol}%`;
             }
 
             masterVolSlider.addEventListener('input', (e) => {
-                const val = e.target.value;
-                masterVolText.innerText = `${val}%`;
-                const normalized = val / 100;
-                localStorage.setItem('b_login_volume', normalized);
-                if (this.engine.bgmAudio) {
-                    this.engine.bgmAudio.volume = normalized * (this.engine.zonesConfig?.[this.engine.currentZone]?.baseStyle?.musicVolume ?? 1.0);
-                }
+              const val = e.target.value;
+              masterVolText.innerText = `${val}%`;
+              const normalized = val / 100;
+              localStorage.setItem('b_login_volume', normalized);
+              if (this.engine.bgmAudio) {
+                this.engine.bgmAudio.volume = normalized * (this.engine.zonesConfig?.[this.engine.currentZone]?.baseStyle?.musicVolume ?? 1.0);
+              }
             });
 
             muteBgmEl.checked = !!this.engine.clientSettings.muteBGM;
             muteBgmEl.onchange = (e) => {
-                this.engine.clientSettings.muteBGM = e.target.checked;
-                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-                this.engine.updateBGM();
+              this.engine.clientSettings.muteBGM = e.target.checked;
+              localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+              this.engine.updateBGM();
             };
 
             // Assuming 'muteArcade' is the key. If not, this can be adjusted.
             muteArcadeEl.checked = !!this.engine.clientSettings.muteArcade;
             muteArcadeEl.onchange = (e) => {
-                this.engine.clientSettings.muteArcade = e.target.checked;
-                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-                if (this.engine.arcadeSystem) {
-                    this.engine.arcadeSystem.setMuted(e.target.checked);
-                }
+              this.engine.clientSettings.muteArcade = e.target.checked;
+              localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
+              if (this.engine.arcadeSystem) {
+                this.engine.arcadeSystem.setMuted(e.target.checked);
+              }
             };
           }
         }
@@ -638,19 +638,20 @@ export class UIManager {
     const isDev = ['dev', 'admin'].some(role =>
       perms[role] && (perms[role].includes('*') || perms[role].includes(pName))
     );
-    const isApartment = eng.currentZone && eng.currentZone.startsWith('apt_' + pName);
+    const isOwnApartment = eng.currentZone && eng.currentZone.startsWith('apt_' + pName);
+    const isApartmentZone = eng.currentZone && eng.currentZone.startsWith('apt_');
 
     let isAptGuestBuilder = false;
-    if (eng.currentZone && eng.currentZone.startsWith('apt_') && eng.zonesConfig && eng.zonesConfig[eng.currentZone]) {
-        const zc = eng.zonesConfig[eng.currentZone];
-        if (zc.builders && zc.builders.includes(pName)) {
-            isAptGuestBuilder = true;
-        }
+    if (isApartmentZone && eng.zonesConfig && eng.zonesConfig[eng.currentZone]) {
+      const zc = eng.zonesConfig[eng.currentZone];
+      if (zc.builders && zc.builders.includes(pName)) {
+        isAptGuestBuilder = true;
+      }
     }
 
-    const canEditHere = hasEdit && (isDev || isApartment || isAptGuestBuilder);
+    const canEditHere = hasEdit && (isDev || isOwnApartment || isAptGuestBuilder);
 
-    const inApartment = isApartment || isAptGuestBuilder;
+    const inApartment = isOwnApartment || isAptGuestBuilder || (isDev && isApartmentZone);
     const heUI = this.els.homeEditorContainer;
     if (heUI) {
       if (inApartment) {
@@ -663,7 +664,7 @@ export class UIManager {
         }
         const btnHomeLock = document.getElementById('btn-home-lock');
         if (btnHomeLock) {
-          if (isApartment) {
+          if (isOwnApartment || (isDev && isApartmentZone)) {
             btnHomeLock.style.display = 'block';
             const zc = (eng.zonesConfig && eng.zonesConfig[eng.currentZone]) ? eng.zonesConfig[eng.currentZone] : {};
             btnHomeLock.innerText = zc.isLocked ? 'Lock: Invite Only' : 'Lock: Open to Public';
@@ -817,11 +818,11 @@ export class UIManager {
         if ((targetObj.type === 'trainer' || targetObj.type === 'banker') && this.els.targetActions) {
           this.els.targetActions.style.display = 'block';
           if (this.els.btnTargetTalk) {
-             this.els.btnTargetTalk.innerText = targetObj.type === 'banker' ? 'Bank' : 'Talk';
-             this.els.btnTargetTalk.onclick = () => {
-                if (targetObj.type === 'trainer') this.trainer.openTrainerUI(targetObj);
-                else if (targetObj.type === 'banker') { if (this.inventory) this.inventory.toggleBank(); }
-             };
+            this.els.btnTargetTalk.innerText = targetObj.type === 'banker' ? 'Bank' : 'Talk';
+            this.els.btnTargetTalk.onclick = () => {
+              if (targetObj.type === 'trainer') this.trainer.openTrainerUI(targetObj);
+              else if (targetObj.type === 'banker') { if (this.inventory) this.inventory.toggleBank(); }
+            };
           }
         } else if (this.els.targetActions) {
           this.els.targetActions.style.display = 'none';
