@@ -25,3 +25,6 @@ Thumbs.db
 /server/data/chunks
 /server/data/accounts
 /docs/assets/icons/powers/templates
+notes.txt
+server/data/accounts.json
+/server/data/characters
