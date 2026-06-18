@@ -80,27 +80,120 @@ export class PetUIManager {
 
   update() {
     const eng = this.engine;
-    const myDrones = eng.drones ? Object.values(eng.drones).filter(d => d.ownerSocketId === eng.socket?.id && d.state !== 'dead') : [];
+    const myDrones = eng.drones ? Object.values(eng.drones).filter(d => d.ownerSocketId === eng.socket?.id && d.state !== 'dead' && !d._dismissing) : [];
     const petWindow = document.getElementById('pet-window');
 
     if (myDrones.length > 0) {
       if (petWindow) {
         petWindow.style.display = 'flex';
-        let petListHtml = '';
-        myDrones.sort((a, b) => (a.orbitIndex || 0) - (b.orbitIndex || 0)).forEach(drone => {
-          const dName = drone.isAssaultDrone ? 'Assault Drone' : (drone.isCombatDrone ? 'Combat Drone' : 'Satellite Drone');
-          const hpPercent = Math.max(0, drone.hp / drone.maxHp);
-          let advancedHtml = eng.petAdvancedMode ? `<div style="display: flex; justify-content: space-between; gap: 4px; margin-top: 6px;"><button class="btn-secondary" onclick="event.stopPropagation(); window.currentGameEngine.network.sendPetCommand('attack', '${drone.uuid}', window.currentGameEngine.selectedTarget)" style="flex: 1; font-size: 0.65rem; padding: 2px; border-color: #ff4757; color: #ff4757; cursor: pointer;">Attack</button><button class="btn-secondary" onclick="event.stopPropagation(); window.currentGameEngine.network.sendPetCommand('follow', '${drone.uuid}')" style="flex: 1; font-size: 0.65rem; padding: 2px; border-color: #2ecc71; color: #2ecc71; cursor: pointer;">Follow</button><button class="btn-secondary" onclick="event.stopPropagation(); window.currentGameEngine.network.sendPetCommand('stay', '${drone.uuid}')" style="flex: 1; font-size: 0.65rem; padding: 2px; border-color: #f1c40f; color: #f1c40f; cursor: pointer;">Stay</button><button class="btn-secondary" onclick="event.stopPropagation(); window.currentGameEngine.network.sendPetCommand('dismiss', '${drone.uuid}')" style="flex: 1; font-size: 0.65rem; padding: 2px; border-color: #aaa; color: #aaa; cursor: pointer;">Dismiss</button></div>` : '';
-          petListHtml += `<div class="pet-item" data-id="${drone.uuid}" style="margin-bottom: 4px; padding: 4px; border: 1px solid transparent; border-radius: 4px; transition: background 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='transparent'"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="color: #00d2ff; font-family: var(--font-header); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 0 #000; pointer-events: none;">${dName} <span style="font-size: 0.75em; color: #aaa;">(Lv.${drone.level || 1})</span></span><span style="color: #fff; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none;">${Math.floor(drone.hp)} / ${drone.maxHp}</span></div><div style="width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; border: 1px solid #333;"><div style="height: 100%; background: #2ecc71; width: ${hpPercent * 100}%; transition: width 0.2s;"></div></div>${advancedHtml}</div>`;
-        });
         const listContainer = document.getElementById('pet-list-container');
-        if (listContainer) listContainer.innerHTML = petListHtml;
+        if (listContainer) {
+          listContainer.innerHTML = '';
+          myDrones.sort((a, b) => (a.orbitIndex || 0) - (b.orbitIndex || 0)).forEach(drone => {
+            const dName = drone.isAssaultDrone ? 'Assault Drone' : (drone.isCombatDrone ? 'Combat Drone' : 'Satellite Drone');
+            const hpPercent = Math.max(0, drone.hp / drone.maxHp);
+            
+            const item = document.createElement('div');
+            item.className = 'pet-item';
+            item.dataset.id = drone.uuid;
+            const isSelected = eng.selectedTarget && eng.selectedTarget.type === 'drone' && eng.selectedTarget.id === drone.uuid;
+            item.style.cssText = `margin-bottom: 4px; padding: 4px; border: 1px solid ${isSelected ? '#00d2ff' : 'transparent'}; background: ${isSelected ? 'rgba(0, 210, 255, 0.2)' : 'transparent'}; border-radius: 4px; transition: background 0.2s, border 0.2s;`;
+            item.onmouseenter = () => item.style.background = isSelected ? 'rgba(0, 210, 255, 0.3)' : 'rgba(255,255,255,0.1)';
+            item.onmouseleave = () => item.style.background = isSelected ? 'rgba(0, 210, 255, 0.2)' : 'transparent';
+            item.oncontextmenu = (e) => {
+              e.preventDefault();
+              eng.selectedTarget = { type: 'drone', id: drone.uuid };
+              eng.ui.update();
+              
+              // Simulate a right-click on the entity to trigger the global context menu
+              eng.contextTarget = eng.selectedTarget;
+              const ctxMenu = document.getElementById('player-context-menu');
+              if (ctxMenu) {
+                let menuX = e.clientX;
+                let menuY = e.clientY;
+                if (menuX + 150 > window.innerWidth) menuX = window.innerWidth - 150;
+                if (menuY + 60 > window.innerHeight) menuY = window.innerHeight - 60;
+                
+                const btnTrade = document.getElementById('ctx-btn-trade');
+                const btnTalk = document.getElementById('ctx-btn-talk');
+                const btnPlay = document.getElementById('ctx-btn-arcade-play');
+                const btnEdit = document.getElementById('ctx-btn-arcade-edit');
+                const btnPower = document.getElementById('ctx-btn-arcade-power');
+                const btnInfo = document.getElementById('ctx-btn-info');
+                const btnRename = document.getElementById('ctx-btn-pet-rename');
+                const btnDismiss = document.getElementById('ctx-btn-pet-dismiss');
+
+                if (btnTrade) btnTrade.style.display = 'none';
+                if (btnTalk) btnTalk.style.display = 'none';
+                if (btnPlay) btnPlay.style.display = 'none';
+                if (btnEdit) btnEdit.style.display = 'none';
+                if (btnPower) btnPower.style.display = 'none';
+                if (btnInfo) btnInfo.style.display = 'block';
+                if (btnRename) btnRename.style.display = 'block';
+                if (btnDismiss) btnDismiss.style.display = 'block';
+
+                ctxMenu.style.left = `${menuX}px`;
+                ctxMenu.style.top = `${menuY}px`;
+                ctxMenu.style.display = 'flex';
+              }
+            };
+
+            item.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <span style="color: #00d2ff; font-family: var(--font-header); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none;">${drone.customName || dName} <span style="font-size: 0.75em; color: #aaa; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">(Lv.${drone.level || eng.player.level || eng.playerData?.level || 1})</span></span>
+                <span style="color: #fff; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: none;">${Math.floor(drone.hp)} / ${drone.maxHp}</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; border: 1px solid #333;">
+                <div style="height: 100%; background: #2ecc71; width: ${hpPercent * 100}%; transition: width 0.2s;"></div>
+              </div>
+            `;
+
+            if (eng.petAdvancedMode) {
+              const advancedDiv = document.createElement('div');
+              advancedDiv.style.cssText = 'display: flex; justify-content: space-between; gap: 4px; margin-top: 6px;';
+
+              const btnAttack = document.createElement('button');
+              btnAttack.className = 'btn-secondary';
+              btnAttack.style.cssText = 'flex: 1; font-size: 0.65rem; padding: 2px; border-color: #ff4757; color: #ff4757; cursor: pointer;';
+              btnAttack.innerText = 'Attack';
+              btnAttack.onclick = (e) => { e.stopPropagation(); eng.network.sendPetCommand('attack', drone.uuid, eng.selectedTarget); };
+
+              const btnFollow = document.createElement('button');
+              btnFollow.className = 'btn-secondary';
+              btnFollow.style.cssText = 'flex: 1; font-size: 0.65rem; padding: 2px; border-color: #2ecc71; color: #2ecc71; cursor: pointer;';
+              btnFollow.innerText = 'Follow';
+              btnFollow.onclick = (e) => { e.stopPropagation(); eng.network.sendPetCommand('follow', drone.uuid); };
+
+              const btnStay = document.createElement('button');
+              btnStay.className = 'btn-secondary';
+              btnStay.style.cssText = 'flex: 1; font-size: 0.65rem; padding: 2px; border-color: #f1c40f; color: #f1c40f; cursor: pointer;';
+              btnStay.innerText = 'Stay';
+              btnStay.onclick = (e) => { e.stopPropagation(); eng.network.sendPetCommand('stay', drone.uuid); };
+
+              const btnDismiss = document.createElement('button');
+              btnDismiss.className = 'btn-secondary';
+              btnDismiss.style.cssText = 'flex: 1; font-size: 0.65rem; padding: 2px; border-color: #aaa; color: #aaa; cursor: pointer;';
+              btnDismiss.innerText = 'Dismiss';
+              btnDismiss.onclick = (e) => { e.stopPropagation(); eng.network.sendPetCommand('dismiss', drone.uuid); };
+
+              advancedDiv.appendChild(btnAttack);
+              advancedDiv.appendChild(btnFollow);
+              advancedDiv.appendChild(btnStay);
+              advancedDiv.appendChild(btnDismiss);
+              item.appendChild(advancedDiv);
+            }
+            
+            listContainer.appendChild(item);
+          });
+        }
 
         let petTop = 15;
         const tWin = document.getElementById('target-window');
         if (tWin && tWin.style.display !== 'none') petTop += tWin.offsetHeight + 10;
         petWindow.style.top = `${petTop}px`;
       }
-    } else if (petWindow) petWindow.style.display = 'none';
+    } else if (petWindow) {
+      petWindow.style.display = 'none';
+    }
   }
 }

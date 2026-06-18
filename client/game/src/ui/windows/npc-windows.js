@@ -210,16 +210,20 @@ export class SpawnerEditWindow extends BaseWindow {
         </div>
       </div>
 
-      <div style="border-top: 1px solid var(--text-dim); margin: 15px 0; padding-top: 10px; color: #f1c40f; font-size: 0.85rem; font-weight: bold; text-align: center;">SPAWN DEFINITION</div>
+      <div style="border-top: 1px solid var(--text-dim); margin: 15px 0; padding-top: 10px; color: #f1c40f; font-size: 0.85rem; font-weight: bold; text-align: center;">Spawn Definition</div>
 
       <div class="b-input-group" style="margin-bottom: 10px; background: rgba(52, 152, 219, 0.1); padding: 5px; border-radius: 4px; border: 1px solid #3498db;">
-        <label class="b-label" style="color: #3498db;">Mob Pack Preset (Overrides Custom Template)</label>
-        <select id="edit-spawner-mobpack" class="b-select" style="border-color: #3498db;">
-          <option value="">-- Use Custom Template Below --</option>
-        </select>
+        <label class="b-label" style="color: #3498db; margin-bottom: 5px;">Allowed Pack IDs (Overrides Neighborhood)</label>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+           <select id="edit-spawner-pack-add-select" class="b-select" style="flex: 1; border-color: #3498db;">
+             <option value="">-- Select Pack ID --</option>
+           </select>
+           <button id="btn-edit-spawner-pack-add" class="b-btn" style="padding: 0 10px;">+</button>
+        </div>
+        <div id="edit-spawner-pack-list" style="display: flex; flex-direction: column; gap: 2px; max-height: 80px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 2px; border-radius: var(--border-radius);"></div>
       </div>
 
-      <div style="color: var(--text-dim); font-size: 0.85rem; font-weight: bold; text-align: center; margin-bottom: 5px;">CUSTOM NPC TEMPLATE</div>
+      <div style="color: var(--text-dim); font-size: 0.85rem; font-weight: bold; text-align: center; margin-bottom: 5px;">Custom Npc Template</div>
 
       <div class="b-input-row">
         <div class="b-input-group" style="flex: 1;">
@@ -291,128 +295,142 @@ export class SpawnerEditWindow extends BaseWindow {
   }
 }
 
-export class MobPackManagerWindow extends BaseWindow {
+export class FactionManagerWindow extends BaseWindow {
   constructor() {
-    super('mobpack-manager-panel', 'Mob Pack Presets', { width: 900, height: 600, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.mobPackManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.mobPackManager.y });
+    super('faction-manager-panel', 'Faction Manager', { width: 1000, height: 600, x: window.innerWidth / 2 - 500, y: 100 });
 
     this.setContent(`
-      <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px;">
-          <h4 class="b-label" style="margin: 0;">Mob Packs</h4>
-          <div id="mp-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;"></div>
-          <div style="display: flex; gap: 5px;">
-            <input type="text" id="mp-new-input" class="b-input" placeholder="New Pack ID..." style="flex: 1;">
-            <button id="btn-mp-add" class="b-btn" style="padding: 0 10px;">Add</button>
-          </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; height: 100%; box-sizing: border-box;">
+        <!-- Header: Faction Selection -->
+        <div style="display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--text-dim); padding-bottom: 10px;">
+          <label class="b-label" style="margin: 0;">Faction</label>
+          <select id="fac-select" class="b-select" style="flex: 1;"></select>
+          <button id="btn-fac-new" class="b-btn btn-secondary" style="padding: 4px 10px;">+ New</button>
+          <button id="btn-fac-rename" class="b-btn btn-secondary" style="padding: 4px 10px;">Rename</button>
+          <button id="btn-fac-delete" class="b-btn btn-secondary" style="padding: 4px 10px; border-color: #e74c3c; color: #e74c3c;">Delete</button>
         </div>
-        <div style="flex: 2; display: flex; flex-direction: column; gap: 5px; padding-left: 5px;">
-          <h4 class="b-label" style="margin: 0;">Intensity & Mob Entries</h4>
 
-          <div id="mp-bulk-edit-container" style="background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; padding: 5px; border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; display: none;">
-            <div style="font-weight: bold; color: #3498db; display: flex; align-items: center; gap: 5px;">
-                Bulk Apply Properties <span title="Apply these values to ALL entries in the current pack." style="cursor: help; color: #f1c40f; background: rgba(0,0,0,0.5); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">i</span>
+        <!-- Body: 3 Columns -->
+        <div style="display: flex; gap: 15px; flex: 1; overflow: hidden;">
+          
+          <!-- Column 1: Faction Settings -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px; overflow-y: auto;">
+            <h4 class="b-label" style="margin: 0; color: #2ecc71;">Core Settings</h4>
+            <div class="b-input-group">
+              <label class="b-label">Lore / Description</label>
+              <textarea id="fac-desc" class="b-input" style="height: 60px; resize: vertical;" placeholder="The backstory of this faction..."></textarea>
             </div>
-            <div style="display: flex; gap: 5px; align-items: center; color: #aaa; flex-wrap: wrap;">
-                Grp <select id="mp-bulk-group" class="b-select" style="width: 120px; padding: 2px;"></select>
-                | Int <input type="number" id="mp-bulk-int-min" class="b-input" style="width: 35px; padding: 2px;" value="1">-<input type="number" id="mp-bulk-int-max" class="b-input" style="width: 35px; padding: 2px;" value="5">
-                | Lvl <input type="number" id="mp-bulk-lvl-min" class="b-input" style="width: 35px; padding: 2px;" value="0">-<input type="number" id="mp-bulk-lvl-max" class="b-input" style="width: 35px; padding: 2px;" value="1">
-                | Str <input type="number" id="mp-bulk-str" class="b-input" style="width: 35px; padding: 2px;" value="0">
-                <button id="btn-mp-bulk-apply" class="b-btn btn-primary" style="padding: 2px 10px; margin-left: auto;">Apply All</button>
+            
+            <h4 class="b-label" style="margin: 10px 0 0 0;">Hostile Towards</h4>
+            <div id="fac-hostile-list" class="scroll-list" style="height: 100px; min-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;"></div>
+
+            <div class="b-input-group" style="margin-top: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label class="b-label" style="margin: 0;">Faction-Wide Powers</label>
+                <button id="btn-fac-add-power" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ Add Power</button>
+              </div>
+              <div id="fac-powers-list" style="display: flex; flex-direction: column; gap: 2px; height: 80px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); padding: 5px; border-radius: var(--border-radius);"></div>
+            </div>
+
+            <h4 class="b-label" style="margin: 10px 0 0 0; color: #2ecc71;">Generic Name Pools</h4>
+            <div style="display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem;">
+              <div class="b-input-group">
+                <div style="display: flex; gap: 5px; margin-bottom: 2px;">
+                   <input type="text" id="fac-names-add-input" class="b-input" placeholder="Add name..." style="flex: 2;">
+                   <select id="fac-names-add-strength" class="b-select" multiple size="8" style="flex: 1; height: auto; min-height: 120px; font-size: 0.8rem; overflow-y: hidden;" title="Hold Ctrl/Cmd to select multiple">
+                     <option value="-2">-2</option><option value="-1">-1</option>
+                     <option value="0" selected>0</option><option value="1">+1</option>
+                     <option value="2">+2</option><option value="3">+3</option>
+                     <option value="4">+4</option><option value="5">+5</option>
+                   </select>
+                   <button id="btn-fac-names-add" class="b-btn" style="padding: 0 10px; height: 40px; align-self: flex-start;">+</button>
+                </div>
+                <div id="fac-names-list" class="scroll-list" style="display: flex; flex-direction: column; gap: 2px; height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); padding: 5px; border-radius: var(--border-radius);"></div>
+              </div>
+            </div>
+            
+            <button id="btn-fac-save" class="b-btn btn-primary" style="margin-top: auto;">Save Faction Settings</button>
+          </div>
+
+          <!-- Column 2: Faction NPCs -->
+          <div style="flex: 1.2; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h4 class="b-label" style="margin: 0; color: #2ecc71;">Faction NPCs</h4>
+              <select id="fac-npc-select" class="b-select" style="max-width: 150px;"></select>
+            </div>
+            
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+              <button id="btn-fac-npc-new" class="b-btn btn-secondary" style="flex: 1; padding: 4px;">+ New</button>
+              <button id="btn-fac-npc-duplicate" class="b-btn btn-secondary" style="flex: 1; padding: 4px; border-color: #f1c40f; color: #f1c40f;">Duplicate</button>
+              <button id="btn-fac-npc-delete" class="b-btn btn-secondary" style="flex: 1; padding: 4px; border-color: #e74c3c; color: #e74c3c;">Delete</button>
+            </div>
+
+            <div id="fac-npc-editor" style="display: flex; flex-direction: column; gap: 5px; opacity: 0.5; pointer-events: none;">
+              <div class="b-input-group"><label class="b-label">Template ID</label><input type="text" id="fac-npc-id" class="b-input"></div>
+              <div class="b-input-group">
+                 <label style="display: flex; align-items: center; gap: 5px; color: #fff; font-size: 0.8rem; cursor: pointer; margin-bottom: 2px;">
+                    <input type="checkbox" id="fac-npc-use-generic-name" style="accent-color: #3498db; width: 16px; height: 16px;">
+                    Use Generic Name Pools
+                 </label>
+                 <input type="text" id="fac-npc-name" class="b-input" placeholder="Name...">
+              </div>
+              <div class="b-input-group"><label class="b-label">Description</label><textarea id="fac-npc-desc" class="b-input" style="height: 50px; resize: vertical;"></textarea></div>
+              
+              <div class="b-input-row">
+                <div class="b-input-group" style="flex: 1;">
+                  <label class="b-label">Strength</label>
+                  <select id="fac-npc-strength" class="b-select">
+                    <option value="-2">-2 (Minion)</option><option value="-1">-1 (Weak)</option>
+                    <option value="0" selected>0 (Standard)</option><option value="1">+1 (Strong)</option>
+                    <option value="2">+2 (Elite)</option><option value="3">+3 (Boss)</option>
+                    <option value="4">+4 (Arch-Villain)</option><option value="5">+5 (Raid Boss)</option>
+                  </select>
+                </div>
+                <div class="b-input-group" style="flex: 1;"><label class="b-label">Type</label><select id="fac-npc-type" class="b-select"><option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option><option value="banker">Banker</option></select></div>
+              </div>
+              <div class="b-input-row">
+                 <div class="b-input-group" style="flex: 1;"><label class="b-label">Speed Variant</label><input type="number" id="fac-npc-speed" class="b-input" value="1.0" step="0.1"></div>
+                 <div class="b-input-group" style="flex: 1;"><label class="b-label">Aggro Radius</label><input type="number" id="fac-npc-aggro" class="b-input" value="500"></div>
+                 <div class="b-input-group" style="flex: 1;"><label class="b-label">Base EXP</label><input type="number" id="fac-npc-exp" class="b-input" value="20"></div>
+              </div>
+
+              <div class="b-input-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><label class="b-label" style="margin: 0;">NPC Powers</label><button id="btn-fac-npc-add-power" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ Add Power</button></div>
+                <div id="fac-npc-powers-list" style="display: flex; flex-direction: column; gap: 2px; height: 80px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); padding: 5px; border-radius: var(--border-radius);"></div>
+              </div>
+              
+              <button id="btn-fac-npc-save" class="b-btn btn-primary" style="margin-top: auto;">Save NPC Template</button>
             </div>
           </div>
 
-          <div id="mp-entries-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 5px; padding: 5px;"></div>
-          <button id="btn-mp-add-entry" class="b-btn btn-secondary" style="border-color: #2ecc71; color: #2ecc71;">+ Add NPC Entry</button>
-          <button id="btn-mp-save" class="b-btn btn-primary" style="margin-top: auto;">Save Pack to Server</button>
-        </div>
-      </div>
-    `);
-  }
-}
+          <!-- Column 3: Faction Spawns (Mob Packs) -->
+          <div style="flex: 1.2; display: flex; flex-direction: column; gap: 5px; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h4 class="b-label" style="margin: 0; color: #2ecc71;">Faction Spawns (Packs)</h4>
+              <select id="fac-pack-select" class="b-select" style="max-width: 150px;"></select>
+            </div>
+            
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+              <button id="btn-fac-pack-new" class="b-btn btn-secondary" style="flex: 1; padding: 4px;">+ Add Pack</button>
+              <button id="btn-fac-pack-delete" class="b-btn btn-secondary" style="flex: 1; padding: 4px; border-color: #e74c3c; color: #e74c3c;">Delete</button>
+            </div>
 
-export class EntityGroupManagerWindow extends BaseWindow {
-  constructor() {
-    super('entity-group-manager-panel', 'Entity Group Manager', { width: 900, height: 550, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.entityGroupManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.entityGroupManager.y });
-
-    this.setContent(`
-      <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px;">
-          <h4 class="b-label" style="margin: 0;">Entity Groups</h4>
-          <div id="egm-group-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;">
-          </div>
-          <div style="display: flex; gap: 5px;">
-            <input type="text" id="egm-new-group-input" class="b-input" placeholder="New Group..." style="flex: 1;">
-            <button id="btn-egm-add-group" class="b-btn" style="padding: 0 10px;">Add</button>
-          </div>
-        </div>
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; padding-left: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px;">
-          <h4 class="b-label" style="margin: 0;">Hostile Towards (Aggro List)</h4>
-          <div id="egm-hostile-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;">
-          </div>
-          <div class="b-input-group" style="margin-top: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><label class="b-label" style="margin: 0;">Group Powers</label><button id="btn-egm-add-power" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ Add Power</button></div>
-            <div id="egm-powers-list" style="display: flex; flex-direction: column; gap: 2px; max-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); padding: 5px; border-radius: var(--border-radius);"></div>
-          </div>
-          <button id="btn-egm-save" class="b-btn" style="margin-top: auto;">Save Group Settings</button>
-        </div>
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; padding-left: 5px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h4 class="b-label" style="margin: 0;">Faction NPCs</h4>
-            <button id="btn-egm-new-npc" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ New NPC</button>
-          </div>
-          <div id="egm-npc-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 5px; padding: 5px;"></div>
-        </div>
-      </div>
-    `);
-  }
-}
-
-export class NPCTemplateManagerWindow extends BaseWindow {
-  constructor() {
-    super('npc-template-manager-panel', 'NPC Template Manager', { width: 800, height: 500, x: window.innerWidth / 2 + GUI_DEFAULT_POSITIONS.npcTemplateManager.xCenterOffset, y: GUI_DEFAULT_POSITIONS.npcTemplateManager.y });
-
-    this.setContent(`
-      <div style="display: flex; gap: var(--spacing-1); height: 100%; box-sizing: border-box;">
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--text-dim); padding-right: 10px;">
-          <h4 class="b-label" style="margin: 0;">NPC Templates</h4>
-          <div id="npct-list" class="scroll-list" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 2px; padding: 5px;"></div>
-          <div style="display: flex; gap: 5px;">
-            <input type="text" id="npct-new-input" class="b-input" placeholder="New Template ID..." style="flex: 1;">
-            <button id="btn-npct-add" class="b-btn" style="padding: 0 10px;">Add</button>
-          </div>
-        </div>
-        <div style="flex: 2; display: flex; flex-direction: column; gap: 5px; padding-left: 5px; overflow-y: auto;">
-          <h4 class="b-label" style="margin: 0;">Template Properties</h4>
-          <div class="b-input-row">
-            <div class="b-input-group" style="flex: 1;"><label class="b-label">Display Name</label><input type="text" id="npct-name" class="b-input"></div>
-            <div class="b-input-group" style="flex: 1;">
-              <label class="b-label">Group / Faction</label>
-              <select id="npct-group" class="b-select">
-              </select>
+            <div id="fac-pack-editor" style="display: flex; flex-direction: column; gap: 5px; opacity: 0.5; pointer-events: none;">
+              <div class="b-input-group"><label class="b-label">Pack ID</label><input type="text" id="fac-pack-id" class="b-input"></div>
+              <div class="b-input-row">
+                 <div class="b-input-group" style="flex: 1;"><label class="b-label">Intensity Min</label><input type="number" id="fac-pack-intmin" class="b-input" value="1"></div>
+                 <div class="b-input-group" style="flex: 1;"><label class="b-label">Intensity Max</label><input type="number" id="fac-pack-intmax" class="b-input" value="5"></div>
+                 <div class="b-input-group" style="flex: 1;"><label class="b-label">Weight</label><input type="number" id="fac-pack-weight" class="b-input" value="10"></div>
+              </div>
+              
+              <h4 class="b-label" style="margin: 5px 0 0 0; color: #2ecc71;">NPC Entries</h4>
+              <div id="fac-pack-entries" class="scroll-list" style="flex: 1; min-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: var(--border-radius); display: flex; flex-direction: column; gap: 5px; padding: 5px;"></div>
+              
+              <button id="btn-fac-pack-add-entry" class="b-btn btn-secondary" style="border-color: #2ecc71; color: #2ecc71;">+ Add Entry</button>
+              <button id="btn-fac-pack-save" class="b-btn btn-primary" style="margin-top: auto;">Save Pack</button>
             </div>
           </div>
-          <div class="b-input-row">
-            <div class="b-input-group" style="flex: 1;">
-              <label class="b-label">Strength Rating</label>
-              <select id="npct-strength" class="b-select">
-                <option value="-2">-2 (Minion)</option><option value="-1">-1 (Weak)</option>
-                <option value="0" selected>0 (Standard)</option><option value="1">+1 (Strong)</option>
-                <option value="2">+2 (Elite)</option><option value="3">+3 (Boss)</option>
-                <option value="4">+4 (Arch-Villain)</option><option value="5">+5 (Raid Boss)</option>
-              </select>
-            </div>
-            <div class="b-input-group" style="flex: 1;"><label class="b-label">NPC Type</label><select id="npct-type" class="b-select"><option value="generic">Generic</option><option value="civilian">Civilian</option><option value="trainer">Trainer</option><option value="banker">Banker</option></select></div>
-          </div>
-          <div class="b-input-row">
-             <div class="b-input-group" style="flex: 1;"><label class="b-label">Speed Variant (Multiplier)</label><input type="number" id="npct-speed" class="b-input" value="1.0" step="0.1"></div>
-             <div class="b-input-group" style="flex: 1;"><label class="b-label">Aggro Radius</label><input type="number" id="npct-aggro" class="b-input" value="500"></div>
-             <div class="b-input-group" style="flex: 1;"><label class="b-label">Base EXP</label><input type="number" id="npct-exp" class="b-input" value="20"></div>
-          </div>
-          <div class="b-input-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><label class="b-label" style="margin: 0;">Assigned Powers</label><button id="btn-npct-add-power" class="b-btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">+ Add Power</button></div>
-            <div id="npct-powers-list" style="display: flex; flex-direction: column; gap: 2px; max-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--text-dim); padding: 5px; border-radius: var(--border-radius);"></div>
-          </div>
-          <button id="btn-npct-save" class="b-btn btn-primary" style="margin-top: auto;">Save Template</button>
+
         </div>
       </div>
     `);

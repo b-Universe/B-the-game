@@ -40,15 +40,14 @@ export class DevToolsWindow extends BaseWindow {
           <button id="btn-dev-player-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Player Manager</button>
           <button id="btn-dev-npc-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">NPC Manager</button>
           <button id="btn-dev-spawner-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Spawner Manager</button>
-          <button id="btn-dev-mobpack-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Mob Pack Presets</button>
-          <button id="btn-dev-group-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Entity Group Manager</button>
-          <button id="btn-dev-npc-template-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">NPC Templates</button>
+          <button id="btn-dev-faction-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Faction Manager</button>
           <button id="btn-dev-entity-type-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Entity Types</button>
           <button id="btn-dev-edit-target" class="b-btn btn-secondary" style="width: 100%; border-color: #e056fd; color: #e056fd;">Edit Selected Target</button>
       </div>
 
       <div id="dev-tab-systems" class="dev-tab-panel" style="display: none; flex-direction: column; gap: 5px; overflow-y: auto; padding-right: 5px;">
           <button id="btn-dev-power-editor" class="b-btn btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;">Power Customizer</button>
+          <button id="btn-dev-powerset-editor" class="b-btn btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;">Powerset Customizer</button>
           <button id="btn-dev-arcade-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;">Arcade Manager</button>
           <button id="btn-dev-neighborhood-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;">Neighborhood Manager</button>
           <button id="btn-dev-zone-manager" class="b-btn btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;">Zone Manager</button>

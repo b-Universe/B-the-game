@@ -202,6 +202,15 @@ export class Renderer {
       this.scene.add(light.target);
       this.spotLightPool.push(light);
     }
+
+    this.pointLightPool = [];
+    for (let i = 0; i < maxSpotLights; i++) {
+      const light = new THREE.PointLight(0xeef4ff, 0, 800, 1.5); // color, intensity, distance, decay
+      light.castShadow = false; // PointLight shadows are expensive, disable for drones
+      light.userData.inUse = false;
+      this.scene.add(light);
+      this.pointLightPool.push(light);
+    }
   }
 
   updateChunkColumn(cx, cy, chunkMap, forceRebuild = false) {
@@ -1340,7 +1349,7 @@ export class Renderer {
     if (!compassWrapper) {
       compassWrapper = document.createElement('div');
       compassWrapper.id = 'compass-wrapper';
-      compassWrapper.style.cssText = 'position: absolute; display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 1000;';
+      compassWrapper.style.cssText = 'position: absolute; display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 900;';
 
       let compass = document.createElement('div');
       compass.id = 'compass-ui';
@@ -1679,32 +1688,52 @@ export class Renderer {
       opLight.target.updateMatrixWorld();
     }
 
+    const now = Date.now();
     if (eng.drones) {
       for (const [id, drone] of Object.entries(eng.drones)) {
         if (drone.state === 'dead' || drone.state === 'death') continue;
-        activeLightIds.add(`drone_${id}`);
 
-        let dLight = this.otherPlayerLights.get(`drone_${id}`);
-        if (!dLight) {
-          dLight = this.spotLightPool.find(l => !l.userData.inUse);
+        let lightsOn = false;
+        
+        if (drone.ownerSocketId === eng.network?.socket?.id) {
+           const hasLights = eng.player.activePowers && eng.player.activePowers.includes('satellite-support-lights');
+           if (hasLights && eng.player.satelliteLightsToggleTime) {
+              const elapsed = now - eng.player.satelliteLightsToggleTime;
+              const staggerMs = ((drone.orbitIndex || 1) - 1) * 2000;
+              if (elapsed >= staggerMs) lightsOn = true;
+           }
+        } else {
+           const owner = eng.players && eng.players[drone.ownerSocketId];
+           if (owner && owner.activePowers && owner.activePowers.includes('satellite-support-lights')) {
+              lightsOn = true; 
+           }
+        }
+
+        if (lightsOn) {
+          activeLightIds.add(`drone_point_${id}`);
+          let dLight = this.otherPlayerLights.get(`drone_point_${id}`);
+          if (!dLight) {
+            dLight = this.pointLightPool.find(l => !l.userData.inUse);
+            if (dLight) {
+              dLight.userData.inUse = true;
+              this.otherPlayerLights.set(`drone_point_${id}`, dLight);
+            }
+          }
           if (dLight) {
-            dLight.userData.inUse = true;
-            dLight.angle = Math.PI / 3;
-            this.otherPlayerLights.set(`drone_${id}`, dLight);
+            dLight.intensity = 1500;
+            dLight.position.set(drone.x, drone.y, (drone.z || 0) + 10);
+            dLight.color.setHex(0xeef4ff); // blueish white
           }
         }
-        if (!dLight) continue;
-
-        dLight.intensity = 15000;
-        dLight.position.set(drone.x, drone.y, (drone.z || 0) - 5);
-        dLight.target.position.set(drone.x, drone.y, (drone.z || 0) - 1000);
-        dLight.target.updateMatrixWorld();
       }
     }
 
     for (const [id, opLight] of this.otherPlayerLights.entries()) {
       if (!activeLightIds.has(id)) {
-        if (id.startsWith('drone_') && opLight.intensity > 0) {
+        if (id.startsWith('drone_point_') && opLight.intensity > 0) {
+          opLight.intensity -= 100; // Smooth fade out
+          if (opLight.intensity > 0) continue;
+        } else if (id.startsWith('drone_') && opLight.intensity > 0) {
           opLight.intensity -= 1000; // Smooth 15-frame fade out
           if (opLight.intensity > 0) continue;
         }

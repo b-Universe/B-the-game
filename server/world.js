@@ -100,6 +100,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         player.preAptX = freshCharData.preAptX;
         player.preAptY = freshCharData.preAptY;
         player.preAptZ = freshCharData.preAptZ;
+        player.petNames = freshCharData.petNames || {};
         if (!player.stats) player.stats = {};
         player.stats.pvpKills = freshCharData.stats?.pvpKills || 0; player.stats.pveKills = freshCharData.stats?.pveKills || 0;
 
@@ -143,7 +144,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
       }
     } catch (e) { console.error(`Error loading fresh char data for ${player.name}:`, e.message); }
 
-    if (player.activePowers && player.activePowers.includes('satelite-support')) {
+    if (player.activePowers && player.activePowers.includes('satellite-support')) {
       const existingDrones = Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id);
       const hasEquipRobot = player.powers && player.powers.some(pId => pId === 'equip-robot' || (SERVER_POWER_REGISTRY[pId] && SERVER_POWER_REGISTRY[pId].name === 'Equip Robot'));
       const hasUpgradeRobot = player.powers && player.powers.some(pId => pId === 'upgrade-robot' || pId === 'upgrade-robots' || (SERVER_POWER_REGISTRY[pId] && (SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robot' || SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robots')));
@@ -152,7 +153,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         let delay = 0;
         for (let i = existingDrones.length; i < numDrones; i++) {
           setTimeout(() => {
-            const p = activePlayers[socket.id]; if (!p || !p.zone || p.state === 'death' || !p.activePowers || !p.activePowers.includes('satelite-support')) return;
+            const p = activePlayers[socket.id]; if (!p || !p.zone || p.state === 'death' || !p.activePowers || !p.activePowers.includes('satellite-support')) return;
             const droneId = randomUUID();
             const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: p.name, x: p.x, y: p.y, z: (p.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: i, orbitOffset: (i / numDrones) * Math.PI * 2 + (Math.random() * Math.PI), hp: hasUpgradeRobot ? 150 : 100, maxHp: hasUpgradeRobot ? 150 : 100, type: 'drone', isCombatDrone: i === 1, isAssaultDrone: i === 2, isUpgraded: hasUpgradeRobot, zone: p.zone, level: p.level || 1, strength: -2, mode: 'defensive' };
             activeDrones[droneId] = newDrone; io.to(p.zone).emit('drone_spawned', newDrone);
@@ -173,6 +174,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     socket.emit('current_mob_packs', state.mobPacks);
     socket.emit('current_npc_templates', state.npcTemplates);
     socket.emit('current_entity_types', state.entityTypes);
+    socket.emit('entity_groups_data', state.entityGroups);
 
     const dronesInZone = {}; for (const id in activeDrones) { if (activeDrones[id].zone === player.zone) dronesInZone[id] = activeDrones[id]; }
     socket.emit('current_drones', dronesInZone);
@@ -494,7 +496,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
     const playersInZone = {}; for (const id in activePlayers) { if (activePlayers[id].zone === targetZone) playersInZone[id] = activePlayers[id]; }
     socket.emit('current_players', playersInZone); socket.emit('current_npcs', npcsCatalog.filter(n => n.zone === targetZone)); socket.emit('current_spawners', spawnersCatalog.filter(s => s.zone === targetZone)); const dronesInZone = {}; for (const id in activeDrones) { if (activeDrones[id].zone === targetZone) dronesInZone[id] = activeDrones[id]; } socket.emit('current_drones', dronesInZone);
     socket.emit('current_map_badges', mapBadgesCatalog.filter(b => (b.zone || 'untitled') === targetZone));
-    socket.emit('current_neighborhoods', state.neighborhoods); socket.emit('current_mob_packs', state.mobPacks); socket.emit('current_npc_templates', state.npcTemplates); socket.emit('current_entity_types', state.entityTypes);
+    socket.emit('current_neighborhoods', state.neighborhoods); socket.emit('current_mob_packs', state.mobPacks); socket.emit('current_npc_templates', state.npcTemplates); socket.emit('current_entity_types', state.entityTypes); socket.emit('entity_groups_data', state.entityGroups);
     socket.emit('zones_config_data', state.zonesConfig || {});
     const combinedData = {}; if (mapChunks[targetZone]) { for (let chunkId in mapChunks[targetZone]) { Object.assign(combinedData, mapChunks[targetZone][chunkId]); } } socket.compress(true).emit('full_map_data_received', { data: combinedData, currentZone: targetZone });
     checkZoneBadge(player, targetZone, socket.id);
@@ -513,9 +515,35 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
         if (charData.unspentPowerPicks > 0) {
           if (!charData.powers.includes(powerId)) {
             charData.unspentPowerPicks--; charData.powers.push(powerId); // TODO: This should be handled by the ProgressionSystem
+            const newlyLearned = [powerId];
+            const inheritPowers = (pId) => {
+              const def = SERVER_POWER_REGISTRY[pId];
+              if (def && def.inheritedPowers && def.inheritedPowers.length > 0) {
+                def.inheritedPowers.forEach(inheritedId => {
+                  if (!charData.powers.includes(inheritedId)) {
+                    charData.powers.push(inheritedId);
+                    newlyLearned.push(inheritedId);
+                    inheritPowers(inheritedId);
+                  }
+                });
+              }
+            };
+            inheritPowers(powerId);
+            
             if (!charData.powerTray) charData.powerTray = charData.powers.filter(p => SERVER_POWER_REGISTRY[p] ? SERVER_POWER_REGISTRY[p].type?.toLowerCase() !== 'passive' : true);
-            const pDef = SERVER_POWER_REGISTRY[powerId];
-            if (!pDef || pDef.type?.toLowerCase() !== 'passive') { charData.powerTray.push(powerId); } else { if (!charData.activePowers) charData.activePowers = []; if (!charData.activePowers.includes(powerId)) { charData.activePowers.push(powerId); } player.activePowers = charData.activePowers; io.to(socket.id).emit('player_stats_updated', { activePowers: player.activePowers }); const isEquipRobot = powerId === 'equip-robot' || (pDef && pDef.name === 'Equip Robot'); const isUpgradeRobot = powerId === 'upgrade-robot' || powerId === 'upgrade-robots' || (pDef && (pDef.name === 'Upgrade Robot' || pDef.name === 'Upgrade Robots')); const hasUpgradeRobot = player.powers && player.powers.some(pId => pId === 'upgrade-robot' || pId === 'upgrade-robots' || (SERVER_POWER_REGISTRY[pId] && (SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robot' || SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robots'))); const existingDrones = Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id && d.state !== 'dead'); if (isEquipRobot && existingDrones.length === 1) { const droneId = randomUUID(); const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: player.name, x: player.x, y: player.y, z: (player.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: 1, orbitOffset: Math.PI + (Math.random() * Math.PI), hp: hasUpgradeRobot ? 150 : 100, maxHp: hasUpgradeRobot ? 150 : 100, type: 'drone', isCombatDrone: true, isAssaultDrone: false, isUpgraded: hasUpgradeRobot, zone: player.zone }; activeDrones[droneId] = newDrone; io.to(player.zone).emit('drone_spawned', newDrone); } if (isUpgradeRobot && existingDrones.length === 2) { const droneId = randomUUID(); const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: player.name, x: player.x, y: player.y, z: (player.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: 2, orbitOffset: Math.PI + (Math.random() * Math.PI), hp: 150, maxHp: 150, type: 'drone', isCombatDrone: false, isAssaultDrone: true, isUpgraded: true, zone: player.zone }; activeDrones[droneId] = newDrone; io.to(player.zone).emit('drone_spawned', newDrone); } if (isUpgradeRobot) { Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id).forEach(d => { d.isUpgraded = true; d.maxHp = 150; d.hp += 50; io.to(d.zone).emit('drones_moved', { [d.uuid]: d }); }); } }
+            
+            newlyLearned.forEach(learnedId => {
+              const pDef = SERVER_POWER_REGISTRY[learnedId];
+              if (!pDef || pDef.type?.toLowerCase() !== 'passive') { 
+                if (!charData.powerTray.includes(learnedId)) charData.powerTray.push(learnedId); 
+              } else { 
+                if (!charData.activePowers) charData.activePowers = []; 
+                if (!charData.activePowers.includes(learnedId)) charData.activePowers.push(learnedId); 
+              }
+            });
+            player.activePowers = charData.activePowers; io.to(socket.id).emit('player_stats_updated', { activePowers: player.activePowers }); 
+            const pDef = SERVER_POWER_REGISTRY[powerId]; const isEquipRobot = powerId === 'equip-robot' || (pDef && pDef.name === 'Equip Robot'); const isUpgradeRobot = powerId === 'upgrade-robot' || powerId === 'upgrade-robots' || (pDef && (pDef.name === 'Upgrade Robot' || pDef.name === 'Upgrade Robots')); const hasUpgradeRobot = player.powers && player.powers.some(pId => pId === 'upgrade-robot' || pId === 'upgrade-robots' || (SERVER_POWER_REGISTRY[pId] && (SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robot' || SERVER_POWER_REGISTRY[pId].name === 'Upgrade Robots'))); const existingDrones = Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id && d.state !== 'dead'); if (isEquipRobot && existingDrones.length === 1) { const droneId = randomUUID(); const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: player.name, x: player.x, y: player.y, z: (player.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: 1, orbitOffset: Math.PI + (Math.random() * Math.PI), hp: hasUpgradeRobot ? 150 : 100, maxHp: hasUpgradeRobot ? 150 : 100, type: 'drone', isCombatDrone: true, isAssaultDrone: false, isUpgraded: hasUpgradeRobot, zone: player.zone }; activeDrones[droneId] = newDrone; io.to(player.zone).emit('drone_spawned', newDrone); } if (isUpgradeRobot && existingDrones.length === 2) { const droneId = randomUUID(); const newDrone = { uuid: droneId, ownerSocketId: socket.id, ownerName: player.name, x: player.x, y: player.y, z: (player.z || 0) + 220, state: 'idle', dir: 'down', orbitIndex: 2, orbitOffset: Math.PI + (Math.random() * Math.PI), hp: 150, maxHp: 150, type: 'drone', isCombatDrone: false, isAssaultDrone: true, isUpgraded: true, zone: player.zone }; activeDrones[droneId] = newDrone; io.to(player.zone).emit('drone_spawned', newDrone); } if (isUpgradeRobot) { Object.values(activeDrones).filter(d => d.ownerSocketId === socket.id).forEach(d => { d.isUpgraded = true; d.maxHp = 150; d.hp += 50; io.to(d.zone).emit('drones_moved', { [d.uuid]: d }); }); } 
+            
             if (charData.currency !== undefined) delete charData.currency;
             player.powers = charData.powers; fs.writeFileSync(charFile, JSON.stringify(charData, null, 2));
             charData.currency = player.currency;
@@ -592,6 +620,7 @@ module.exports = function registerWorldSockets(socket, io, state, deps) {
           if (player.preAptX !== undefined) charObj.preAptX = player.preAptX;
           if (player.preAptY !== undefined) charObj.preAptY = player.preAptY;
           if (player.preAptZ !== undefined) charObj.preAptZ = player.preAptZ;
+          if (player.petNames) charObj.petNames = player.petNames;
           fs.writeFileSync(charFile, JSON.stringify(charObj, null, 2));
 
           if (player.accountUuid) {

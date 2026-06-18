@@ -288,15 +288,15 @@ export class NetworkManager {
 
     this.socket.on('current_mob_packs', (mobPacks) => {
       eng.mobPacks = mobPacks;
-      if (eng.ui && eng.ui.devTools && eng.ui.devTools.mobPackManagerWindow.element.style.display === 'flex') {
-        eng.ui.devTools.renderMobPacks();
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.factionManagerWindow && eng.ui.devTools.factionManagerWindow.element.style.display === 'flex') {
+        if(eng.ui.devTools.factionUI) eng.ui.devTools.factionUI.render();
       }
     });
 
     this.socket.on('current_npc_templates', (templates) => {
       eng.npcTemplates = templates;
-      if (eng.ui && eng.ui.devTools && eng.ui.devTools.npcTemplateManagerWindow && eng.ui.devTools.npcTemplateManagerWindow.element.style.display === 'flex') {
-        eng.ui.devTools.renderNpcTemplates();
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.factionManagerWindow && eng.ui.devTools.factionManagerWindow.element.style.display === 'flex') {
+        if(eng.ui.devTools.factionUI) eng.ui.devTools.factionUI.render();
       }
     });
 
@@ -305,8 +305,8 @@ export class NetworkManager {
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.entityTypeManagerWindow && eng.ui.devTools.entityTypeManagerWindow.element.style.display === 'flex') {
         eng.ui.devTools.renderEntityTypes();
       }
-      if (eng.ui && eng.ui.devTools && eng.ui.devTools.npcTemplateManagerWindow && eng.ui.devTools.npcTemplateManagerWindow.element.style.display === 'flex') {
-        eng.ui.devTools.renderNpcTemplates();
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.factionManagerWindow && eng.ui.devTools.factionManagerWindow.element.style.display === 'flex') {
+        if(eng.ui.devTools.factionUI) eng.ui.devTools.factionUI.render();
       }
     });
 
@@ -398,10 +398,19 @@ export class NetworkManager {
         if (op) drone.z = (op.z || 0) + 1000;
       }
       eng.drones[drone.uuid] = drone;
+      if (eng.ui && eng.ui.petUI) eng.ui.petUI.update();
     });
 
     this.socket.on('drone_despawned', (data) => {
-      delete eng.drones[data.uuid];
+      const d = eng.drones[data.uuid];
+      if (d) {
+        d._dismissing = true;
+        d._dismissTimer = 1.2;
+        d._dismissVz = 800;
+      } else {
+        delete eng.drones[data.uuid];
+      }
+      if (eng.ui && eng.ui.petUI) eng.ui.petUI.update();
     });
 
     this.socket.on('npc_respawned', (uuid) => {
@@ -742,8 +751,9 @@ export class NetworkManager {
     });
 
     this.socket.on('entity_groups_data', (data) => {
-      if (eng.ui && eng.ui.devTools) {
-        eng.ui.devTools.renderEntityGroupManager(data);
+      eng.entityGroups = data;
+      if (eng.ui && eng.ui.devTools && eng.ui.devTools.factionManagerWindow && eng.ui.devTools.factionManagerWindow.element.style.display === 'flex') {
+        if(eng.ui.devTools.factionUI) eng.ui.devTools.factionUI.render();
       }
     });
 
@@ -844,6 +854,7 @@ export class NetworkManager {
 
     this.socket.on('zones_config_data', (data) => {
       eng.zonesConfig = data;
+      localStorage.setItem('b_cache_zones_config', JSON.stringify(data));
       if (typeof eng.updateBGM === 'function') eng.updateBGM();
       if (eng.ui && eng.ui.devTools && eng.ui.devTools.populateZoneConfig) eng.ui.devTools.populateZoneConfig();
       if (eng.ui && eng.ui.homeEditor && eng.ui.homeEditor.refreshModal) eng.ui.homeEditor.refreshModal();

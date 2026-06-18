@@ -9,7 +9,7 @@ export class CombatStatsWindow extends BaseWindow {
 
         <!-- Health Section -->
         <div style="border: 1px solid ${UI_COLORS.success}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: ${UI_COLORS.success}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; display: flex; justify-content: space-between;"><span>Health & Healing</span> <span style="color: ${UI_COLORS.warning}; font-size: 0.8rem;">Lv. <span id="cs-level">1</span></span></div>
+          <div style="color: ${UI_COLORS.success}; font-weight: bold; margin-bottom: 5px; text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8); display: flex; justify-content: space-between;"><span>Health & Healing</span> <span style="color: ${UI_COLORS.warning}; font-size: 0.8rem;">Lv. <span id="cs-level">1</span></span></div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Current HP:</span> <span id="cs-hp" style="color: ${UI_COLORS.success};">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Max HP:</span> <span id="cs-max-hp" style="color: ${UI_COLORS.success};">0</span></div>
@@ -22,7 +22,7 @@ export class CombatStatsWindow extends BaseWindow {
 
         <!-- Energy & Battery Section -->
         <div style="border: 1px solid #0984e3; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: #0984e3; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Energy & Battery</div>
+          <div style="color: #0984e3; font-weight: bold; margin-bottom: 5px; text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Energy & Battery</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="color: #0984e3; text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;">Energy</div>
             <div style="color: ${UI_COLORS.cyan}; text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px;">Battery</div>
@@ -41,7 +41,7 @@ export class CombatStatsWindow extends BaseWindow {
 
         <!-- Combat Section -->
         <div style="border: 1px solid ${UI_COLORS.error}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: ${UI_COLORS.error}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Combat</div>
+          <div style="color: ${UI_COLORS.error}; font-weight: bold; margin-bottom: 5px; text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Combat</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Damage Bonus:</span> <span id="cs-dmg">+0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Thorns:</span> <span id="cs-thorns">0</span></div>
@@ -57,7 +57,7 @@ export class CombatStatsWindow extends BaseWindow {
         </div>
 
         <div style="border: 1px solid ${UI_COLORS.orange}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: ${UI_COLORS.orange}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Resistance & Defense</div>
+          <div style="color: ${UI_COLORS.orange}; font-weight: bold; margin-bottom: 5px; text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Resistance & Defense</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Smashing Res:</span> <span id="cs-res-smashing">0%</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Smashing Def:</span> <span id="cs-def-smashing">0%</span></div>
@@ -72,7 +72,7 @@ export class CombatStatsWindow extends BaseWindow {
         </div>
 
         <div style="border: 1px solid ${UI_COLORS.purple}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4);">
-          <div style="color: ${UI_COLORS.purple}; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Status Protection & Resistance</div>
+          <div style="color: ${UI_COLORS.purple}; font-weight: bold; margin-bottom: 5px; text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Status Protection & Resistance</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div style="display: flex; justify-content: space-between;"><span>Hold Prot:</span> <span id="cs-prot-hold">0</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Hold Res:</span> <span id="cs-res-hold">0%</span></div>
@@ -88,7 +88,7 @@ export class CombatStatsWindow extends BaseWindow {
         <!-- Target Comparison Section -->
         <div id="cs-target-section" style="border: 1px solid ${UI_COLORS.error}; border-radius: 4px; padding: 8px; background: rgba(0,0,0,0.4); display: none; flex-direction: column;">
           <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="cs-target-header">
-            <span style="color: ${UI_COLORS.error}; font-weight: bold; text-transform: uppercase;">Target Comparison</span>
+            <span style="color: ${UI_COLORS.error}; font-weight: bold; text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);">Target Comparison</span>
             <span id="cs-target-toggle">▼</span>
           </div>
           <div id="cs-target-content" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px;">

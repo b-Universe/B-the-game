@@ -407,7 +407,8 @@
 .help-content h4 {
   margin: 0 0 12px 0;
   color: #2ecc71;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);
   border-bottom: 1px solid #3498db;
   padding-bottom: 6px;
   font-family: var(--font-header);

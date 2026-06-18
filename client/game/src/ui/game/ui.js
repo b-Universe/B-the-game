@@ -6,6 +6,7 @@ import { PlayerListUIManager } from './player-list-ui.js?v=cache-bust-005';
 import { FriendsUIManager } from './friends-ui.js?v=cache-bust-005';
 import { GAME_TIPS } from './tips.js?v=cache-bust-005';
 import { PowerEditorUIManager } from '../power-editor-ui.js?v=cache-bust-005';
+import { PowersetEditorUIManager } from '../powerset-editor-ui.js?v=cache-bust-005';
 import { PlayerModifierUIManager } from './player-modifier-ui.js?v=cache-bust-005';
 import { ProgressionSystem } from '../windows/progression.js?v=cache-bust-005';
 import { CombatStatsUIManager } from './combat-stats-ui.js?v=cache-bust-005';
@@ -17,6 +18,7 @@ import { HomeEditorUIManager } from './home-editor-ui.js?v=cache-bust-005';
 import { HudAltUIManager } from './hud-alt-ui.js?v=cache-bust-005';
 import { PetUIManager } from './pet-ui.js?v=cache-bust-005';
 import { ContextMenuUIManager } from './context-menu-ui.js?v=cache-bust-005';
+import { InfoWindow } from '../windows/info-window.js?v=cache-bust-005';
 
 export class UIManager {
   constructor(engine) {
@@ -29,6 +31,7 @@ export class UIManager {
     this.playerList = new PlayerListUIManager(engine, this);
     this.friendsList = new FriendsUIManager(engine, this);
     this.powerEditor = new PowerEditorUIManager(engine);
+    this.powersetEditor = new PowersetEditorUIManager(engine);
     this.playerModifier = new PlayerModifierUIManager(engine, this);
     this.combatStats = new CombatStatsUIManager(engine, this);
     this.badges = new BadgesUIManager(engine, this);
@@ -40,6 +43,7 @@ export class UIManager {
     this.hudAlt = new HudAltUIManager(engine, this);
     this.petUI = new PetUIManager(engine, this);
     this.contextMenu = new ContextMenuUIManager(engine, this);
+    this.infoWindow = new InfoWindow(engine, this);
 
     this.loadingUI.setupLoadingScreen();
     this.makeDraggable('game-chat-container', '#chat-drag-handle');
@@ -80,187 +84,6 @@ export class UIManager {
       el.dataset.tracked = 'true';
       this.panelObserver.observe(el, { attributes: true, attributeFilter: ['style'] });
       if (el.style.display !== 'none' && el.style.display !== '') this.panelStack.push(el);
-
-      // Dynamically inject UI Mode setting into the Settings window
-      if (el.id === 'settings-window' || el.classList.contains('settings-window')) {
-        if (!document.getElementById('ui-mode-select')) {
-          const contentArea = el.querySelector('.window-content') || el.querySelector('.settings-content') || el;
-
-          const resetPosDiv = document.createElement('div');
-          resetPosDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
-          resetPosDiv.innerHTML = `
-            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Local Cache Data</span>
-            <div style="display: flex; gap: 8px;">
-              <button id="btn-reset-window-pos" class="b-btn btn-secondary" style="color: #f39c12; border: 1px solid #f39c12; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">Reset Windows</button>
-              <button id="btn-clear-cache" class="b-btn btn-secondary" style="color: #e74c3c; border: 1px solid #e74c3c; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">Clear Cache</button>
-            </div>
-          `;
-
-          const autoSaveDiv = document.createElement('div');
-          autoSaveDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
-          autoSaveDiv.innerHTML = `
-            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Auto-Save Builder World</span>
-            <select id="auto-save-select" class="btn-secondary" style="color: #3498db; border: 1px solid #3498db; background: rgba(5,7,10,0.8); padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono); outline: none; cursor: pointer;">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-          `;
-
-          const uiModeDiv = document.createElement('div');
-          uiModeDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
-          uiModeDiv.innerHTML = `
-            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Interface Mode</span>
-            <select id="ui-mode-select" class="btn-secondary" style="color: #3498db; border: 1px solid #3498db; background: rgba(5,7,10,0.8); padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono); outline: none; cursor: pointer;">
-              <option value="classic">Classic</option>
-              <option value="alternative">Alternative</option>
-            </select>
-          `;
-
-          const gradientDiv = document.createElement('div');
-          gradientDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;';
-          gradientDiv.innerHTML = `
-            <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Window Gradients</span>
-            <div style="display: flex; gap: 8px;">
-              <input type="color" id="window-color-1" value="${this.engine.clientSettings.windowColor1 || '#34495e'}" title="Top Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;">
-              <input type="color" id="window-color-2" value="${this.engine.clientSettings.windowColor2 || '#2c3e50'}" title="Bottom Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;">
-            </div>
-          `;
-
-
-          if (contentArea) {
-            contentArea.insertBefore(resetPosDiv, contentArea.firstChild);
-            contentArea.insertBefore(autoSaveDiv, contentArea.firstChild);
-            contentArea.insertBefore(uiModeDiv, contentArea.firstChild);
-            contentArea.appendChild(gradientDiv);
-
-            const wc1 = document.getElementById('window-color-1');
-            const wc2 = document.getElementById('window-color-2');
-            const updateGrad = () => {
-              this.engine.clientSettings.windowColor1 = wc1.value;
-              this.engine.clientSettings.windowColor2 = wc2.value;
-              localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-              this.applyWindowColors();
-            };
-            if (wc1) wc1.addEventListener('input', updateGrad);
-            if (wc2) wc2.addEventListener('input', updateGrad);
-
-            const selectEl = document.getElementById('ui-mode-select');
-            if (selectEl) {
-              selectEl.value = this.engine.clientSettings.uiMode || 'alternative';
-              selectEl.onchange = (e) => {
-                this.engine.clientSettings.uiMode = e.target.value;
-                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-                this.update();
-              };
-            }
-
-            const autoSaveEl = document.getElementById('auto-save-select');
-            if (autoSaveEl) {
-              autoSaveEl.value = this.engine.clientSettings.enableAutoSave !== false ? 'true' : 'false';
-              autoSaveEl.onchange = (e) => {
-                this.engine.clientSettings.enableAutoSave = e.target.value === 'true';
-                localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-              };
-            }
-
-            const btnResetPos = document.getElementById('btn-reset-window-pos');
-            if (btnResetPos) {
-              btnResetPos.onclick = () => {
-                this.showConfirmModal("Reset Window Positions", "Are you sure you want to reset all window positions? This will reload the interface to apply defaults.", () => {
-                  const keysToRemove = [];
-                  for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.endsWith('_pos') || key.includes('_pos_') || key.endsWith('_position') || key.startsWith('b_window_state_'))) {
-                      keysToRemove.push(key);
-                    }
-                  }
-                  keysToRemove.forEach(k => localStorage.removeItem(k));
-
-                  if (this.engine && this.engine.clientSettings) {
-                    this.engine.clientSettings.snapPowerTray = true;
-                    this.engine.clientSettings.snapActivePowers = true;
-                    localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-                  }
-
-                  window.location.reload();
-                });
-              };
-            }
-
-            const btnClearCache = document.getElementById('btn-clear-cache');
-            if (btnClearCache) {
-              btnClearCache.onclick = () => {
-                this.showConfirmModal("Clear All Game Data", "WARNING: This will completely wipe all local game settings, saved window positions, and cached account logins. You will need to log back in. Are you absolutely sure?", () => {
-                  localStorage.clear();
-                  window.location.reload();
-                });
-              };
-            }
-
-            // Create Audio Settings Tab/Section
-            const audioSection = document.createElement('div');
-            audioSection.id = 'audio-settings-section';
-            audioSection.innerHTML = `
-              <h3 style="color: #3498db; font-family: var(--font-header); border-bottom: 1px solid #333; padding-bottom: 5px; margin: 20px 0 10px 0;">Audio</h3>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;">
-                  <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Master Volume</span>
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                      <input type="range" id="master-volume-slider" min="0" max="100" value="30" class="b-input" style="width: 120px;">
-                      <span id="master-volume-text" style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem; width: 40px; text-align: right;">30%</span>
-                  </div>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;">
-                  <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Mute Background Music</span>
-                  <input type="checkbox" id="audio-mute-bgm" class="b-input" style="width: 24px; height: 24px; cursor: pointer;">
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px;">
-                  <span style="color: #fff; font-family: var(--font-mono); font-size: 0.9rem;">Mute Arcade Sounds</span>
-                  <input type="checkbox" id="audio-mute-arcade" class="b-input" style="width: 24px; height: 24px; cursor: pointer;">
-              </div>
-            `;
-            contentArea.insertBefore(audioSection, gradientDiv);
-
-            const masterVolSlider = document.getElementById('master-volume-slider');
-            const masterVolText = document.getElementById('master-volume-text');
-            const muteBgmEl = document.getElementById('audio-mute-bgm');
-            const muteArcadeEl = document.getElementById('audio-mute-arcade');
-
-            const savedMasterVol = localStorage.getItem('b_login_volume');
-            if (savedMasterVol !== null) {
-              const vol = Math.round(parseFloat(savedMasterVol) * 100);
-              masterVolSlider.value = vol;
-              masterVolText.innerText = `${vol}%`;
-            }
-
-            masterVolSlider.addEventListener('input', (e) => {
-              const val = e.target.value;
-              masterVolText.innerText = `${val}%`;
-              const normalized = val / 100;
-              localStorage.setItem('b_login_volume', normalized);
-              if (this.engine.bgmAudio) {
-                this.engine.bgmAudio.volume = normalized * (this.engine.zonesConfig?.[this.engine.currentZone]?.baseStyle?.musicVolume ?? 1.0);
-              }
-            });
-
-            muteBgmEl.checked = !!this.engine.clientSettings.muteBGM;
-            muteBgmEl.onchange = (e) => {
-              this.engine.clientSettings.muteBGM = e.target.checked;
-              localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-              this.engine.updateBGM();
-            };
-
-            // Assuming 'muteArcade' is the key. If not, this can be adjusted.
-            muteArcadeEl.checked = !!this.engine.clientSettings.muteArcade;
-            muteArcadeEl.onchange = (e) => {
-              this.engine.clientSettings.muteArcade = e.target.checked;
-              localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
-              if (this.engine.arcadeSystem) {
-                this.engine.arcadeSystem.setMuted(e.target.checked);
-              }
-            };
-          }
-        }
-      }
     };
 
     const trackSelectors = '.dev-panel, .modal-overlay, #trainer-dialog-modal, .builder-hotbar, .b-window';
@@ -338,6 +161,8 @@ export class UIManager {
       targetEnergyText: document.getElementById('target-energy-text'),
       targetActions: document.getElementById('target-actions'),
       btnTargetTalk: document.getElementById('btn-target-talk'),
+      btnTargetInfo: document.getElementById('btn-target-info'),
+      btnTargetRename: document.getElementById('btn-target-rename'),
       zoneDisplay: document.getElementById('zone-display-container'),
       petWindow: document.getElementById('pet-window'),
       petName: document.getElementById('pet-name'),
@@ -411,6 +236,27 @@ export class UIManager {
         if (pos.right !== undefined) el.style.right = pos.right;
         if (pos.bottom !== undefined) el.style.bottom = pos.bottom;
         el.style.transform = 'none';
+        
+        requestAnimationFrame(() => {
+          if (el.style.display === 'none') return; // don't calc if hidden
+          let rect = el.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+          let newLeft = rect.left;
+          let newTop = rect.top;
+          let snapped = false;
+
+          if (rect.right > window.innerWidth) { newLeft = window.innerWidth - rect.width; snapped = true; }
+          if (rect.bottom > window.innerHeight) { newTop = window.innerHeight - rect.height; snapped = true; }
+          if (rect.left < 0) { newLeft = 0; snapped = true; }
+          if (rect.top < 0) { newTop = 0; snapped = true; }
+
+          if (snapped) {
+            el.style.left = `${newLeft}px`;
+            el.style.top = `${newTop}px`;
+            el.style.right = 'auto';
+            el.style.bottom = 'auto';
+          }
+        });
       } catch (e) { }
     }
   }
@@ -418,6 +264,7 @@ export class UIManager {
   applyWindowColors() {
     const c1 = this.engine.clientSettings.windowColor1 || '#34495e';
     const c2 = this.engine.clientSettings.windowColor2 || '#2c3e50';
+    const accent = this.engine.clientSettings.windowAccentColor || '#3498db';
     let styleTag = document.getElementById('custom-window-colors');
     if (!styleTag) {
       styleTag = document.createElement('style');
@@ -425,6 +272,10 @@ export class UIManager {
       document.head.appendChild(styleTag);
     }
     styleTag.innerHTML = `
+      :root {
+        --accent: ${accent};
+        --accent-neon: ${accent};
+      }
       .b-window-header { background: linear-gradient(to bottom, ${c1}, ${c2}) !important; }
       #alt-ui-menu-btn { background: linear-gradient(to bottom, ${c1}, ${c2}) !important; }
     `;
@@ -621,6 +472,43 @@ export class UIManager {
     });
   }
 
+  renderBuffs() {
+    if (!this.engine.player) return;
+    const active = this.engine.player.activePowers || [];
+    const allPowers = this.engine.playerData?.powers || [];
+    const passives = allPowers.filter(pId => {
+      const pDef = this.engine.powers && this.engine.powers[pId];
+      return pDef && (pDef.type === 'Passive' || pDef.type === 'passive');
+    });
+    
+    const combined = [...new Set([...active, ...passives])];
+    const buffList = this.els.buffList || document.getElementById('buff-indicator-list');
+    
+    if (combined.length === 0) {
+      if (buffList) buffList.innerHTML = '';
+      return;
+    }
+
+    if (!buffList) return;
+
+    const activeStr = combined.join(',');
+    if (this._lastBuffsStr === activeStr) return;
+    this._lastBuffsStr = activeStr;
+
+    buffList.innerHTML = '';
+    combined.forEach(pId => {
+      const pDef = this.engine.powers && this.engine.powers[pId];
+      const icon = pDef && pDef.icon ? pDef.icon : '✨';
+      const name = pDef && pDef.name ? pDef.name : pId;
+      
+      const el = document.createElement('div');
+      el.style.cssText = 'width: 28px; height: 28px; border-radius: 4px; background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; display: flex; justify-content: center; align-items: center; font-size: 16px; position: relative; cursor: help; box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);';
+      el.title = name;
+      el.innerHTML = icon;
+      buffList.appendChild(el);
+    });
+  }
+
   update() {
     const eng = this.engine;
 
@@ -706,6 +594,7 @@ export class UIManager {
     if (topBarMenuBtn) topBarMenuBtn.style.display = isAltMode ? 'none' : 'block';
 
     this.hudAlt.update();
+    if (this.homeEditor) this.homeEditor.update();
 
     if (this.els.btnEditTarget) {
       if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
@@ -822,8 +711,32 @@ export class UIManager {
             this.els.btnTargetTalk.onclick = () => {
               if (targetObj.type === 'trainer') this.trainer.openTrainerUI(targetObj);
               else if (targetObj.type === 'banker') { if (this.inventory) this.inventory.toggleBank(); }
+              else alert(targetObj.name + " says: " + (targetObj.dialogue || "Hello there."));
             };
           }
+          
+          if (this.els.btnTargetInfo) {
+            this.els.btnTargetInfo.onclick = () => {
+               if (this.devTools && this.devTools.infoWindow) {
+                 this.devTools.infoWindow.openWithTarget({ type: eng.selectedTarget.type, id: targetObj.uuid || targetObj.id });
+               }
+            };
+          }
+
+          if (this.els.btnTargetRename) {
+            if (eng.selectedTarget.type === 'drone' && targetObj.ownerSocketId === eng.socket.id) {
+               this.els.btnTargetRename.style.display = 'block';
+               this.els.btnTargetRename.onclick = () => {
+                  const newName = prompt('Enter new name for ' + (targetObj.customName || targetObj.name) + ':');
+                  if (newName && newName.trim().length > 0) {
+                     eng.network.socket.emit('pet_command', { command: 'rename', targetId: targetObj.uuid || targetObj.id, newName: newName.trim() });
+                  }
+               };
+            } else {
+               this.els.btnTargetRename.style.display = 'none';
+            }
+          }
+
         } else if (this.els.targetActions) {
           this.els.targetActions.style.display = 'none';
         }
@@ -836,6 +749,7 @@ export class UIManager {
     }
 
     this.petUI.update();
+    this.renderBuffs();
 
     if (eng.activeTrainer) {
       const dist = Math.hypot(eng.player.x - eng.activeTrainer.x, eng.player.y - eng.activeTrainer.y);

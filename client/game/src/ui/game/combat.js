@@ -230,6 +230,9 @@ export class CombatManager {
     if (powerDef?.type?.toLowerCase() === 'toggle' || ['fly', 'super-jump', 'super-speed', 'mighty-leap', 'dash', 'speed-serum', 'combat-flight', 'combat-jumping', 'jetpack', 'flashlight'].includes(engineScript)) {
       if (isRepeat) return; // Prevent rapid toggling when holding down the key
       this.toggleTravelPower(powerId);
+      if (PowerScripts[engineScript]) {
+        PowerScripts[engineScript](eng, powerId, eng.player.activePowers.includes(powerId));
+      }
       return;
     }
 

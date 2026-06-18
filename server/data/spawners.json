@@ -20,10 +20,10 @@
     "lastSpawnTime": 1780935307227
   },
   {
-    "uuid": "ab6c90dc-d694-4f59-b966-2ae9960d977d",
+    "uuid": "afd1c646-25ab-4ca8-a9ea-d62989a0d42a",
     "name": "New Spawner",
-    "x": 4270,
-    "y": 3490,
+    "x": 4202,
+    "y": 3483,
     "z": 16,
     "zone": "atlas-city",
     "radius": 300,
@@ -37,9 +37,7 @@
     "strength": 0,
     "aggroRadius": 500,
     "patrolRoute": "",
-    "lastSpawnTime": 0,
-    "currentFaction": null,
-    "mobPack": "1",
-    "npcPowers": []
+    "lastSpawnTime": 1781798909695,
+    "currentFaction": "Maple Gang"
   }
 ]

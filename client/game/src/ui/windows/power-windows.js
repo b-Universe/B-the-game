@@ -54,11 +54,18 @@ export class PowerEditorWindow extends BaseWindow {
                   <input type="text" id="pe-engine-script" placeholder="e.g. teleport, brawl, flashlight" class="b-input">
                 </div>
               </div>
-              <div style="flex: 1; display: flex; flex-direction: column;">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
                 <div class="pe-input-row" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
                   <label>Assigned Powersets (Multi-select)</label>
-                  <div id="pe-assigned-powersets" class="scroll-list" style="flex-grow: 1; max-height: 250px; overflow-y: auto; border: 1px solid var(--text-dim); padding: 5px; background: rgba(0,0,0,0.3); display: grid; grid-template-columns: 1fr; gap: 5px; font-family: var(--font-mono); font-size: 0.8rem; color: #ccc; align-content: start; border-radius: var(--border-radius);">
+                  <div id="pe-assigned-powersets" class="scroll-list" style="flex-grow: 1; max-height: 150px; overflow-y: auto; border: 1px solid var(--text-dim); padding: 5px; background: rgba(0,0,0,0.3); display: grid; grid-template-columns: 1fr; gap: 5px; font-family: var(--font-mono); font-size: 0.8rem; color: #ccc; align-content: start; border-radius: var(--border-radius);">
                   </div>
+                </div>
+                <div class="pe-input-row" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label style="margin: 0;">Inherited Powers</label>
+                    <button id="btn-pe-add-inherited" class="b-btn" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add</button>
+                  </div>
+                  <div id="pe-inherited-powers-list" class="scroll-list" style="flex-grow: 1; min-height: 80px; max-height: 150px; overflow-y: auto; border: 1px solid var(--text-dim); padding: 5px; background: rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 5px;"></div>
                 </div>
               </div>
             </div>
@@ -67,7 +74,7 @@ export class PowerEditorWindow extends BaseWindow {
           <div class="pe-editor-section">
             <h4 class="pe-section-title">Base Properties</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-              <div class="pe-input-row" style="grid-column: span 2;"><label>Unlock Tier (Order)</label><input type="number" id="pe-stat-tier" class="b-input" min="1" step="1" value="1"></div>
+              <div class="pe-input-row" style="grid-column: span 2;"><label>Unlock Tier (Order)</label><input type="number" id="pe-stat-tier" class="b-input" min="0" step="1" value="1"></div>
               <div class="pe-input-row"><label>Recharge Rate (s)</label><input type="number" id="pe-stat-rech" class="b-input" min="0" step="0.5" value="1.0"></div>
               <div class="pe-input-row"><label>Activation Time (s)</label><input type="number" id="pe-stat-activation" class="b-input" min="0" step="0.1" value="0.5"></div>
               <div class="pe-input-row"><label>Energy Cast Cost</label><input type="number" id="pe-stat-ener-cast" class="b-input" min="0" step="1" value="10"></div>
@@ -102,7 +109,8 @@ export class PowerEditorWindow extends BaseWindow {
             <div class="pe-input-row" style="margin-top: 10px;">
               <label>Player Animation</label>
               <select id="pe-visual-anim" class="b-select">
-                <option value="idle">None (Idle)</option>
+                <option value="none">No Animation</option>
+                <option value="idle">Idle (Hold)</option>
                 <option value="attack1">Melee Strike (Right Hand)</option>
                 <option value="attack2">Melee Strike (Left Hand)</option>
                 <option value="throw-attack1">Throw / Ranged Cast</option>
@@ -115,16 +123,16 @@ export class PowerEditorWindow extends BaseWindow {
             <div id="pe-caster-visuals-list" class="pe-dynamic-list-container"></div>
           </div>
 
-          <div class="pe-editor-section">
+          <div class="pe-editor-section" id="pe-section-projectile">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h4 class="pe-section-title" style="margin: 0;">Projectile Visuals</h4><button id="btn-pe-add-projectile-visual" class="b-btn" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add Sprite Event</button></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;" id="pe-proj-settings-container">
               <div class="pe-input-row"><label>Speed (units/sec)</label><input type="number" id="pe-proj-speed" class="b-input" value="400"></div>
               <div class="pe-input-row"><label>Arc (0-1)</label><input type="number" id="pe-proj-arc" class="b-input" value="0" step="0.1" min="0" max="1"></div>
             </div>
             <div id="pe-projectile-visuals-list" class="pe-dynamic-list-container"></div>
           </div>
 
-          <div class="pe-editor-section">
+          <div class="pe-editor-section" id="pe-section-target">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h4 class="pe-section-title" style="margin: 0;">Target Visuals</h4><button id="btn-pe-add-target-visual" class="b-btn" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Add Sprite Event</button></div>
             <div id="pe-target-visuals-list" class="pe-dynamic-list-container"></div>
           </div>
@@ -133,8 +141,10 @@ export class PowerEditorWindow extends BaseWindow {
           </div>
         </div>
 
-        <!-- ROW 3: Commit Button -->
-        <button id="btn-pe-save" class="b-btn" style="border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1); height: 40px; font-size: 1.1rem; flex-shrink: 0; margin-top: 5px;">Commit To Server</button>
+        <div style="display: flex; gap: 10px; margin-top: 5px; flex-shrink: 0;">
+          <button id="btn-pe-save" class="b-btn" style="border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1); height: 40px; font-size: 1.1rem; flex: 3;">Commit To Server</button>
+          <button id="btn-pe-delete" class="b-btn" style="border-color: #e74c3c; color: #e74c3c; background: rgba(231, 76, 60, 0.1); height: 40px; font-size: 1.1rem; flex: 1; display: none;">Delete Power</button>
+        </div>
       </div>
     `);
   }

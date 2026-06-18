@@ -90,12 +90,26 @@ export class HomeEditorUIManager {
               const pChunkX = Math.floor((this.engine.player.x / 32) / 32) || 1;
               const pChunkY = Math.floor((this.engine.player.y / 32) / 32) || 1;
 
+              if (this.selectedAptChunk === '1_1' && pChunkX !== 1 && pChunkY !== 1 && ownedChunks.includes(`${pChunkX}_${pChunkY}`)) {
+                this.selectedAptChunk = `${pChunkX}_${pChunkY}`;
+              }
+
               const visContainer = document.getElementById('apt-chunk-visualizer');
               if (visContainer) {
                 visContainer.innerHTML = '';
+                let maxDist = 0;
+                ownedChunks.forEach(c => {
+                  const [cx, cy] = c.split('_').map(Number);
+                  maxDist = Math.max(maxDist, Math.abs(cx - pChunkX), Math.abs(cy - pChunkY));
+                });
+                const gridRadius = maxDist > 1 ? 2 : 1;
+                const gridSize = gridRadius * 2 + 1;
+                const cellSize = gridRadius > 1 ? 28 : 32;
+                visContainer.style.transition = 'grid-template-columns 0.3s ease, gap 0.3s ease';
+                visContainer.style.gridTemplateColumns = `repeat(${gridSize}, ${cellSize}px)`;
 
-                for (let y = pChunkY - 2; y <= pChunkY + 2; y++) {
-                  for (let x = pChunkX - 2; x <= pChunkX + 2; x++) {
+                for (let y = pChunkY - gridRadius; y <= pChunkY + gridRadius; y++) {
+                  for (let x = pChunkX - gridRadius; x <= pChunkX + gridRadius; x++) {
                     if (x < 0 || y < 0 || x >= 95 || y >= 95) {
                       const spacer = document.createElement('div');
                       spacer.style.cssText = `width: 32px; height: 32px; background: transparent;`;
@@ -106,7 +120,7 @@ export class HomeEditorUIManager {
                     const chunkKey = `${x}_${y}`;
                     const isOwned = ownedChunks.includes(chunkKey);
                     const btn = document.createElement('button');
-                    btn.style.cssText = `width: 32px; height: 32px; border: 2px solid #333; cursor: pointer; transition: all 0.2s; border-radius: 2px; position: relative;`;
+                    btn.style.cssText = `width: ${cellSize}px; height: ${cellSize}px; border: 2px solid #333; cursor: pointer; transition: all 0.2s; border-radius: 2px; position: relative;`;
 
                     if (this.selectedAptChunk === chunkKey) btn.style.borderColor = '#f1c40f';
 
@@ -154,7 +168,11 @@ export class HomeEditorUIManager {
                     unexpandContainer.style.display = 'flex';
                     const btnUnexpand = document.getElementById('btn-apt-unexpand');
                     btnUnexpand.onclick = () => {
-                      this.ui.showConfirmModal("Un-Expand Apartment", `Are you sure you want to un-expand this chunk? You will be refunded $5,000, but all blocks inside it will be permanently deleted!`, () => {
+                      const isOwnApt = this.engine.currentZone === `apt_${this.engine.playerData.name.toLowerCase()}`;
+                      const msg = isOwnApt
+                        ? `Are you sure you want to un-expand this chunk? $5,000 will be deposited to your bank vault, but all blocks inside will be permanently deleted!`
+                        : `Are you sure you want to remove this chunk from this apartment? All blocks inside will be permanently deleted!`;
+                      this.ui.showConfirmModal("Un-Expand Apartment", msg, () => {
                         if (this.engine.network) this.engine.network.socket.emit('apartment_unexpand', { chunk: this.selectedAptChunk });
                       });
                     };
@@ -168,7 +186,9 @@ export class HomeEditorUIManager {
                 let cStyle = baseStyle;
                 if (this.selectedAptChunk !== 'all') cStyle = chunkStyles[this.selectedAptChunk] || {};
                 document.getElementById('base-style-floor').value = cStyle.floorTex || baseStyle.floorTex || 'concrete';
+                document.getElementById('base-style-floor-color').value = cStyle.floorColor || baseStyle.floorColor || '#ffffff';
                 document.getElementById('base-style-wall').value = cStyle.wallTex || baseStyle.wallTex || 'stone-bricks1';
+                document.getElementById('base-style-wall-color').value = cStyle.wallColor || baseStyle.wallColor || '#ffffff';
                 const playlistContainer = document.getElementById('playlist-container');
                 if (playlistContainer) {
                   playlistContainer.innerHTML = '';
@@ -187,19 +207,24 @@ export class HomeEditorUIManager {
                 if (unexpandContainer) unexpandContainer.style.display = 'none';
 
                 const btnExpand = document.getElementById('btn-apt-expand');
-                const cost = 5000;
+                const isOwnApt = this.engine.currentZone === `apt_${this.engine.playerData.name.toLowerCase()}`;
+                const cost = isOwnApt ? 5000 : 0;
+                
                 if (ownedChunks.length >= 9025) {
                   btnExpand.innerText = 'Max Size Reached';
                   btnExpand.disabled = true;
                 } else {
-                  btnExpand.innerText = `Expand Apartment ($5,000)`;
+                  btnExpand.innerText = isOwnApt ? `Expand Apartment ($5,000)` : `Expand Apartment (Admin)`;
                   btnExpand.disabled = false;
                   btnExpand.onclick = () => {
                     const playerCurrency = this.engine.playerData.currency || 0;
                     if (playerCurrency < cost) {
                       this.ui.showSystemMessage(`You cannot afford this. You need $${cost.toLocaleString()}, but only have $${playerCurrency.toLocaleString()}.`);
                     } else {
-                      this.ui.showConfirmModal("Expand Apartment", `Purchase this chunk for $5,000?`, () => {
+                      const msg = isOwnApt
+                        ? `Purchase this chunk for $5,000?`
+                        : `Grant this chunk to this apartment?`;
+                      this.ui.showConfirmModal("Expand Apartment", msg, () => {
                         if (this.engine.network) this.engine.network.socket.emit('apartment_expand', { chunk: this.selectedAptChunk });
                       });
                     }
@@ -272,12 +297,12 @@ export class HomeEditorUIManager {
                 <button id="btn-apt-expand" class="b-btn btn-secondary" style="width: 100%;">Expand ($5,000)</button>
             </div>
             <div id="apt-unexpand-container" style="display: none; flex-direction: column; align-items: center; margin-top: 5px; margin-bottom: 5px;">
-                <button id="btn-apt-unexpand" class="b-btn b-btn-danger" style="width: 100%;">Un-Expand (Refund $5,000)</button>
+                <button id="btn-apt-unexpand" class="b-btn b-btn-danger" style="width: 100%;">Un-Expand (Bank $5,000)</button>
             </div>
             <div id="apt-settings-container" style="display: flex; flex-direction: column; gap: 15px;">
                 <button id="btn-apt-select-all" class="b-btn btn-primary" style="margin-top: -5px; font-size: 0.75rem; width: 100%;">Apply to All Chunks</button>
-                <div><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Floor Texture:</label><select id="base-style-floor" class="b-select" style="width: 100%; margin-top: 5px;"><option value="concrete">Concrete</option><option value="stone-bricks1">Stone Bricks</option><option value="wood-planks">Wood Planks</option><option value="carpet">Carpet</option><option value="grass">Grass</option><option value="sand">Sand</option><option value="dirt">Dirt</option><option value="stone">Stone</option><option value="ice">Ice</option><option value="mud1">Mud</option></select></div>
-                <div><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Wall Texture:</label><select id="base-style-wall" class="b-select" style="width: 100%; margin-top: 5px;"><option value="stone-bricks1">Stone Bricks</option><option value="concrete">Concrete</option><option value="wood-planks">Wood Planks</option><option value="paint">Paint</option><option value="stone">Stone</option><option value="glass">Glass</option></select></div>
+                <div><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Floor Texture & Color:</label><div style="display: flex; gap: 5px; margin-top: 5px;"><select id="base-style-floor" class="b-select" style="flex: 1;"><option value="concrete">Concrete</option><option value="stone-bricks1">Stone Bricks</option><option value="wood-planks">Wood Planks</option><option value="carpet">Carpet</option><option value="grass">Grass</option><option value="sand">Sand</option><option value="dirt">Dirt</option><option value="stone">Stone</option><option value="ice">Ice</option><option value="mud1">Mud</option></select><input type="color" id="base-style-floor-color" value="#ffffff" style="width: 32px; height: 32px; padding: 0; border: none; background: none; cursor: pointer;"></div></div>
+                <div><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Wall Texture & Color:</label><div style="display: flex; gap: 5px; margin-top: 5px;"><select id="base-style-wall" class="b-select" style="flex: 1;"><option value="stone-bricks1">Stone Bricks</option><option value="concrete">Concrete</option><option value="wood-planks">Wood Planks</option><option value="paint">Paint</option><option value="stone">Stone</option><option value="glass">Glass</option></select><input type="color" id="base-style-wall-color" value="#ffffff" style="width: 32px; height: 32px; padding: 0; border: none; background: none; cursor: pointer;"></div></div>
                 <div><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Music Playlist:</label><div id="playlist-container" style="background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); border-radius: 4px; padding: 5px; min-height: 32px; margin-top: 5px; display: flex; flex-direction: column; gap: 5px; max-height: 100px; overflow-y: auto;"></div><div style="display: flex; gap: 5px; margin-top: 5px;"><select id="playlist-track-select" class="b-select" style="flex: 1;"><option value="metallic-crackers.mp3">Metallic Crackers</option></select><button id="btn-preview-track" class="b-btn btn-secondary" title="Preview Track">▶</button><button id="btn-add-track" class="b-btn btn-secondary">Add</button></div></div>
                 <div style="display: flex; gap: 10px;"><div style="flex: 1;"><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Playback:</label><select id="base-style-music-mode" class="b-select" style="width: 100%; margin-top: 5px;"><option value="ordered">Ordered</option><option value="random">Shuffle</option></select></div><div style="flex: 1;"><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Delay (sec):</label><input type="number" id="base-style-music-delay" class="b-input" style="width: 100%; margin-top: 5px;" value="0" placeholder="Neg = Crossfade"></div><div style="flex: 1;"><label style="color: #ccc; font-family: var(--font-mono); font-size: 0.85rem;">Volume: <span id="base-style-music-volume-text">50%</span></label><input type="range" id="base-style-music-volume" class="b-input" style="width: 100%; margin-top: 5px;" min="0" max="1" step="0.05" value="0.5"></div></div>
             </div>
@@ -294,6 +319,7 @@ export class HomeEditorUIManager {
 
       this.updateBaseStyle = () => {
         const f = document.getElementById('base-style-floor').value; const w = document.getElementById('base-style-wall').value;
+        const fc = document.getElementById('base-style-floor-color').value; const wc = document.getElementById('base-style-wall-color').value;
         const m = document.getElementById('base-style-music-mode').value; const d = parseFloat(document.getElementById('base-style-music-delay').value) || 0;
         const vEl = document.getElementById('base-style-music-volume'); const v = vEl ? parseFloat(vEl.value) : 0.5;
         const t = []; document.querySelectorAll('.playlist-item').forEach(i => t.push(i.dataset.track)); const tr = t.join(',');
@@ -310,12 +336,16 @@ export class HomeEditorUIManager {
 
         if (this.selectedAptChunk === 'all') {
           zc.baseStyle.floorTex = f;
+          zc.baseStyle.floorColor = fc;
           zc.baseStyle.wallTex = w;
-          for (const key in zc.chunkStyles) { delete zc.chunkStyles[key].floorTex; delete zc.chunkStyles[key].wallTex; }
+          zc.baseStyle.wallColor = wc;
+          for (const key in zc.chunkStyles) { delete zc.chunkStyles[key].floorTex; delete zc.chunkStyles[key].floorColor; delete zc.chunkStyles[key].wallTex; delete zc.chunkStyles[key].wallColor; }
         } else {
           if (!zc.chunkStyles[this.selectedAptChunk]) zc.chunkStyles[this.selectedAptChunk] = {};
           zc.chunkStyles[this.selectedAptChunk].floorTex = f;
+          zc.chunkStyles[this.selectedAptChunk].floorColor = fc;
           zc.chunkStyles[this.selectedAptChunk].wallTex = w;
+          zc.chunkStyles[this.selectedAptChunk].wallColor = wc;
         }
 
         zc.baseStyle.musicTrack = tr; zc.baseStyle.musicMode = m; zc.baseStyle.musicDelay = d; zc.baseStyle.musicVolume = v;
@@ -335,10 +365,12 @@ export class HomeEditorUIManager {
           const cOldWall = oldCStyle.wallTex || oldBaseStyle.wallTex || 'stone-bricks1';
           const newFloor = this.selectedAptChunk === 'all' ? f : (zc.chunkStyles[aptChunkKey]?.floorTex || zc.baseStyle.floorTex || f);
           const newWall = this.selectedAptChunk === 'all' ? w : (zc.chunkStyles[aptChunkKey]?.wallTex || zc.baseStyle.wallTex || w);
+          const newFloorColor = this.selectedAptChunk === 'all' ? fc : (zc.chunkStyles[aptChunkKey]?.floorColor || zc.baseStyle.floorColor || fc);
+          const newWallColor = this.selectedAptChunk === 'all' ? wc : (zc.chunkStyles[aptChunkKey]?.wallColor || zc.baseStyle.wallColor || wc);
 
           for (const [key, voxel] of chunkMap.entries()) {
-            if (voxel.tex === cOldFloor) { voxel.tex = newFloor; chunkChanged = true; }
-            else if (voxel.tex === cOldWall) { voxel.tex = newWall; chunkChanged = true; }
+            if (voxel.tex === cOldFloor) { voxel.tex = newFloor; voxel.color = newFloorColor; chunkChanged = true; }
+            else if (voxel.tex === cOldWall) { voxel.tex = newWall; voxel.color = newWallColor; chunkChanged = true; }
           }
           if (chunkChanged) { chunksUpdated = true; if (this.engine.renderer) this.engine.renderer.updateChunkColumn(vx, vy, chunkMap, true); }
         }
@@ -357,9 +389,13 @@ export class HomeEditorUIManager {
 
       const floorEl = document.getElementById('base-style-floor');
       if (floorEl) floorEl.addEventListener('change', this.updateBaseStyle);
+      const floorColorEl = document.getElementById('base-style-floor-color');
+      if (floorColorEl) floorColorEl.addEventListener('change', this.updateBaseStyle);
 
       const wallEl = document.getElementById('base-style-wall');
       if (wallEl) wallEl.addEventListener('change', this.updateBaseStyle);
+      const wallColorEl = document.getElementById('base-style-wall-color');
+      if (wallColorEl) wallColorEl.addEventListener('change', this.updateBaseStyle);
 
       const modeEl = document.getElementById('base-style-music-mode');
       if (modeEl) modeEl.addEventListener('change', this.updateBaseStyle);
@@ -409,5 +445,19 @@ export class HomeEditorUIManager {
     const createRow = (name, type) => `<div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 2px 5px; border-radius: 3px;"><span style="color: #fff;">${name}</span><button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem;" onclick="window.currentGameEngine.network.sendApartmentToggle${type.charAt(0).toUpperCase() + type.slice(1)}('${name}'); setTimeout(() => window.currentGameEngine.ui.homeEditor.renderAptPerms(), 200);">X</button></div>`;
     bList.innerHTML = builders.length > 0 ? builders.map(b => createRow(b, 'builder')).join('') : '<div style="color: #888; text-align: center;">None</div>';
     vList.innerHTML = visitors.length > 0 ? visitors.map(v => createRow(v, 'visitor')).join('') : '<div style="color: #888; text-align: center;">None</div>';
+  }
+
+  update() {
+    if (!this.engine.player) return;
+    const pChunkX = Math.floor((this.engine.player.x / 32) / 32) || 1;
+    const pChunkY = Math.floor((this.engine.player.y / 32) / 32) || 1;
+    if (this._lastPChunkX !== pChunkX || this._lastPChunkY !== pChunkY) {
+      this._lastPChunkX = pChunkX;
+      this._lastPChunkY = pChunkY;
+      const modal = document.getElementById('base-styles-modal');
+      if (modal && modal.style.display !== 'none' && typeof this.renderVisualizer === 'function') {
+        this.renderVisualizer();
+      }
+    }
   }
 }

@@ -36,12 +36,14 @@ export class WorldSerializer {
 
       if (cachedWorld) {
         data = JSON.parse(cachedWorld);
-        fetch(`/api/world/load?file=${filename}&v=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).then(d => localStorage.setItem(cacheKey, JSON.stringify(d))).catch(()=>{});
+        fetch(`/api/world/load?file=${filename}&v=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).then(d => {
+          try { localStorage.setItem(cacheKey, JSON.stringify(d)); } catch (e) { console.warn("Failed to cache world due to storage quota:", e); }
+        }).catch(()=>{});
       } else {
         const res = await fetch(`/api/world/load?file=${filename}&v=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
           data = await res.json();
-          localStorage.setItem(cacheKey, JSON.stringify(data));
+          try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) { console.warn("Failed to cache world due to storage quota:", e); }
         } else {
           data = {};
         }

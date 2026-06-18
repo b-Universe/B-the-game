@@ -14,6 +14,9 @@ export class DebugRenderer {
     this.renderer.debugMeshes = new THREE.Group();
     this.renderer.scene.add(this.renderer.debugMeshes);
 
+    this.renderer.interactiveDevMeshes = new THREE.Group();
+    this.renderer.scene.add(this.renderer.interactiveDevMeshes);
+
     const ringGeo = new THREE.RingGeometry(25, 30, 32);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
     this.renderer.targetRing = new THREE.Mesh(ringGeo, ringMat);
@@ -102,6 +105,31 @@ export class DebugRenderer {
     const nhBoxGeo = new THREE.BoxGeometry(1, 1, 1);
     const nhBoxMat = new THREE.MeshBasicMaterial({ color: 0xe056fd, wireframe: true, depthTest: false, transparent: true, opacity: 0.3 });
     this.renderer.neighborhoodBoxMesh = new THREE.InstancedMesh(nhBoxGeo, nhBoxMat, 50);
+
+    const badgeBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const badgeBoxMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, wireframe: true, depthTest: false, transparent: true, opacity: 0.8 });
+    this.renderer.badgeBoxMesh = new THREE.InstancedMesh(badgeBoxGeo, badgeBoxMat, 100);
+    this.renderer.badgeBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.badgeBoxMesh.frustumCulled = false;
+    this.renderer.badgeBoxMesh.visible = false;
+    this.renderer.badgeBoxMesh.userData = { type: 'badge_boxes' };
+    this.renderer.debugMeshes.add(this.renderer.badgeBoxMesh);
+
+    const centerBoxGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    this.renderer.spawnerCenterMesh = new THREE.InstancedMesh(centerBoxGeo, new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true, depthTest: false, transparent: true, opacity: 0.9, linewidth: 2 }), 100);
+    this.renderer.spawnerCenterMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.spawnerCenterMesh.frustumCulled = false;
+    this.renderer.interactiveDevMeshes.add(this.renderer.spawnerCenterMesh);
+
+    this.renderer.neighborhoodCenterMesh = new THREE.InstancedMesh(centerBoxGeo, new THREE.MeshBasicMaterial({ color: 0x3498db, wireframe: true, depthTest: false, transparent: true, opacity: 0.9, linewidth: 2 }), 50);
+    this.renderer.neighborhoodCenterMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.neighborhoodCenterMesh.frustumCulled = false;
+    this.renderer.interactiveDevMeshes.add(this.renderer.neighborhoodCenterMesh);
+
+    this.renderer.badgeCenterMesh = new THREE.InstancedMesh(centerBoxGeo, new THREE.MeshBasicMaterial({ color: 0xf1c40f, wireframe: true, depthTest: false, transparent: true, opacity: 0.9, linewidth: 2 }), 100);
+    this.renderer.badgeCenterMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.renderer.badgeCenterMesh.frustumCulled = false;
+    this.renderer.interactiveDevMeshes.add(this.renderer.badgeCenterMesh);
     this.renderer.neighborhoodBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.renderer.neighborhoodBoxMesh.frustumCulled = false;
     this.renderer.neighborhoodBoxMesh.visible = false;
@@ -185,14 +213,6 @@ export class DebugRenderer {
     this.renderer.arcadeHighlightBox.renderOrder = 999;
     this.renderer.arcadeHighlightBox.visible = false;
     this.renderer.scene.add(this.renderer.arcadeHighlightBox);
-
-    const badgeBoxGeo = new THREE.BoxGeometry(1, 1, 1);
-    const badgeBoxMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, wireframe: true, depthTest: false, transparent: true, opacity: 0.5 });
-    this.renderer.badgeBoxMesh = new THREE.InstancedMesh(badgeBoxGeo, badgeBoxMat, 100);
-    this.renderer.badgeBoxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.renderer.badgeBoxMesh.frustumCulled = false;
-    this.renderer.badgeBoxMesh.visible = false;
-    this.renderer.debugMeshes.add(this.renderer.badgeBoxMesh);
   }
 
   setupDebugOverlay() {
@@ -319,13 +339,23 @@ export class DebugRenderer {
           dummy.position.set(cx, cy, cz);
           dummy.scale.set(width, depth, height);
           dummy.updateMatrix();
-          this.renderer.neighborhoodBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+          this.renderer.neighborhoodBoxMesh.setMatrixAt(hitCount, dummy.matrix);
+
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          this.renderer.neighborhoodCenterMesh.setMatrixAt(hitCount++, dummy.matrix);
         }
       });
       this.renderer.neighborhoodBoxMesh.count = hitCount;
       this.renderer.neighborhoodBoxMesh.instanceMatrix.needsUpdate = true;
       this.renderer.neighborhoodBoxMesh.visible = hitCount > 0;
-    } else if (this.renderer.neighborhoodBoxMesh) { this.renderer.neighborhoodBoxMesh.visible = false; }
+      this.renderer.neighborhoodCenterMesh.count = hitCount;
+      this.renderer.neighborhoodCenterMesh.instanceMatrix.needsUpdate = true;
+      this.renderer.neighborhoodCenterMesh.visible = hitCount > 0;
+    } else {
+      if (this.renderer.neighborhoodBoxMesh) this.renderer.neighborhoodBoxMesh.visible = false;
+      if (this.renderer.neighborhoodCenterMesh) this.renderer.neighborhoodCenterMesh.visible = false;
+    }
 
     if (eng.devOptions.showMapBadges && eng.mapBadges) {
       let hitCount = 0;
@@ -335,13 +365,23 @@ export class DebugRenderer {
           dummy.position.set(b.x, b.y, b.z || 0);
           dummy.scale.set(b.width || 64, b.depth || 64, b.height || 64);
           dummy.updateMatrix();
-          this.renderer.badgeBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+          this.renderer.badgeBoxMesh.setMatrixAt(hitCount, dummy.matrix);
+
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          this.renderer.badgeCenterMesh.setMatrixAt(hitCount++, dummy.matrix);
         }
       });
       this.renderer.badgeBoxMesh.count = hitCount;
       this.renderer.badgeBoxMesh.instanceMatrix.needsUpdate = true;
       this.renderer.badgeBoxMesh.visible = hitCount > 0;
-    } else if (this.renderer.badgeBoxMesh) { this.renderer.badgeBoxMesh.visible = false; }
+      this.renderer.badgeCenterMesh.count = hitCount;
+      this.renderer.badgeCenterMesh.instanceMatrix.needsUpdate = true;
+      this.renderer.badgeCenterMesh.visible = hitCount > 0;
+    } else {
+      if (this.renderer.badgeBoxMesh) this.renderer.badgeBoxMesh.visible = false;
+      if (this.renderer.badgeCenterMesh) this.renderer.badgeCenterMesh.visible = false;
+    }
 
     if (eng.devOptions.showAggro) {
       let hitCount = 0;
@@ -387,13 +427,23 @@ export class DebugRenderer {
           dummy.position.set(s.x, s.y, s.z || 0);
           dummy.scale.set(s.radius || 300, s.radius || 300, s.radius || 300);
           dummy.updateMatrix();
-          this.renderer.spawnerBoxMesh.setMatrixAt(hitCount++, dummy.matrix);
+          this.renderer.spawnerBoxMesh.setMatrixAt(hitCount, dummy.matrix);
+
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          this.renderer.spawnerCenterMesh.setMatrixAt(hitCount++, dummy.matrix);
         }
       });
       this.renderer.spawnerBoxMesh.count = hitCount;
       this.renderer.spawnerBoxMesh.instanceMatrix.needsUpdate = true;
       this.renderer.spawnerBoxMesh.visible = hitCount > 0;
-    } else if (this.renderer.spawnerBoxMesh) { this.renderer.spawnerBoxMesh.visible = false; }
+      this.renderer.spawnerCenterMesh.count = hitCount;
+      this.renderer.spawnerCenterMesh.instanceMatrix.needsUpdate = true;
+      this.renderer.spawnerCenterMesh.visible = hitCount > 0;
+    } else {
+      if (this.renderer.spawnerBoxMesh) this.renderer.spawnerBoxMesh.visible = false;
+      if (this.renderer.spawnerCenterMesh) this.renderer.spawnerCenterMesh.visible = false;
+    }
 
     if (eng.devOptions.showMelee) {
       this.renderer.meleeCircle.visible = true;

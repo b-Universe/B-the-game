@@ -152,6 +152,27 @@ export class InputManager {
         }
       }
 
+      if (!clickedTarget && eng.devOptions && eng.renderer.interactiveDevMeshes) {
+        const debugGroups = [];
+        if (eng.devOptions.showSpawners && eng.renderer.spawnerCenterMesh) debugGroups.push(eng.renderer.spawnerCenterMesh);
+        if (eng.devOptions.showNeighborhoods && eng.renderer.neighborhoodCenterMesh) debugGroups.push(eng.renderer.neighborhoodCenterMesh);
+        if (eng.devOptions.showMapBadges && eng.renderer.badgeCenterMesh) debugGroups.push(eng.renderer.badgeCenterMesh);
+        
+        if (debugGroups.length > 0) {
+          const debugHits = raycaster.intersectObjects(debugGroups, false);
+          for (const hit of debugHits) {
+            if (hit.object === eng.renderer.spawnerCenterMesh && eng.spawners && eng.spawners[hit.instanceId]) {
+              clickedTarget = { type: 'spawner', id: eng.spawners[hit.instanceId].uuid }; break;
+            } else if (hit.object === eng.renderer.neighborhoodCenterMesh && eng.neighborhoods) {
+              const nhKeys = Object.keys(eng.neighborhoods);
+              if (nhKeys[hit.instanceId]) { clickedTarget = { type: 'neighborhood', id: nhKeys[hit.instanceId] }; break; }
+            } else if (hit.object === eng.renderer.badgeCenterMesh && eng.mapBadges && eng.mapBadges[hit.instanceId]) {
+              clickedTarget = { type: 'badge', id: eng.mapBadges[hit.instanceId].uuid }; break;
+            }
+          }
+        }
+      }
+
       if (e.button === 0) {
         if (eng.clientSettings.showMinimap && e.target === eng.canvas && !eng.targetingPower) {
           const mmBox = eng.getMinimapBox();
@@ -425,6 +446,23 @@ export class InputManager {
         }
 
         if (clickedTarget) {
+          if (clickedTarget.type === 'spawner' && eng.ui && eng.ui.devTools && eng.ui.devTools.spawnerManager) {
+            eng.ui.devTools.spawnerManager.openEditForSpawner(clickedTarget.id);
+            return;
+          } else if (clickedTarget.type === 'neighborhood' && eng.ui && eng.ui.devTools && eng.ui.devTools.worldUI) {
+            eng.ui.devTools.neighborhoodManagerWindow.open();
+            eng.ui.devTools.renderNeighborhoodManager();
+            eng.network.socket.emit('request_neighborhoods');
+            return;
+          } else if (clickedTarget.type === 'badge' && eng.ui && eng.ui.devTools && eng.ui.devTools.mapBadgeEditWindow) {
+            eng.ui.devTools.mapBadgeEditWindow.open();
+            return;
+          }
+
+          if (eng.ui && typeof eng.ui.handleEntityRightClick === 'function') {
+            eng.ui.handleEntityRightClick(clickedTarget);
+          }
+
           eng.contextTarget = clickedTarget;
 
           let menuX = e.clientX;
@@ -438,13 +476,19 @@ export class InputManager {
             const btnPlay = document.getElementById('ctx-btn-arcade-play');
             const btnEdit = document.getElementById('ctx-btn-arcade-edit');
             const btnPower = document.getElementById('ctx-btn-arcade-power');
+            const btnInfo = document.getElementById('ctx-btn-info');
+            const btnRename = document.getElementById('ctx-btn-pet-rename');
+            const btnDismiss = document.getElementById('ctx-btn-pet-dismiss');
 
             if (btnTrade) btnTrade.style.display = clickedTarget.type === 'player' ? 'block' : 'none';
             if (btnTalk) {
-              btnTalk.style.display = clickedTarget.type === 'npc' ? 'block' : 'none';
+              btnTalk.style.display = 'none';
               if (clickedTarget.type === 'npc') {
                  const npc = eng.npcs.find(n => n.uuid === clickedTarget.id);
-                 btnTalk.innerText = (npc && npc.type === 'banker') ? 'Open Bank' : 'Talk';
+                 if (npc && (['banker', 'trainer', 'shop'].includes(npc.type) || npc.canTalk)) {
+                     btnTalk.style.display = 'block';
+                     btnTalk.innerText = (npc.type === 'banker') ? 'Open Bank' : 'Talk';
+                 }
               }
             }
             if (btnPlay) btnPlay.style.display = clickedTarget.type === 'arcade' ? 'block' : 'none';
@@ -458,6 +502,22 @@ export class InputManager {
               if (clickedTarget.type === 'arcade') {
                 btnPower.innerText = clickedTarget.voxel.powerState === 'off' ? 'Enable Power' : 'Disable Power';
               }
+            }
+
+            if (btnInfo) {
+              btnInfo.style.display = ['npc', 'player', 'drone'].includes(clickedTarget.type) ? 'block' : 'none';
+            }
+
+            if (btnRename && btnDismiss) {
+              let isMyPet = false;
+              if (clickedTarget.type === 'drone' && eng.drones && eng.drones[clickedTarget.id]) {
+                const drone = eng.drones[clickedTarget.id];
+                if (eng.network && eng.network.socket && drone.ownerSocketId === eng.network.socket.id) {
+                  isMyPet = true;
+                }
+              }
+              btnRename.style.display = isMyPet ? 'block' : 'none';
+              btnDismiss.style.display = isMyPet ? 'block' : 'none';
             }
 
             ctxMenu.style.left = `${menuX}px`;

@@ -80,19 +80,27 @@ export class TerrainGenerator {
             const cStyle = chunkStyles[`${aptChunkX}_${aptChunkY}`] || {};
             const floorTex = cStyle.floorTex || baseStyle.floorTex || 'concrete';
             const wallTex = cStyle.wallTex || baseStyle.wallTex || 'stone-bricks1';
+            const floorColor = cStyle.floorColor || baseStyle.floorColor || '#ffffff';
+            const wallColor = cStyle.wallColor || baseStyle.wallColor || '#ffffff';
 
             for (let vz = -24; vz <= maxZ; vz++) {
               const voxelKey = `${worldX}_${worldY}_${vz}`;
               if (!voxels.has(voxelKey)) {
                 let tex = floorTex;
-                let hex = '#ffffff';
+                let baseHex = floorColor;
 
                 if (isBorder && vz > 0) {
                   tex = wallTex;
-                  hex = '#aaaaaa';
-                } else {
-                  const shade = Math.floor(200 - Math.abs(vz) * 6);
-                  hex = '#' + ((1 << 24) + (shade << 16) + (shade << 8) + shade).toString(16).slice(1);
+                  baseHex = wallColor;
+                }
+
+                let hex = baseHex;
+                if (vz < 0) {
+                  const depthFactor = Math.max(0.3, 1.0 - (Math.abs(vz) * 0.06));
+                  const r = Math.floor(parseInt(baseHex.slice(1, 3), 16) * depthFactor);
+                  const g = Math.floor(parseInt(baseHex.slice(3, 5), 16) * depthFactor);
+                  const b = Math.floor(parseInt(baseHex.slice(5, 7), 16) * depthFactor);
+                  hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
                 }
                 voxels.set(voxelKey, {
                   tex: tex,

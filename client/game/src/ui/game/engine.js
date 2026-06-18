@@ -85,6 +85,13 @@ export class GameEngine {
     this.mapData = {};
     this.powersetsData = {};
     this.permissions = {};
+    this.zonesConfig = {};
+    try {
+      const cachedZonesConfig = localStorage.getItem('b_cache_zones_config');
+      if (cachedZonesConfig) {
+        this.zonesConfig = JSON.parse(cachedZonesConfig);
+      }
+    } catch(e) {}
 
     this.waypoints = [];
     this.mapPings = [];

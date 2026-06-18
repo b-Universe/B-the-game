@@ -105,15 +105,25 @@ export class PowerbarUIManager {
 
       const keyLabel = document.createElement('span');
       keyLabel.innerText = i < 10 ? keys[i] : '';
-      keyLabel.style.cssText = 'position: absolute; top: 2px; left: 4px; font-size: 0.75rem; font-weight: bold; color: #888; font-family: var(--font-mono, monospace); text-shadow: 1px 1px 0 #000;';
+      keyLabel.style.cssText = 'position: absolute; top: 2px; left: 4px; font-size: 0.75rem; font-weight: bold; color: #888; font-family: var(--font-mono, monospace); text-shadow: 1px 1px 0 #000; z-index: 5; pointer-events: none;';
+
+      const powerIconInner = document.createElement('div');
+      powerIconInner.className = 'power-icon-inner';
+      powerIconInner.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 1; pointer-events: none; opacity: 0.9;';
+
+      const powerBorder = document.createElement('div');
+      powerBorder.className = 'power-border';
+      powerBorder.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 2; pointer-events: none;';
 
       const iconOrName = document.createElement('div');
-      iconOrName.style.cssText = 'color: #fff; font-size: 0.7rem; font-family: var(--font-header, sans-serif); text-align: center; line-height: 1.1; pointer-events: none; padding: 0 2px; word-wrap: break-word; overflow: hidden; max-height: 30px; text-shadow: 1px 1px 0 #000; z-index: 3;';
+      iconOrName.style.cssText = 'color: #fff; font-size: 0.7rem; font-family: var(--font-header, sans-serif); text-align: center; line-height: 1.1; pointer-events: none; padding: 0 2px; word-wrap: break-word; overflow: hidden; max-height: 30px; text-shadow: 1px 1px 0 #000; z-index: 3; position: relative;';
 
       const overlay = document.createElement('div');
       overlay.className = 'cooldown-overlay';
-      overlay.style.cssText = 'position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0, 0, 0, 0.75); pointer-events: none; z-index: 2;';
+      overlay.style.cssText = 'position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0, 0, 0, 0.75); pointer-events: none; z-index: 4;';
 
+      slot.appendChild(powerIconInner);
+      slot.appendChild(powerBorder);
       slot.appendChild(overlay);
       slot.appendChild(keyLabel);
       slot.appendChild(iconOrName);
@@ -122,9 +132,11 @@ export class PowerbarUIManager {
       slot.onmouseenter = () => {
         const tray = this.engine.playerData.powerTray || [];
         const powerName = tray[i];
-        if (powerName) slot.style.background = 'rgba(52, 152, 219, 0.4)';
+        if (powerName) slot.style.filter = 'brightness(1.5)';
       };
-      slot.onmouseleave = () => slot.style.background = 'rgba(0, 0, 0, 0.7)';
+      slot.onmouseleave = () => {
+        slot.style.filter = 'none';
+      };
 
       slot.draggable = true;
       slot.ondragstart = (e) => {
@@ -187,7 +199,7 @@ export class PowerbarUIManager {
         }
       };
 
-      this.powerSlots.push({ element: slot, iconEl: iconOrName, overlayEl: overlay, keyLabel: keyLabel });
+      this.powerSlots.push({ element: slot, iconEl: iconOrName, overlayEl: overlay, keyLabel: keyLabel, innerIcon: powerIconInner, borderOverlay: powerBorder });
     }
     this.updatePowerbar();
     if (this.ui && this.ui.makeDraggable) {
@@ -214,7 +226,8 @@ export class PowerbarUIManager {
 
       const powerId = tray[i];
       if (powerId) {
-        const powerName = POWER_REGISTRY[powerId] ? POWER_REGISTRY[powerId].name : powerId;
+        const powerDef = POWER_REGISTRY[powerId];
+        const powerName = powerDef ? powerDef.name : powerId;
         const words = powerName.split(' ');
         let displayTxt = powerName;
         if (displayTxt.length > 8) {
@@ -222,6 +235,40 @@ export class PowerbarUIManager {
           if (words.length === 1) displayTxt = displayTxt.substring(0, 6) + '..';
         }
         slotData.iconEl.innerText = displayTxt;
+        
+        let bgColor = 'rgba(0, 0, 0, 0.7)';
+        if (powerDef && powerDef.assignedPowersets) {
+           const lowerSets = powerDef.assignedPowersets.map(ps => ps.toLowerCase());
+           if (lowerSets.includes('inherited')) {
+               bgColor = 'rgba(204, 204, 255, 0.4)';
+           } else if (lowerSets.some(ps => ps.includes('robotic'))) {
+               bgColor = 'rgba(0, 210, 255, 0.4)';
+           } else if (lowerSets.includes('developer') || lowerSets.includes('developmental')) {
+               bgColor = 'rgba(255, 50, 50, 0.4)';
+           }
+        }
+        slotData.element.style.background = bgColor;
+        let borderImage = 'none';
+        const pType = (powerDef && powerDef.type) ? powerDef.type.toLowerCase() : '';
+        
+        if (pType === 'passive' || pType === 'toggle') {
+            borderImage = 'none';
+        } else if (powerDef && powerDef.stats && powerDef.stats.coneRadius && powerDef.stats.coneRadius > 0) {
+            borderImage = "url('assets/images/ui/power-icons/border/cone.png')";
+        } else if (pType === 'targeted aoe') {
+            borderImage = "url('assets/images/ui/power-icons/border/targeted-aoe.png')";
+        } else if (pType === 'pbaoe' || pType === 'aoe') {
+            borderImage = "url('assets/images/ui/power-icons/border/aoe.png')";
+        } else if (pType === 'targeted summon') {
+            borderImage = "url('assets/images/ui/power-icons/border/targeted-summon.png')";
+        } else if (pType === 'summon') {
+            borderImage = "url('assets/images/ui/power-icons/border/summon.png')";
+        } else if (pType === 'targeted' || pType === 'click') {
+            borderImage = "url('assets/images/ui/power-icons/border/targeted.png')";
+        }
+        
+        slotData.borderOverlay.style.backgroundImage = borderImage;
+        
         const isActive = this.engine.player && this.engine.player.activePowers && this.engine.player.activePowers.includes(powerId);
         if (isActive) {
           slotData.element.style.borderColor = '#2ecc71';
@@ -233,6 +280,8 @@ export class PowerbarUIManager {
         slotData.element.title = powerName + (isActive ? ' (Active)' : '');
       } else {
         slotData.iconEl.innerText = '';
+        slotData.element.style.background = 'rgba(0, 0, 0, 0.7)';
+        slotData.borderOverlay.style.backgroundImage = 'none';
         slotData.element.style.borderColor = '#444';
         slotData.element.title = 'Empty Slot';
       }

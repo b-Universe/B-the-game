@@ -1,6 +1,6 @@
 {
   "new-maplegang-j3i0": {
-    "name": "Dewwy",
+    "name": "",
     "group": "Maple Gang",
     "strength": 0,
     "type": "generic",
@@ -9,7 +9,9 @@
     "baseExp": 20,
     "powers": [
       "slug"
-    ]
+    ],
+    "useGenericName": true,
+    "description": ""
   },
   "new-maplegang-j3i0-copy": {
     "name": "Tong",

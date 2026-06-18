@@ -1,6 +1,6 @@
 import { BaseWindow } from '../base-window.js?v=cache-bust-005';
 import { FURNITURE_REGISTRY } from './registry.js?v=cache-bust-005';
-import { NPCManagerWindow, NPCEditWindow, EntityGroupManagerWindow, SpawnerManagerWindow, SpawnerEditWindow, MobPackManagerWindow, NPCTemplateManagerWindow, EntityTypeManagerWindow, PowerSelectorWindow } from '../windows/npc-windows.js?v=cache-bust-005';
+import { NPCManagerWindow, NPCEditWindow, SpawnerManagerWindow, SpawnerEditWindow, FactionManagerWindow, EntityTypeManagerWindow, PowerSelectorWindow } from '../windows/npc-windows.js?v=cache-bust-005';
 import { PlayerManagerWindow } from '../windows/player-windows.js?v=cache-bust-005';
 import { ZoneManagerWindow, NeighborhoodManagerWindow } from '../windows/zone-windows.js?v=cache-bust-005';
 import { ArcadeManagerWindow, ArcadeEditWindow } from '../windows/arcade-windows.js?v=cache-bust-005';
@@ -10,6 +10,7 @@ import { BuilderUIManager } from './dev-tools/builder-ui.js?v=cache-bust-005';
 import { NpcUIManager } from './dev-tools/npc-manager-ui.js?v=cache-bust-005';
 import { SpawnerManagerUI } from './dev-tools/spawner-manager-ui.js?v=cache-bust-005';
 import { WorldManagerUI } from './dev-tools/world-manager-ui.js?v=cache-bust-005';
+import { FactionUIManager } from './dev-tools/faction-manager-ui.js?v=cache-bust-005';
 
 const DEFAULT_FACTIONS = ['Civilian', 'APD', 'Cyber-Syndicate', 'Corporate Extractors', 'Astro-Enforcers', 'Prism Zealots', 'Swarm', 'Rodent', 'Maple Gang'];
 const NPC_ROW_STYLE = 'display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px;';
@@ -65,10 +66,8 @@ export class DevToolsUIManager {
     this.npcEditWindow = new NPCEditWindow();
     this.spawnerManagerWindow = new SpawnerManagerWindow();
     this.spawnerEditWindow = new SpawnerEditWindow();
-    this.entityGroupManagerWindow = new EntityGroupManagerWindow();
+    this.factionManagerWindow = new FactionManagerWindow();
     this.playerManagerWindow = new PlayerManagerWindow();
-    this.mobPackManagerWindow = new MobPackManagerWindow();
-    this.npcTemplateManagerWindow = new NPCTemplateManagerWindow();
     this.entityTypeManagerWindow = new EntityTypeManagerWindow();
     this.powerSelectorWindow = new PowerSelectorWindow();
     this.zoneManagerWindow = new ZoneManagerWindow();
@@ -93,6 +92,7 @@ export class DevToolsUIManager {
     this.npcUI = new NpcUIManager(this.engine, this);
     this.spawnerUI = new SpawnerManagerUI(this.engine, this);
     this.worldUI = new WorldManagerUI(this.engine, this);
+    this.factionUI = new FactionUIManager(this.engine, this);
 
     this.setupDevTools();
     this.setupSideHudButtons();
@@ -100,10 +100,7 @@ export class DevToolsUIManager {
     this.worldUI.setupZoneManager();
     this.worldUI.setupArcadeManager();
     this.worldUI.setupNeighborhoodManager();
-    this.spawnerUI.setupMobPacks();
-    this.npcUI.setupEntityGroupManager();
     this.setupMapBadgeManager();
-    this.npcUI.setupNpcTemplates();
     this.npcUI.setupEntityTypes();
 
     this.builderUI.setupBuilderTools();
@@ -608,12 +605,13 @@ export class DevToolsUIManager {
           z: parseFloat(document.getElementById('edit-spawner-z').value),
           radius: parseFloat(document.getElementById('edit-spawner-radius').value) || 300,
           respawnRate: parseFloat(document.getElementById('edit-spawner-rate').value) || 10,
+          maxActive: parseInt(document.getElementById('edit-spawner-max').value) || 5,
           patrolRoute: document.getElementById('edit-spawner-patrol').value || ''
         };
         eng.network.sendEditSpawner(uuid, updates);
       };
 
-      ['edit-spawner-name', 'edit-spawner-x', 'edit-spawner-y', 'edit-spawner-z', 'edit-spawner-radius', 'edit-spawner-rate', 'edit-spawner-patrol'].forEach(id => {
+      ['edit-spawner-name', 'edit-spawner-x', 'edit-spawner-y', 'edit-spawner-z', 'edit-spawner-radius', 'edit-spawner-rate', 'edit-spawner-max', 'edit-spawner-patrol'].forEach(id => {
         document.getElementById(id).addEventListener('input', emitSpawnerUpdate);
       });
       document.getElementById('btn-save-spawner-edit').onclick = () => this.spawnerEditWindow.close();
@@ -644,47 +642,19 @@ export class DevToolsUIManager {
       });
     }
 
-    const btnGroupManager = document.getElementById('btn-dev-group-manager');
-    if (btnGroupManager) {
-      btnGroupManager.onclick = () => {
-        if (this.entityGroupManagerWindow.element.style.display === 'none') {
-          this.entityGroupManagerWindow.open();
-          this.engine.network.sendRequestEntityGroups();
-        } else {
-          this.entityGroupManagerWindow.close();
-        }
-      };
-    }
-
-    const btnMobPack = document.getElementById('btn-dev-mobpack-manager');
-    if (btnMobPack) {
-      btnMobPack.onclick = () => {
-        if (this.mobPackManagerWindow.element.style.display === 'none') {
-          if (this.mobPackManagerWindow.setTitle) {
-              this.mobPackManagerWindow.setTitle('Encounter Presets');
+      const btnFaction = document.getElementById('btn-dev-faction-manager');
+      if (btnFaction) {
+        btnFaction.onclick = () => {
+          if (this.factionManagerWindow.element.style.display === 'none') {
+            this.factionManagerWindow.open();
+            this.engine.network.sendRequestEntityGroups();
+            this.engine.network.socket.emit('request_npc_templates');
+            this.engine.network.socket.emit('request_mob_packs');
+          } else {
+            this.factionManagerWindow.close();
           }
-          this.mobPackManagerWindow.open();
-          this.engine.network.sendRequestEntityGroups();
-          this.engine.network.socket.emit('request_mob_packs');
-          this.renderMobPacks();
-        } else {
-          this.mobPackManagerWindow.close();
-        }
-      };
-    }
-
-    const btnNpcTemplate = document.getElementById('btn-dev-npc-template-manager');
-    if (btnNpcTemplate) {
-      btnNpcTemplate.onclick = () => {
-        if (this.npcTemplateManagerWindow.element.style.display === 'none') {
-          this.npcTemplateManagerWindow.open();
-          this.engine.network.socket.emit('request_npc_templates');
-          this.engine.network.sendRequestEntityGroups();
-        } else {
-          this.npcTemplateManagerWindow.close();
-        }
-      };
-    }
+        };
+      }
 
     const btnEntityType = document.getElementById('btn-dev-entity-type-manager');
     if (btnEntityType) {

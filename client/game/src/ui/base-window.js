@@ -153,6 +153,7 @@ export class BaseWindow {
   }
 
   open() {
+    if (this.closingTimeout) clearTimeout(this.closingTimeout);
     this.element.style.display = 'flex';
     void this.element.offsetWidth; // Force reflow
     this.element.style.opacity = '1';
@@ -164,10 +165,11 @@ export class BaseWindow {
   close() {
     this.element.style.opacity = '0';
     this.element.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      if (this.element.style.opacity === '0') {
-        this.element.style.display = 'none';
-      }
+    this.element.style.pointerEvents = 'none';
+    if (this.closingTimeout) clearTimeout(this.closingTimeout);
+    this.closingTimeout = setTimeout(() => {
+      this.element.style.display = 'none';
+      this.element.style.pointerEvents = 'auto';
     }, 150);
     this.onClose();
   }

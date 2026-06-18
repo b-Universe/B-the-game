@@ -258,8 +258,19 @@ export class PhysicsManager {
 
   checkCollision(nextX, nextY, overrideZ) {
     const eng = this.engine;
-    const corners = this.collisionCorners;
 
+    if (eng.currentZone && eng.currentZone.startsWith('apt_')) {
+      const zc = eng.zonesConfig ? eng.zonesConfig[eng.currentZone] : null;
+      if (zc && zc.ownedChunks) {
+        for (let c of this.collisionCorners) {
+          const cx = Math.floor(((nextX + c.dx) / 32) / 32);
+          const cy = Math.floor(((nextY + c.dy) / 32) / 32);
+          if (!zc.ownedChunks.includes(`${cx}_${cy}`)) return true;
+        }
+      }
+    }
+
+    const corners = this.collisionCorners;
     const pZ = overrideZ !== undefined ? overrideZ : (eng.player.z || 0);
     const currentGridZ = Math.floor((pZ + 5) / 32);
     const headGridZ = Math.floor((pZ + 48) / 32);

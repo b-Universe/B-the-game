@@ -319,16 +319,22 @@ module.exports = function registerSocialSockets(socket, io, state, deps) {
 
     if (!state.zonesConfig[myAptZone]) return;
     const zc = state.zonesConfig[myAptZone];
-    if (!zc.ownedChunks || !zc.ownedChunks.includes(chunkToLock)) return;
+    if (!zc.ownedChunks || !zc.ownedChunks.includes(chunkToLock)) {
+      if (player.zone === myAptZone) {
+        player.x = 48 * 32; player.y = 48 * 32; player.z = 64;
+        socket.emit('force_teleport', { x: player.x, y: player.y, z: player.z, zone: player.zone });
+        socket.emit('system_dialog', "You cannot sell a chunk you don't own. You've been warped back to safety.");
+      }
+      return;
+    }
 
     const isEditingOwnApt = myAptZone === `apt_${pName}`;
     const refund = isEditingOwnApt ? 5000 : 0;
 
     if (refund > 0) {
-      accData.currency = (accData.currency || 0) + refund;
-      player.currency = accData.currency;
+      accData.bankCurrency = (accData.bankCurrency || 0) + refund;
       fs.writeFileSync(accFile, JSON.stringify(accData, null, 2));
-      socket.emit('currency_updated', { currency: accData.currency });
+      socket.emit('bank_data_updated', { items: accData.bankItems || [], currency: accData.bankCurrency });
     }
 
     zc.ownedChunks = zc.ownedChunks.filter(c => c !== chunkToLock);
@@ -349,7 +355,7 @@ module.exports = function registerSocialSockets(socket, io, state, deps) {
     }
 
     socket.emit('apartment_expanded');
-    socket.emit('system_dialog', isEditingOwnApt ? 'Apartment un-expanded. $5,000 refunded.' : `Apartment chunk ${chunkToLock} removed (Admin).`);
+    socket.emit('system_dialog', isEditingOwnApt ? 'Apartment un-expanded. $5,000 deposited to your bank vault.' : `Apartment chunk ${chunkToLock} removed (Admin).`);
     logSystem(`APARTMENT UN-EXPAND: ${player.name} locked chunk ${chunkToLock} in ${myAptZone} for ${refund} refund`);
 
     if (state.mapChunks[myAptZone]) {

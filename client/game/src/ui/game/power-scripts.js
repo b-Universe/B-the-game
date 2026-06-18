@@ -7,7 +7,7 @@ const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up'
 const baseScripts = {
   ...TravelPowerScripts,
   ...AssaultRifleScripts,
-  'satelite-support': (eng, powerId = 'satelite-support') => {
+  'satellite-support': (eng, powerId = 'satellite-support') => {
     const powerDef = POWER_REGISTRY[powerId];
     if (!powerDef) return;
 
@@ -37,6 +37,13 @@ const baseScripts = {
 
     if (eng.network && eng.network.socket) {
       eng.network.socket.emit('summon_entity', { powerId });
+    }
+  },
+  'satellite-support-lights': (eng, powerId, isActivated) => {
+    if (isActivated) {
+      eng.player.satelliteLightsToggleTime = Date.now();
+    } else {
+      eng.player.satelliteLightsToggleTime = 0;
     }
   },
   'teleport': (eng, powerId = 'teleport') => {
@@ -85,7 +92,7 @@ const baseScripts = {
     eng.player.moveTarget = null;
 
     if (activationMs > 0) {
-       eng.ui.showSystemMessage(`Initiating warp... Stand still for ${activationMs / 1000} seconds.`);
+       if (eng.showFloatingText) eng.showFloatingText('Initiating Warp...', '#00d2ff');
     }
 
     const executeTeleport = () => {
@@ -107,17 +114,21 @@ const baseScripts = {
        eng.player.z = 64;
        eng.camera.x = eng.player.x;
        eng.camera.y = eng.player.y;
-
-       eng.ui.showSystemMessage('Traveling to your personal apartment...');
     };
 
     if (activationMs <= 0) {
         executeTeleport();
     } else {
+        const startX = eng.player.x;
+        const startY = eng.player.y;
+        const startHp = eng.player.hp || 1000;
         let elapsed = 0;
         const castInterval = setInterval(() => {
-           if (eng.player.castingPower !== powerId) {
+           if (eng.player.castingPower !== powerId || Math.abs(eng.player.x - startX) > 10 || Math.abs(eng.player.y - startY) > 10 || (eng.player.hp || 1000) < startHp) {
+               eng.player.state = 'idle';
+               eng.player.castingPower = null;
                clearInterval(castInterval);
+               if (eng.showFloatingText) eng.showFloatingText('Interrupted!', '#e74c3c');
                return;
            }
 
@@ -127,17 +138,19 @@ const baseScripts = {
                executeTeleport();
            } else {
                const intensity = elapsed / activationMs;
-               if (powerDef.visuals?.casterVisuals) {
-                   powerDef.visuals.casterVisuals.forEach(vis => {
-                       if (vis.particle && vis.particle !== 'none') {
-                           eng.spawnEventParticles({
-                               x: eng.player.x, y: eng.player.y, z: eng.player.z,
-                               particle: vis.particle,
-                               particleColor: vis.color,
-                               particleCount: Math.max(1, Math.floor(intensity * (vis.particleCount || 5))),
-                               particleScatter: vis.particleScatter || 60
-                           });
-                       }
+               const numSpirals = 3;
+               for (let i = 0; i < numSpirals; i++) {
+                   const angle = (elapsed / 200) + (i * Math.PI * 2 / numSpirals);
+                   const radius = 40 * (1 - intensity * 0.5);
+                   const zOffset = ((elapsed / 20) % 150);
+                   eng.spawnEventParticles({
+                       x: eng.player.x + Math.cos(angle) * radius,
+                       y: eng.player.y + Math.sin(angle) * radius,
+                       z: (eng.player.z || 0) + zOffset,
+                       particle: 'sparkle',
+                       particleColor: '#00d2ff',
+                       particleCount: 2,
+                       particleScatter: 5
                    });
                }
            }

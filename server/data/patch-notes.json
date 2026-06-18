@@ -1,6 +1,57 @@
 [
   {
     "version": "v2.6.0",
+    "color": "#00d2ff",
+    "changes": [
+      { "type": "Engine", "text": "Overhauled the Developer Tools architecture, splitting them into standalone, easily manageable modules: Faction Manager, Spawner Manager, NPC Manager, and Builder tools." },
+      { "type": "Design", "text": "Implemented a unified 'Accent Color' setting under Interface -> Window Gradients. You can now globally change the neon blue accent across windows, dropdowns, powertray borders, and targeted highlights to any custom color." },
+      { "type": "UI", "text": "Standardized the settings menu aesthetics by reducing excessive button padding and normalizing text size. The 'Impact' font is now strictly reserved for window headers to reduce visual clutter." },
+      { "type": "UI", "text": "Added the 'Identification Card' module to the Alternative UI's Start Menu under a new 'ID' category." },
+      { "type": "Fix", "text": "Fixed a bug that was preventing passive abilities (like Stamina or Equip Robot) from properly displaying in the Status Buff tray." },
+      { "type": "Engine", "text": "Spawners now natively support and utilize Faction Generic Name Pools. Rapidly adding generic names to a pool via the developer UI now automatically refocuses the input box for faster data entry." },
+    ]
+  },
+  {
+    "version": "v2.5.8",
+    "color": "#e056f",
+    "changes": [
+      { "type": "Fix", "text": "Generic NPCs will no longer spawn with completely blank names if a matching Faction Generic Name Pool cannot be found; they will now visibly fallback to 'Unknown (Faction)' to help you debug your spawners." },
+      { "type": "Engine", "text": "Spawners now strictly prioritize explicit Pack IDs while still properly respecting neighborhood faction weights, completely eliminating legacy hardcoding during entity generation." },
+      { "type": "Gameplay", "text": "Substantially increased the NPC 'far-cap' pursuit distance limit up to 2000 units. Aggroed enemies will no longer immediately lose interest if sniped from outside their base scan range." },
+      { "type": "Design", "text": "Added visually distinct power-icon borders denoting Area of Effect, Cone, Summon, and Targeted abilities in the powertray." },
+      { "type": "Design", "text": "Removed the unnecessary 'Talk' right-click context menu option from generic NPCs that don't serve conversational roles." },
+      { "type": "Engine", "text": "Rescaled the debug renderer's center selection wireframes for spawners and zones down to exactly half a block (0.5x0.5x0.5) to be less obtrusive when interacting with the world." }
+    ]
+  },
+  {
+    "version": "v2.5.7",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "UI", "text": "Implemented a new Target Info popup window allowing you to view detailed stats and bios for Players, NPCs, and Drones." },
+      { "type": "UI", "text": "Added 'Rename' and 'Dismiss' features to the right-click Context Menu for pets." },
+      { "type": "UI", "text": "Selecting a pet in the Pet Window now properly selects it in the Target Window and highlights it in the list." },
+      { "type": "Fix", "text": "Fixed a UI layering issue where the Start Menu would sometimes appear underneath the minimap compass." },
+      { "type": "Engine", "text": "Added a new public Player Info API endpoint to fetch non-sensitive player bios, badges, and stats." }
+    ]
+  },
+  {
+    "version": "v2.5.6",
+    "color": "#e056fd",
+    "changes": [
+      { "type": "Design", "text": "Replaced 'prompt()' browser popups with proper styled dropdown modals when adding new Inherited Powers." },
+      { "type": "UI", "text": "Overhauled the Player Modifier UI: Known Powers and Powersets are now displayed as sleek tags with searchable '+Add' modals." },
+      { "type": "UI", "text": "Added a confirmation modal when un-expanding apartment chunks, and refunds are now correctly deposited straight into the Account Vault." },
+      { "type": "UI", "text": "The Inherited Powers dropdown list is now sorted alphabetically for easier navigation." },
+      { "type": "UI", "text": "The Base Styles green dot UI indicator now features a smooth CSS fade and updates instantly when clicking different chunks." },
+      { "type": "Gameplay", "text": "Pet Dismissal now features a clean float-away animation on the client before cleanly un-summoning from the server." },
+      { "type": "Engine", "text": "Added server-side energy and battery scaling functionality based on the number of active drones currently spawned." },
+      { "type": "Engine", "text": "Power IDs can now be renamed directly from the Power Customization Engine! Renaming automatically syncs to the backend." },
+      { "type": "Fix", "text": "Fixed an issue in the Trainer UI where Developer powers were unnecessarily locking if previous powers weren't learned." },
+      { "type": "Engine", "text": "Implemented server-side security logging for blocked UI command attempts." }
+    ]
+  },
+  {
+    "version": "v2.5.5",
     "color": "#2ecc71",
     "changes": [
       { "type": "Design", "text": "Migrated Player Currency to the Account level. All characters on the same account now share a unified currency pool." },

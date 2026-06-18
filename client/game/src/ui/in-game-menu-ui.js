@@ -98,8 +98,17 @@ export class InGameMenuUIManager {
         if (window.currentGameEngine) window.currentGameEngine.stop();
         this.app.currentAccount = null;
         localStorage.removeItem('b_current_account');
-        document.getElementById('game-screen').style.display = 'none';
-        document.getElementById('creation-screen').style.display = 'block';
+        const gameScreen = document.getElementById('game-screen');
+        if(gameScreen) {
+          gameScreen.style.display = 'none';
+          gameScreen.style.opacity = '0';
+        }
+        
+        const creationScreen = document.getElementById('creation-screen');
+        if(creationScreen) {
+          creationScreen.style.opacity = '1';
+          creationScreen.style.display = 'block';
+        }
         gameDropdown.style.display = 'none';
 
         const btnMusic = document.getElementById('btn-login-music');

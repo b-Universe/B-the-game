@@ -28,6 +28,9 @@ export class PowerEditorUIManager {
     this.els.assignedContainer = document.getElementById('pe-assigned-powersets');
     this.els.btnSave = document.getElementById('btn-pe-save');
     this.els.btnCreate = document.getElementById('btn-pe-create-new');
+    this.els.btnDelete = document.getElementById('btn-pe-delete');
+    this.els.btnAddInherited = document.getElementById('btn-pe-add-inherited');
+    this.els.inheritedList = document.getElementById('pe-inherited-powers-list');
 
     if (this.els.btnOpen && this.els.panel) {
       this.els.btnOpen.style.borderColor = '#e056fd';
@@ -44,6 +47,14 @@ export class PowerEditorUIManager {
 
     if (this.els.btnSave) {
       this.els.btnSave.addEventListener('click', () => this.savePower());
+    }
+
+    if (this.els.btnDelete) {
+      this.els.btnDelete.addEventListener('click', () => this.deletePower());
+    }
+
+    if (this.els.btnAddInherited) {
+      this.els.btnAddInherited.addEventListener('click', () => this.addInheritedPower());
     }
 
     this.els.btnAddEffect = document.getElementById('btn-pe-add-effect');
@@ -99,6 +110,9 @@ export class PowerEditorUIManager {
       toggleDisabled('pe-stat-recovery', !isPassive);
       toggleDisabled('pe-stat-battery-recovery', !isPassive);
 
+      toggleDisabled('pe-stat-rech', isPassive || isToggle);
+      toggleDisabled('pe-stat-activation', isPassive || isToggle);
+
       toggleDisabled('pe-stat-aoe', type !== 'Targeted AoE' && type !== 'PBAoE');
       toggleDisabled('pe-stat-cone', type !== 'Click' && type !== 'Targeted');
 
@@ -108,6 +122,12 @@ export class PowerEditorUIManager {
       toggleDisabled('pe-stat-accuracy', disableCombatStats);
       toggleDisabled('pe-stat-crit-chance', disableCombatStats);
       toggleDisabled('pe-stat-crit-mult', disableCombatStats);
+
+      const projSec = document.getElementById('pe-section-projectile');
+      if (projSec) projSec.style.display = (isToggle || isPassive) ? 'none' : 'block';
+      
+      const tgtSec = document.getElementById('pe-section-target');
+      if (tgtSec) tgtSec.style.display = isPassive ? 'none' : 'block';
     };
 
     const powerTypeSelect = document.getElementById('pe-power-type');
@@ -476,6 +496,89 @@ export class PowerEditorUIManager {
     });
   }
 
+  deletePower() {
+    if (!this.currentPowerId) return;
+    if (confirm(`Are you sure you want to delete the power '${this.currentPowerId}'? This cannot be undone.`)) {
+      const playerName = this.engine?.playerData?.name || '';
+      fetch('/api/powers/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-player-name': playerName },
+        body: JSON.stringify({ id: this.currentPowerId })
+      }).then(r => r.json()).then(res => {
+        if (res.success) {
+          this.powers = this.powers.filter(p => p.id !== this.currentPowerId);
+          if (POWER_REGISTRY[this.currentPowerId]) delete POWER_REGISTRY[this.currentPowerId];
+          if (window.POWER_REGISTRY && window.POWER_REGISTRY[this.currentPowerId]) delete window.POWER_REGISTRY[this.currentPowerId];
+          localStorage.setItem('b_cache_powers', JSON.stringify(this.powers));
+          this.currentPowerId = null;
+          this.renderRoster();
+          document.getElementById('pe-id').value = '';
+          if (this.els.btnDelete) this.els.btnDelete.style.display = 'none';
+        } else {
+          alert("Error: " + res.error);
+        }
+      }).catch(e => console.error(e));
+    }
+  }
+
+  addInheritedPower() {
+    const sortedPowers = [...this.powers].sort((a, b) => a.name.localeCompare(b.name));
+    const listHtml = sortedPowers.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('');
+    
+    const modalHtml = `
+      <div id="pe-inherited-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-dark); padding: 20px; border: 1px solid var(--border-dark); border-radius: 5px; width: 400px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+          <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-light); font-size: 1.1rem; text-transform: uppercase;">Add Inherited Power</h3>
+          <select id="pe-inherited-select" class="b-select" style="width: 100%; margin-bottom: 15px;">
+            ${listHtml}
+          </select>
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="pe-inherited-cancel" class="b-btn" style="flex: 1;">Cancel</button>
+            <button id="pe-inherited-confirm" class="b-btn" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71; flex: 1;">Add</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const div = document.createElement('div');
+    div.innerHTML = modalHtml;
+    document.body.appendChild(div);
+    
+    document.getElementById('pe-inherited-cancel').onclick = () => div.remove();
+    document.getElementById('pe-inherited-confirm').onclick = () => {
+      const pId = document.getElementById('pe-inherited-select').value;
+      if (pId) {
+        if (!this.currentInheritedPowers) this.currentInheritedPowers = [];
+        if (!this.currentInheritedPowers.includes(pId)) {
+          this.currentInheritedPowers.push(pId);
+          this.renderInheritedPowers();
+        }
+      }
+      div.remove();
+    };
+  }
+
+  renderInheritedPowers() {
+    if (!this.els.inheritedList) return;
+    this.els.inheritedList.innerHTML = '';
+    if (!this.currentInheritedPowers || this.currentInheritedPowers.length === 0) {
+      this.els.inheritedList.innerHTML = '<div style="color: var(--text-dim); font-size: 0.75rem; text-align: center; padding: 10px;">No inherited powers.</div>';
+      return;
+    }
+    this.currentInheritedPowers.forEach((pId, idx) => {
+      const p = this.powers.find(x => x.id === pId);
+      const name = p ? p.name : pId;
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 2px;';
+      row.innerHTML = `<span style="font-size: 0.75rem;">${name} (${pId})</span> <button class="b-btn b-btn-danger" style="padding: 0 5px; font-size: 0.7rem; height: 20px;">X</button>`;
+      row.querySelector('button').onclick = () => {
+        this.currentInheritedPowers.splice(idx, 1);
+        this.renderInheritedPowers();
+      };
+      this.els.inheritedList.appendChild(row);
+    });
+  }
+
   createNewPower() {
     const newId = prompt("Enter a unique internal ID for this power (e.g., plasma_burst):");
     if (!newId || newId.trim() === '') return;
@@ -508,7 +611,7 @@ export class PowerEditorUIManager {
       },
       effects: [],
       visuals: {
-        icon: '', tint: '#ffffff', animation: 'throw-attack1',
+        icon: '', tint: '#ffffff', animation: 'none',
         casterVisuals: [],
         projectileVisuals: [],
         targetVisuals: [],
@@ -528,7 +631,8 @@ export class PowerEditorUIManager {
     this.renderRoster(); // Refresh to highlight the active power in the roster
 
     document.getElementById('pe-id').value = power.id;
-    document.getElementById('pe-id').disabled = true; // Lock ID to prevent reference breaks
+    document.getElementById('pe-id').disabled = false;
+    this._originalPowerId = power.id;
     document.getElementById('pe-name').value = power.name || '';
     document.getElementById('pe-power-type').value = power.type || 'Click';
     document.getElementById('pe-desc').value = power.description || '';
@@ -654,6 +758,11 @@ export class PowerEditorUIManager {
     this.renderSpriteEventList('projectile');
     this.renderSpriteEventList('target');
 
+    this.currentInheritedPowers = power.inheritedPowers ? [...power.inheritedPowers] : [];
+    this.renderInheritedPowers();
+
+    if (this.els.btnDelete) this.els.btnDelete.style.display = 'block';
+
     const firstCastSeq = this.currentCasterVisuals.length > 0 ? this.currentCasterVisuals[0].sequence : 'None';
     this.updateSequenceDetails(firstCastSeq);
 
@@ -685,13 +794,16 @@ export class PowerEditorUIManager {
     const projAVal = parseFloat(document.getElementById('pe-proj-arc').value);
     const dashForwardVal = document.getElementById('pe-stat-dash-forward') ? document.getElementById('pe-stat-dash-forward').checked : false;
 
+    const newId = document.getElementById('pe-id').value.trim();
     const payload = {
-      id: document.getElementById('pe-id').value,
+      _oldId: this._originalPowerId || newId,
+      id: newId,
       name: document.getElementById('pe-name').value,
       type: document.getElementById('pe-power-type').value,
       description: document.getElementById('pe-desc').value,
       engineScript: document.getElementById('pe-engine-script').value,
       assignedPowersets: Array.from(document.querySelectorAll('.pe-powerset-cb:checked')).map(cb => cb.value),
+      inheritedPowers: this.currentInheritedPowers || [],
       stats: {
         tier: isNaN(tierVal) ? 1 : tierVal,
         rechargeRate: isNaN(rechVal) ? 1.0 : rechVal,
@@ -726,11 +838,17 @@ export class PowerEditorUIManager {
       }
     };
 
-    // Update local cache and UI
-    const idx = this.powers.findIndex(p => p.id === payload.id);
-    if (idx !== -1) this.powers[idx] = payload;
+    const idx = this.powers.findIndex(p => p.id === (this._originalPowerId || payload.id));
+    if (idx !== -1) { this.powers[idx] = payload; this.powers[idx].id = payload.id; }
     POWER_REGISTRY[payload.id] = payload;
+    if (this._originalPowerId && this._originalPowerId !== payload.id) {
+      delete POWER_REGISTRY[this._originalPowerId];
+      if (window.POWER_REGISTRY) delete window.POWER_REGISTRY[this._originalPowerId];
+    }
     if (window.POWER_REGISTRY) window.POWER_REGISTRY[payload.id] = payload;
+    this.currentPowerId = payload.id;
+    this._originalPowerId = payload.id;
+    localStorage.setItem('b_cache_powers', JSON.stringify(this.powers));
     this.renderRoster();
 
     const btn = this.els.btnSave;
@@ -738,9 +856,10 @@ export class PowerEditorUIManager {
     btn.innerText = "Saving...";
     btn.style.opacity = "0.5";
 
+    const playerName = this.engine?.playerData?.name || '';
     fetch('/api/powers/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-player-name': playerName },
       body: JSON.stringify(payload)
     }).then(res => {
       if (res.ok) {

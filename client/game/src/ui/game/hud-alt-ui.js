@@ -24,23 +24,26 @@ export class HudAltUIManager {
           </div>
           <button id="alt-ui-menu-btn" style="background: linear-gradient(to bottom, #34495e, #2c3e50); color: #fff; border: 1px solid #1abc9c; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: 'Arial Black', Impact, sans-serif; font-size: 0.8rem; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: all 0.2s;">Menu</button>
           <div id="alt-ui-dropdown" style="position: absolute; top: 100%; right: 0; background: rgba(5, 7, 10, 0.95); border: 2px solid #3498db; border-radius: 6px; display: none; flex-direction: column; gap: 5px; padding: 10px; z-index: 1001; min-width: 200px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); cursor: default; margin-top: 10px;">
+          <p style="text-align: center; margin: 0; color: #1abc9c">ID</p>
+            <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-id" style="text-align: left; padding: 6px 10px; color: #fff;">Identification Card</button>
           <p style="text-align: center; margin: 0; color: #1abc9c">Game</p>
             <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-player-search" style="text-align: left; padding: 6px 10px;">Player Search</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-fullscreen-map" style="text-align: left; padding: 6px 10px;">Fullscreen Map</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-inventory" style="text-align: left; padding: 6px 10px;">Inventory</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-bank" style="text-align: left; padding: 6px 10px;">Account Vault</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-badges" style="text-align: left; padding: 6px 10px;">Badges & Honors</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-editmode" style="text-align: left; padding: 6px 10px;">Builder Mode (/edit)</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-player-search" style="text-align: left; padding: 6px 10px; color: #fff;">Player Search</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-fullscreen-map" style="text-align: left; padding: 6px 10px; color: #fff;">Fullscreen Map</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-inventory" style="text-align: left; padding: 6px 10px; color: #fff;">Inventory</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-bank" style="text-align: left; padding: 6px 10px; color: #fff;">Account Vault</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-badges" style="text-align: left; padding: 6px 10px; color: #fff;">Badges & Honors</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-editmode" style="text-align: left; padding: 6px 10px; color: #fff;">Builder Mode (/edit)</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-dev-tools" style="text-align: left; padding: 6px 10px; display: none; border-color: #1abc9c; color: #1abc9c;">Developer Tools</button>
             <p style="text-align: center; margin: 0; color: #1abc9c">Combat</p>
             <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-combat-stats" style="text-align: left; padding: 6px 10px;">Combat Statistics</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-powers" style="text-align: left; padding: 6px 10px;">Powers and Abilities</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-combat-stats" style="text-align: left; padding: 6px 10px; color: #fff;">Combat Statistics</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-powers" style="text-align: left; padding: 6px 10px; color: #fff;">Powers and Abilities</button>
             <p style="text-align: center; margin: 0; color: #1abc9c">Account</p>
             <hr style="border: 0; border-top: 1px solid #1abc9c; margin: 2px 0;">
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-settings" style="text-align: left; padding: 6px 10px;">Settings</button>
-            <button class="btn-secondary alt-menu-btn" id="alt-btn-char-select" style="text-align: left; padding: 6px 10px;">Change Character</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-settings" style="text-align: left; padding: 6px 10px; color: #fff;">Settings</button>
+            <button class="btn-secondary alt-menu-btn" id="alt-btn-char-select" style="text-align: left; padding: 6px 10px; color: #fff;">Change Character</button>
             <button class="btn-secondary alt-menu-btn" id="alt-btn-logout" style="text-align: left; padding: 6px 10px; color: #e74c3c; border-color: #e74c3c;">Logout</button>
           </div>
         </div>
@@ -87,6 +90,12 @@ export class HudAltUIManager {
 
         const closeDropdown = () => { altDropdown.style.display = 'none'; };
 
+        document.getElementById('alt-btn-id').onclick = () => {
+          const idModal = document.getElementById('in-game-id-modal');
+          if (idModal) idModal.style.display = 'flex';
+          closeDropdown();
+        };
+
         document.getElementById('alt-btn-combat-stats').onclick = () => {
           if (this.ui.combatStats) this.ui.combatStats.toggle();
           closeDropdown();
@@ -120,7 +129,7 @@ export class HudAltUIManager {
           closeDropdown();
         };
         document.getElementById('alt-btn-settings').onclick = () => {
-          document.getElementById('btn-main-settings')?.click();
+          document.getElementById('btn-settings')?.click();
           closeDropdown();
         };
         document.getElementById('alt-btn-char-select').onclick = () => {

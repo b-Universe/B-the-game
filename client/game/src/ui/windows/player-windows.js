@@ -54,13 +54,21 @@ export class PlayerModifierWindow extends BaseWindow {
       </div>
 
       <div class="b-input-group">
-        <label class="b-label">Known Powersets (Comma Separated IDs)</label>
-        <textarea id="pm-powersets" class="b-input" style="height: 50px; resize: vertical;"></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label class="b-label" style="margin-bottom: 0;">Known Powersets</label>
+          <button id="btn-pm-add-powerset" class="b-btn" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Powerset</button>
+        </div>
+        <div id="pm-powersets-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; min-height: 32px; padding: 5px; border: 1px solid var(--border-dark); border-radius: var(--border-radius); background: rgba(0,0,0,0.2);"></div>
+        <input type="hidden" id="pm-powersets">
       </div>
 
       <div class="b-input-group">
-        <label class="b-label">Known Powers (Comma Separated IDs)</label>
-        <textarea id="pm-powers" class="b-input" style="height: 50px; resize: vertical;"></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label class="b-label" style="margin-bottom: 0;">Known Powers</label>
+          <button id="btn-pm-add-power" class="b-btn" style="padding: 2px 8px; font-size: 0.8rem; height: auto;">+ Power</button>
+        </div>
+        <div id="pm-powers-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; min-height: 32px; padding: 5px; border: 1px solid var(--border-dark); border-radius: var(--border-radius); background: rgba(0,0,0,0.2);"></div>
+        <input type="hidden" id="pm-powers">
       </div>
 
       <div class="b-input-row" style="margin-top: 10px; border-top: 1px solid var(--text-dim); padding-top: 15px;">

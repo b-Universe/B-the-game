@@ -9,6 +9,7 @@ export class SettingsWindow extends BaseWindow {
       <style>
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: default; }
         .settings-row:hover { background: rgba(255,255,255,0.05); }
+        .settings-row button { padding: 2px 20px !important; font-size: 0.9rem !important; height: 28px !important; }
       </style>
       <div style="display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 1px solid var(--text-dim); padding-bottom: 10px;">
         <button class="settings-tab-btn b-btn btn-primary active" data-tab="tab-graphics" style="flex: 1;">Graphics</button>
@@ -34,6 +35,7 @@ export class SettingsWindow extends BaseWindow {
         <div id="row-toggle-shadows" class="settings-row"><span class="b-label">Enable Shadows</span><button id="btn-toggle-shadows" class="b-btn" style="width: 115px;">Enabled</button></div>
         <div id="row-toggle-soft-shadows" class="settings-row"><span class="b-label">Enable Soft Shadows</span><button id="btn-toggle-soft-shadows" class="b-btn" style="width: 115px;">Enabled</button></div>
         <div id="row-toggle-arcade-crt" class="settings-row"><span class="b-label">Enable Arcade CRT Effect</span><button id="btn-toggle-arcade-crt" class="b-btn" style="width: 115px;">Enabled</button></div>
+        <div id="row-toggle-weather" class="settings-row"><span class="b-label">Enable Weather Particles</span><button id="btn-toggle-weather" class="b-btn" style="width: 115px;">Enabled</button></div>
       </div>
 
       <div id="tab-interface" class="settings-tab-panel" style="display: none; flex-direction: column; gap: 5px; max-height: 450px; overflow-y: auto; padding-right: 5px;">
@@ -58,6 +60,14 @@ export class SettingsWindow extends BaseWindow {
         <div id="row-toggle-baseplates" class="settings-row"><span class="b-label">Show Baseplates</span><button id="btn-toggle-baseplates" class="b-btn" style="width: 115px;">Disabled</button></div>
         <div id="row-toggle-power-raytrace" class="settings-row"><span class="b-label">Show Power Raytrace</span><button id="btn-toggle-power-raytrace" class="b-btn" style="width: 115px;">Enabled</button></div>
         <div id="row-toggle-combat-chat" class="settings-row"><span class="b-label">Show Combat Chat</span><button id="btn-toggle-combat-chat" class="b-btn" style="width: 115px;">Enabled</button></div>
+        
+        <div class="settings-row"><span class="b-label">Window Gradients</span><div style="display: flex; gap: 8px;"><input type="color" id="window-color-1" value="#34495e" title="Top Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;"><input type="color" id="window-color-2" value="#2c3e50" title="Bottom Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;"></div></div>
+        <div class="settings-row"><span class="b-label">Accent Color</span><div style="display: flex; gap: 8px;"><input type="color" id="window-accent-color" value="#3498db" title="Accent Color" style="cursor: pointer; background: transparent; border: none; height: 24px; width: 32px; padding: 0;"></div></div>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--text-dim);">
+            <button id="btn-reset-window-pos" class="b-btn btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem; color: #f39c12; border-color: #f39c12;">Reset Windows</button>
+            <button id="btn-clear-cache" class="b-btn btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem; color: #e74c3c; border-color: #e74c3c;">Clear Cache</button>
+        </div>
       </div>
 
       <div id="tab-gameplay" class="settings-tab-panel" style="display: none; flex-direction: column; gap: 5px; max-height: 450px; overflow-y: auto; padding-right: 5px;">
@@ -80,6 +90,11 @@ export class SettingsWindow extends BaseWindow {
 
         <div id="row-toggle-mute-arcade" class="settings-row"><span class="b-label">Mute Arcade Sounds</span><button id="btn-toggle-mute-arcade" class="b-btn" style="width: 115px;">Disabled</button></div>
         <div id="row-toggle-lock-builder" class="settings-row"><span class="b-label">Lock Builder Panels</span><button id="btn-toggle-lock-builder" class="b-btn" style="width: 115px;">Disabled</button></div>
+        <div id="row-toggle-auto-save" class="settings-row"><span class="b-label">Auto-Save Builder World</span><button id="btn-toggle-auto-save" class="b-btn" style="width: 115px;">Enabled</button></div>
+
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--text-dim); color: var(--accent-neon); font-family: var(--font-header); font-weight: bold; font-size: 0.9rem;">Audio</div>
+        <div class="settings-row"><span class="b-label">Master Volume</span><div style="display: flex; align-items: center; gap: 10px;"><span id="master-volume-text" class="b-label" style="color: var(--accent-neon); margin:0;">30%</span><input type="range" id="master-volume-slider" min="0" max="100" value="30" style="width: 150px;" class="b-input"></div></div>
+        <div id="row-toggle-mute-bgm" class="settings-row"><span class="b-label">Mute Background Music</span><button id="btn-toggle-mute-bgm" class="b-btn" style="width: 115px;">Disabled</button></div>
       </div>
 
       <div id="tab-keybinds" class="settings-tab-panel" style="display: none; flex-direction: column; gap: 5px; max-height: 450px; overflow-y: auto; padding-right: 5px;">
@@ -164,6 +179,9 @@ export class SettingsWindow extends BaseWindow {
     syncToggle('btn-toggle-middle-mouse', 'middleMouseRotation', true);
     syncToggle('btn-toggle-lock-builder', 'lockBuilderPanel');
     syncToggle('btn-toggle-mute-arcade', 'muteArcadeSounds');
+    syncToggle('btn-toggle-mute-bgm', 'muteBGM');
+    syncToggle('btn-toggle-weather', 'enableWeather', true);
+    syncToggle('btn-toggle-auto-save', 'enableAutoSave', true);
 
     const btnCombatChat = document.getElementById('btn-toggle-combat-chat');
     if (btnCombatChat) {
@@ -194,6 +212,24 @@ export class SettingsWindow extends BaseWindow {
     setSlider('slider-dynamic-lights', 'val-dynamic-lights', settings.maxDynamicLights !== undefined ? settings.maxDynamicLights : 48);
     setSlider('slider-chunk-gen-speed', 'val-chunk-gen-speed', settings.chunkGenSpeed || 3);
 
+    const wc1 = document.getElementById('window-color-1');
+    const wc2 = document.getElementById('window-color-2');
+    const waColor = document.getElementById('window-accent-color');
+    if (wc1) wc1.value = settings.windowColor1 || '#34495e';
+    if (wc2) wc2.value = settings.windowColor2 || '#2c3e50';
+    if (waColor) waColor.value = settings.windowAccentColor || '#3498db';
+
+    const masterVolSlider = document.getElementById('master-volume-slider');
+    const masterVolText = document.getElementById('master-volume-text');
+    if (masterVolSlider && masterVolText) {
+      const savedMasterVol = localStorage.getItem('b_login_volume');
+      if (savedMasterVol !== null) {
+        const vol = Math.round(parseFloat(savedMasterVol) * 100);
+        masterVolSlider.value = vol;
+        masterVolText.innerText = `${vol}%`;
+      }
+    }
+
     const listEl = document.getElementById('action-binds-list');
     if (listEl) {
       listEl.innerHTML = '';
@@ -217,7 +253,7 @@ export class SettingsWindow extends BaseWindow {
       ];
       for (const cat of categories) {
         const header = document.createElement('div');
-        header.style.cssText = 'color: #3498db; font-size: 0.8rem; font-weight: bold; margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 3px; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 1px;';
+        header.style.cssText = 'color: #3498db; font-size: 0.8rem; font-weight: bold; margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 3px; font-family: var(--font-header); text-transform: capitalize; text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8); letter-spacing: 1px;';
         header.innerText = cat.name;
         listEl.appendChild(header);
 
@@ -309,7 +345,32 @@ export class SettingsWindow extends BaseWindow {
     bindToggle('btn-toggle-invert-cam-y', 'invertCameraY');
     bindToggle('btn-toggle-middle-mouse', 'middleMouseRotation');
     bindToggle('btn-toggle-lock-builder', 'lockBuilderPanel');
-    bindToggle('btn-toggle-mute-arcade', 'muteArcadeSounds');
+    bindToggle('btn-toggle-mute-arcade', 'muteArcadeSounds', (val) => {
+      if (window.currentGameEngine && window.currentGameEngine.arcadeSystem) {
+        window.currentGameEngine.arcadeSystem.setMuted(val);
+      }
+    });
+    bindToggle('btn-toggle-mute-bgm', 'muteBGM', (val) => {
+      if (window.currentGameEngine) {
+        window.currentGameEngine.updateBGM();
+      }
+    });
+    bindToggle('btn-toggle-weather', 'enableWeather');
+    bindToggle('btn-toggle-auto-save', 'enableAutoSave');
+
+    const masterVolSlider = document.getElementById('master-volume-slider');
+    const masterVolText = document.getElementById('master-volume-text');
+    if (masterVolSlider && masterVolText) {
+      masterVolSlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        masterVolText.innerText = `${val}%`;
+        const normalized = val / 100;
+        localStorage.setItem('b_login_volume', normalized);
+        if (window.currentGameEngine && window.currentGameEngine.bgmAudio) {
+          window.currentGameEngine.bgmAudio.volume = normalized * (window.currentGameEngine.zonesConfig?.[window.currentGameEngine.currentZone]?.baseStyle?.musicVolume ?? 1.0);
+        }
+      });
+    }
 
     const btnCombatChat = document.getElementById('btn-toggle-combat-chat');
     if (btnCombatChat) {
@@ -507,5 +568,52 @@ export class SettingsWindow extends BaseWindow {
       this.saveSettings(settings);
       this.syncUI();
     });
+
+    const wc1 = document.getElementById('window-color-1');
+    const wc2 = document.getElementById('window-color-2');
+    const waColor = document.getElementById('window-accent-color');
+    const updateGrad = () => {
+      const settings = window.currentGameEngine ? window.currentGameEngine.clientSettings : this.getSettings();
+      settings.windowColor1 = wc1.value;
+      settings.windowColor2 = wc2.value;
+      settings.windowAccentColor = waColor.value;
+      this.saveSettings(settings);
+      if (window.currentGameEngine && window.currentGameEngine.ui) {
+        window.currentGameEngine.ui.applyWindowColors();
+      }
+    };
+    if (wc1) wc1.addEventListener('input', updateGrad);
+    if (wc2) wc2.addEventListener('input', updateGrad);
+    if (waColor) waColor.addEventListener('input', updateGrad);
+
+    const btnResetWinPos = document.getElementById('btn-reset-window-pos');
+    if (btnResetWinPos) {
+      btnResetWinPos.addEventListener('click', () => {
+        if (window.currentGameEngine && window.currentGameEngine.ui) {
+          window.currentGameEngine.ui.showConfirmModal("Reset Window Positions", "Are you sure you want to reset all window positions?", () => {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && (key.endsWith('_pos') || key.includes('_pos_') || key.endsWith('_position') || key.startsWith('b_window_state_'))) {
+                localStorage.removeItem(key);
+                i--;
+              }
+            }
+            window.location.reload();
+          });
+        }
+      });
+    }
+
+    const btnClearCache = document.getElementById('btn-clear-cache');
+    if (btnClearCache) {
+      btnClearCache.addEventListener('click', () => {
+        if (window.currentGameEngine && window.currentGameEngine.ui) {
+          window.currentGameEngine.ui.showConfirmModal("Clear All Game Data", "WARNING: This will completely wipe all local game settings. Are you absolutely sure?", () => {
+            localStorage.clear();
+            window.location.reload();
+          });
+        }
+      });
+    }
   }
 }

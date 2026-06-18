@@ -63,8 +63,9 @@ input:focus {
   background: rgba(116, 185, 255, 0.15);
   border: 1px solid var(--accent-neon);
   color: var(--accent-neon);
-  font-family: var(--font-header);
-  font-size: 1.4rem;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: bold;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
 }
@@ -93,6 +94,12 @@ input:focus {
   font-family: var(--font-mono);
   padding: 10px;
   cursor: pointer;
+}
+
+.settings-row button, .settings-tab-btn {
+  padding: 2px 20px !important;
+  font-size: 0.9rem !important;
+  height: 28px !important;
 }
 
 .checkbox-group {

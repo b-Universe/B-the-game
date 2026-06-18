@@ -12,6 +12,7 @@
             { "id": "battle-drones", "name": "Battle Drones", "desc": "Construct 1 to 3 Battle Drones depending on your level." },
             { "id": "equip-robot", "name": "Equip Robot", "desc": "Equip your robots with advanced lasers and armor." },
             { "id": "protector-bots", "name": "Protector Bots", "desc": "Construct 1 or 2 Protector Bots depending on your level." },
+            { "id": "satellite-support", "name": "Satellite Support", "desc": "Summon Satellite Drones for overhead support." },
             { "id": "upgrade-robot", "name": "Upgrade Robot", "desc": "Upgrade your robots with heavy weaponry and force fields." },
             { "id": "assault-bot", "name": "Assault Bot", "desc": "Construct a massive Assault Bot." }
           ]

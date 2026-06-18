@@ -8,7 +8,9 @@ export function initSelection(accountData) {
   const btnDelete = document.getElementById('btn-delete');
 
   listContainer.innerHTML = '';
+  selectionScreen.style.opacity = '1';
   selectionScreen.style.display = 'flex';
+  creationScreen.style.opacity = '1';
   creationScreen.style.display = 'none';
 
   let presetContainer = document.getElementById('selection-preset-container');

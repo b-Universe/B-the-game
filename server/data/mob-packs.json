@@ -6,12 +6,22 @@
     "weight": 10,
     "spawns": [
       {
-        "templateId": "new-maplegang-j3i0-copy",
+        "templateId": "new-maplegang-j3i0",
         "minCount": 1,
-        "maxCount": 3
+        "maxCount": 1
       },
       {
         "templateId": "new-maplegang-j3i0",
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "templateId": "new-maplegang-j3i0",
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "templateId": "new-maplegang-j3i0-copy",
         "minCount": 1,
         "maxCount": 3
       }

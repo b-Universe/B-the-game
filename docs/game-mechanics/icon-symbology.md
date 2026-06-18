@@ -8,14 +8,13 @@ To maintain intuitive clarity across the **B** archive, powerset icons use a sta
 
 | Icon | Effect | Description |
 | :--- | :--- | :--- |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/affects-target-only.png');"></span></div> | Affects target only | Standard engagement logic restricted to a single targeted manifest. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/cone.png');"></span></div> | Cone | Directional engagement affecting all valid targets within a forward wedge-shaped arc. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/location.png');"></span></div> | Location | Engagement manifests at a specific, user-designated spatial coordinate. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/pbaoe-allies.png');"></span></div> | Pbaoe allies | Point Blank Area of Effect centered on the user; affects nearby teammates. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/pbaoe.png');"></span></div> | Pbaoe | Point Blank Area of Effect centered on the user; affects nearby enemies. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/summon.png');"></span></div> | Summon | Specialized logic for the manifestation of secondary entities or static nodes. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/targeted-aoe-allies.png');"></span></div> | Targeted aoe allies | Support logic centered on a targeted teammate; splashes to nearby allies. |
-| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/icons/powers/templates/border/targeted-aoe.png');"></span></div> | Targeted aoe | Offensive logic centered on a targeted enemy; splashes to nearby entities. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/targeted.png');"></span></div> | Affects target only | Standard engagement logic restricted to a single targeted manifest. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/cone.png');"></span></div> | Cone | Directional engagement affecting all valid targets within a forward wedge-shaped arc. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/location.png');"></span></div> | Location | Engagement manifests at a specific, user-designated spatial coordinate. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/aoe.png');"></span></div> | Pbaoe | Point Blank Area of Effect centered on the user; affects nearby entities. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/summon.png');"></span></div> | Summon | Specialized logic for the manifestation of secondary entities or static nodes. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/targeted-summon.png');"></span></div> | Targeted summon | Specialized logic for manifesting entities at a specific target. |
+| <div class="icon-stack"><span class="base"></span><span class="inner human" style="background-image: url('assets/images/ui/power-icons/border/targeted-aoe.png');"></span></div> | Targeted aoe | Offensive logic centered on a targeted enemy; splashes to nearby entities. |
 ## Buffs
 The following inner symbols denote powers that grant the caster or his allies buffs to various attributes.
 

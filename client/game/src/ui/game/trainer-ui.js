@@ -182,7 +182,7 @@ export class TrainerUIManager {
 
         const updateLocks = () => {
           powerItems.forEach((pItem, idx) => {
-            if (idx > 1 && psName !== 'inherited') {
+            if (idx > 1 && psName !== 'inherited' && psName !== 'developer') {
               const prev1Active = powerItems[idx - 1].classList.contains('learned');
               const prev2Active = powerItems[idx - 2].classList.contains('learned');
               if (prev1Active || prev2Active) {
@@ -203,9 +203,12 @@ export class TrainerUIManager {
         };
 
         psData.powers.forEach((power, i) => {
+          const pDef = window.POWER_REGISTRY && (window.POWER_REGISTRY[power.id] || window.POWER_REGISTRY[power.name]);
+          if (pDef && pDef.stats && pDef.stats.tier === 0) return;
+
           const alreadyLearned = knownPowers.includes(power.id) || knownPowers.includes(power.name);
           const canAfford = currentPowerPicks > 0;
-          const isLocked = i >= 2 && psName !== 'inherited';
+          const isLocked = i >= 2 && psName !== 'inherited' && psName !== 'developer';
 
           const pButton = document.createElement('button');
           pButton.className = `b-btn power-select-item ${alreadyLearned ? 'learned' : ''} ${isLocked ? 'locked' : ''}`;

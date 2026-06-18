@@ -46,7 +46,8 @@
   font-size: 1rem;
   letter-spacing: 1px;
   color: var(--text-primary);
-  text-shadow: var(--shadow-text);
+  text-shadow: 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8) !important;
+  text-transform: capitalize !important;
 }
 
 .b-window-controls {
@@ -123,9 +124,9 @@
   border: 1px solid var(--accent);
   border-radius: var(--border-radius);
   color: var(--accent-neon);
-  padding: var(--spacing-1) var(--spacing-2);
-  font-family: var(--font-header);
-  font-size: 1rem;
+  padding: 4px var(--spacing-2);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s, border-color 0.2s;
   letter-spacing: 1px;
@@ -136,8 +137,9 @@
   border-color: var(--accent-neon);
 }
 
-.b-btn:active {
+.b-btn:active, .b-btn.active {
   transform: scale(0.98);
+  font-weight: bold;
 }
 
 /* Action variations */

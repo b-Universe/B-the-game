@@ -61,6 +61,9 @@ export class PlayerModifierUIManager {
       }
     };
 
+      pwEl.querySelector('#btn-pm-add-powerset').onclick = () => this.showAddModal('powerset');
+      pwEl.querySelector('#btn-pm-add-power').onclick = () => this.showAddModal('power');
+
     amEl.querySelector('#am-search-input').addEventListener('input', () => this.renderAccountManagerList());
 
     aeEl.querySelector('#btn-am-ban-toggle').onclick = () => {
@@ -90,6 +93,74 @@ export class PlayerModifierUIManager {
     };
   }
 
+  showAddModal(type) {
+    let optionsHtml = '';
+    if (type === 'powerset') {
+      const psets = Object.values(this.engine.powersetsData || {}).sort((a,b) => a.name.localeCompare(b.name));
+      optionsHtml = psets.map(ps => `<option value="${ps.id}">${ps.name} (${ps.id})</option>`).join('');
+    } else {
+      let powersObj = {};
+      if (window.POWER_REGISTRY) powersObj = window.POWER_REGISTRY;
+      const powers = Object.keys(powersObj).map(k => ({id: k, ...powersObj[k]})).sort((a,b) => (a.name||a.id).localeCompare(b.name||b.id));
+      optionsHtml = powers.map(p => `<option value="${p.id}">${p.name||p.id} (${p.id})</option>`).join('');
+    }
+    const title = type === 'powerset' ? 'Add Powerset' : 'Add Power';
+    
+    const modalHtml = `
+      <div id="pm-add-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-dark); padding: 20px; border: 1px solid var(--border-dark); border-radius: 5px; width: 400px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+          <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-light); font-size: 1.1rem; text-transform: uppercase;">${title}</h3>
+          <select id="pm-add-select" class="b-select" style="width: 100%; margin-bottom: 15px;">
+            ${optionsHtml}
+          </select>
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="pm-add-cancel" class="b-btn" style="flex: 1;">Cancel</button>
+            <button id="pm-add-confirm" class="b-btn" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71; flex: 1;">Add</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const div = document.createElement('div');
+    div.innerHTML = modalHtml;
+    document.body.appendChild(div);
+    
+    document.getElementById('pm-add-cancel').onclick = () => div.remove();
+    document.getElementById('pm-add-confirm').onclick = () => {
+      const val = document.getElementById('pm-add-select').value;
+      if (val) {
+        if (type === 'powerset') {
+          if (!this.currentPowersets.includes(val)) this.currentPowersets.push(val);
+          this.renderTagList('pm-powersets-list', 'pm-powersets', this.currentPowersets);
+        } else {
+          if (!this.currentPowers.includes(val)) this.currentPowers.push(val);
+          this.renderTagList('pm-powers-list', 'pm-powers', this.currentPowers);
+        }
+      }
+      div.remove();
+    };
+  }
+
+  renderTagList(containerId, hiddenInputId, dataArray) {
+    const container = this.playerWindow.element.querySelector('#' + containerId);
+    const hidden = this.playerWindow.element.querySelector('#' + hiddenInputId);
+    if (!container || !hidden) return;
+    
+    hidden.value = dataArray.join(',');
+    container.innerHTML = '';
+    
+    dataArray.forEach((id, idx) => {
+      const tag = document.createElement('div');
+      tag.style.cssText = 'background: rgba(52, 152, 219, 0.3); border: 1px solid #3498db; border-radius: 3px; padding: 2px 6px; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;';
+      const name = window.POWER_REGISTRY && window.POWER_REGISTRY[id] ? window.POWER_REGISTRY[id].name : (this.engine.powersetsData && this.engine.powersetsData[id] ? this.engine.powersetsData[id].name : id);
+      tag.innerHTML = `<span title="${id}">${name}</span> <span class="pm-tag-remove" style="cursor: pointer; color: #e74c3c; font-weight: bold; padding: 0 4px;">&times;</span>`;
+      tag.querySelector('.pm-tag-remove').onclick = () => {
+        dataArray.splice(idx, 1);
+        this.renderTagList(containerId, hiddenInputId, dataArray);
+      };
+      container.appendChild(tag);
+    });
+  }
+
   updatePermissionsDisplay() {
     if (!this.targetName || !this.engine.permissions) return;
     const targetLower = this.targetName.toLowerCase();
@@ -116,8 +187,12 @@ export class PlayerModifierUIManager {
     pw.querySelector('#pm-power-picks').value = charData.unspentPowerPicks || 0;
     const psPicksRaw = charData.unspentPowersetPicks;
     pw.querySelector('#pm-powerset-picks').value = Array.isArray(psPicksRaw) ? psPicksRaw.length : (typeof psPicksRaw === 'number' ? psPicksRaw : 0);
-    pw.querySelector('#pm-powersets').value = (charData.powersets || []).join(', ');
-    pw.querySelector('#pm-powers').value = (charData.powers || []).join(', ');
+    
+    this.currentPowersets = charData.powersets ? [...charData.powersets] : [];
+    this.currentPowers = charData.powers ? [...charData.powers] : [];
+    this.renderTagList('pm-powersets-list', 'pm-powersets', this.currentPowersets);
+    this.renderTagList('pm-powers-list', 'pm-powers', this.currentPowers);
+    
     this.updatePermissionsDisplay();
     this.playerWindow.open();
   }
@@ -174,8 +249,8 @@ export class PlayerModifierUIManager {
       maxSynthEnergy: parseInt(pw.querySelector('#pm-maxsynth').value, 10) || 1000,
       unspentPowerPicks: parseInt(pw.querySelector('#pm-power-picks').value, 10) || 0,
       unspentPowersetPicks: parseInt(pw.querySelector('#pm-powerset-picks').value, 10) || 0,
-      powersets: pw.querySelector('#pm-powersets').value.split(',').map(s => s.trim()).filter(Boolean),
-      powers: pw.querySelector('#pm-powers').value.split(',').map(s => s.trim()).filter(Boolean)
+      powersets: this.currentPowersets || [],
+      powers: this.currentPowers || []
     };
     this.engine.network.sendAdminUpdatePlayer(this.targetName, updates);
   }

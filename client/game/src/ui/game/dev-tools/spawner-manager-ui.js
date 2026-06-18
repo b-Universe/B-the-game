@@ -224,23 +224,31 @@ export class SpawnerManagerUI {
         <button class="btn-del btn-secondary" style="width: auto; height: auto; padding: 5px 10px; border-color: ${UI_COLORS.critical}; color: ${UI_COLORS.critical}; font-weight: bold;">X</button>
       `;
       row.querySelector('.btn-edit').onclick = () => {
-        document.getElementById('edit-spawner-uuid').value = s.uuid;
-        document.getElementById('edit-spawner-name').value = s.name;
-        document.getElementById('edit-spawner-x').value = Math.round(s.x);
-        document.getElementById('edit-spawner-y').value = Math.round(s.y);
-        document.getElementById('edit-spawner-z').value = Math.round(s.z || 0);
-        document.getElementById('edit-spawner-radius').value = Math.round(s.radius);
-        document.getElementById('edit-spawner-rate').value = Math.round(s.respawnRate);
-        document.getElementById('edit-spawner-patrol').value = s.patrolRoute || '';
-
-        this.updateSpawnerEditNpcList(s.uuid);
-
-        this.devTools.spawnerEditWindow.open();
+        this.openEditForSpawner(s.uuid);
       };
       row.querySelector('.btn-tp').onclick = () => { this.engine.player.x = s.x; this.engine.player.y = s.y; this.engine.camera.x = s.x; this.engine.camera.y = s.y; };
       row.querySelector('.btn-del').onclick = () => { if (confirm(`Delete Spawner: ${s.name}?`)) this.engine.network.sendDeleteSpawner(s.uuid); };
       list.appendChild(row);
     });
+  }
+
+  openEditForSpawner(uuid) {
+    const s = this.engine.spawners.find(sp => sp.uuid === uuid);
+    if (!s) return;
+    document.getElementById('edit-spawner-uuid').value = s.uuid;
+    document.getElementById('edit-spawner-name').value = s.name;
+    document.getElementById('edit-spawner-x').value = Math.round(s.x);
+    document.getElementById('edit-spawner-y').value = Math.round(s.y);
+    document.getElementById('edit-spawner-z').value = Math.round(s.z || 0);
+    document.getElementById('edit-spawner-radius').value = Math.round(s.radius);
+    document.getElementById('edit-spawner-rate').value = Math.round(s.respawnRate);
+    document.getElementById('edit-spawner-max').value = s.maxActive !== undefined ? s.maxActive : 5;
+    document.getElementById('edit-spawner-patrol').value = s.patrolRoute || '';
+
+    this.renderSpawnerPackList(s.uuid);
+    this.updateSpawnerEditNpcList(s.uuid);
+
+    this.devTools.spawnerEditWindow.open();
   }
 
   updateSpawnerEditNpcList(uuid = null) {
@@ -266,5 +274,55 @@ export class SpawnerManagerUI {
     } else {
       npcListEl.innerHTML = '<div style="text-align: center; color: #888; font-style: italic;">No active NPCs spawned.</div>';
     }
+  }
+
+  renderSpawnerPackList(uuid) {
+    const s = this.engine.spawners.find(x => x.uuid === uuid);
+    if (!s) return;
+    const selectEl = document.getElementById('edit-spawner-pack-add-select');
+    const listEl = document.getElementById('edit-spawner-pack-list');
+    const btnAdd = document.getElementById('btn-edit-spawner-pack-add');
+    if (!selectEl || !listEl || !btnAdd) return;
+
+    selectEl.innerHTML = '<option value="">-- Select Pack ID --</option>';
+    Object.keys(this.engine.mobPacks || {}).sort().forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.innerText = p;
+      selectEl.appendChild(opt);
+    });
+
+    const renderList = () => {
+      listEl.innerHTML = '';
+      if (!s.packIds || s.packIds.length === 0) {
+         listEl.innerHTML = '<div style="text-align: center; font-size: 0.75rem; color: #aaa; padding: 5px;">No packs selected. Using Neighborhood rules.</div>';
+         return;
+      }
+      s.packIds.forEach((pid, idx) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 2px 5px; background: rgba(0,0,0,0.5); border-radius: 2px; font-size: 0.8rem;';
+        row.innerHTML = `<span style="color:#fff;">${pid}</span> <button class="b-btn" style="padding: 0 4px; border-color: #e74c3c; color: #e74c3c;">X</button>`;
+        row.querySelector('button').onclick = () => {
+           s.packIds.splice(idx, 1);
+           this.engine.network.sendEditSpawner(s.uuid, { packIds: s.packIds });
+           renderList();
+        };
+        listEl.appendChild(row);
+      });
+    };
+
+    btnAdd.onclick = () => {
+       const pid = selectEl.value;
+       if (pid) {
+          if (!s.packIds) s.packIds = [];
+          if (!s.packIds.includes(pid)) {
+             s.packIds.push(pid);
+             this.engine.network.sendEditSpawner(s.uuid, { packIds: s.packIds });
+             renderList();
+          }
+       }
+    };
+
+    renderList();
   }
 }

@@ -383,8 +383,12 @@
             <div id="target-energy-text" class="stat-bar-text small"></div>
           </div>
         </div>
-        <div id="target-actions" style="display: none; padding: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div id="target-actions" style="display: none; padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); flex-direction: column; gap: 5px;">
           <button id="btn-target-talk" class="btn-primary" style="font-size: 0.9rem; height: 30px; width: 100%;">Talk</button>
+          <div style="display: flex; gap: 5px;">
+            <button id="btn-target-info" class="btn-secondary" style="font-size: 0.8rem; height: 26px; flex: 1;">Info</button>
+            <button id="btn-target-rename" class="btn-secondary" style="font-size: 0.8rem; height: 26px; flex: 1; display: none;">Rename</button>
+          </div>
         </div>
       </div>
 
@@ -488,9 +492,12 @@
       </div>
 
       <!-- Player Context Menu -->
-      <div id="player-context-menu" class="game-dropdown-menu" style="display: none; position: absolute; z-index: 300; min-width: 150px; right: auto;">
+      <div id="player-context-menu" class="game-dropdown-menu" style="display: none; position: absolute; z-index: 9999; min-width: 150px; right: auto;">
+        <div class="dropdown-item" id="ctx-btn-info" style="display: none; color: #00d2ff;">Info</div>
         <div class="dropdown-item" id="ctx-btn-talk" style="display: none;">Talk</div>
         <div class="dropdown-item" id="ctx-btn-trade">Trade Offer</div>
+        <div class="dropdown-item" id="ctx-btn-pet-rename" style="display: none;">Rename</div>
+        <div class="dropdown-item" id="ctx-btn-pet-dismiss" style="display: none; color: #aaa;">Dismiss</div>
         <div class="dropdown-item" id="ctx-btn-arcade-play" style="display: none;">Play</div>
         <div class="dropdown-item" id="ctx-btn-arcade-edit" style="display: none; color: #e056fd;">Edit Cabinet</div>
         <div class="dropdown-item" id="ctx-btn-arcade-power" style="display: none; color: #e74c3c;">Power On/Off</div>

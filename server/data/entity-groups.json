@@ -81,6 +81,33 @@
     ],
     "powers": [
       "stamina"
-    ]
+    ],
+    "genericNames": {
+      "0": [
+        "ash",
+        "tom",
+        "bob",
+        "tim"
+      ],
+      "1": [
+        "ash",
+        "tom",
+        "bob",
+        "tim"
+      ],
+      "2": [
+        "ash",
+        "tom",
+        "bob",
+        "tim"
+      ],
+      "-1": [
+        "ash",
+        "tom",
+        "bob",
+        "tim"
+      ]
+    },
+    "description": ""
   }
 }

@@ -4,8 +4,31 @@ export function updateDrones(eng, dt, em) {
     const drone = eng.drones[id];
     drone.frameTimer = (drone.frameTimer || 0) + dt;
 
+    if (drone._dismissing) {
+      drone._dismissTimer = (drone._dismissTimer || 1.2) - dt / 1000;
+      drone._dismissVz = (drone._dismissVz || 800);
+      drone.z += drone._dismissVz * (dt / 1000);
+      drone._dismissVz += 600 * (dt / 1000);
+
+      const col = drone.isAssaultDrone ? '#f39c12' : (drone.isCombatDrone ? '#e74c3c' : '#00d2ff');
+      eng.spawnParticle({
+        x: drone.x + (Math.random() - 0.5) * 24,
+        y: drone.y + (Math.random() - 0.5) * 24,
+        z: drone.z,
+        vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, vz: 30 + Math.random() * 60,
+        life: 0.35, maxLife: 0.35, color: col, size: 2 + Math.random() * 3, noGravity: true
+      });
+
+      if (drone._dismissTimer <= 0) {
+        delete eng.drones[id];
+        if (eng.ui && eng.ui.petUI) eng.ui.petUI.update();
+      }
+      continue;
+    }
+
     if (drone.state !== 'dead' && drone.state !== 'death' && !drone.state.endsWith('-death')) {
       let owner = eng.otherPlayers[drone.ownerSocketId];
+
       if (drone.ownerSocketId === eng.socket?.id) owner = eng.player;
       if (owner) {
         let idealX, idealY, idealZ;
