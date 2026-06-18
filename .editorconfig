@@ -1,0 +1,17 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+
+# Standardize line endings (LF is standard for Node/Bash/Linux servers)
+end_of_line = lf
+
+# Standardize file encoding
+charset = utf-8
+
+# Automatically delete invisible spaces at the end of lines
+trim_trailing_whitespace = true
+
+# Ensure every file ends with a blank line (a standard POSIX requirement)
+insert_final_newline = true
